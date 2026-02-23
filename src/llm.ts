@@ -31,7 +31,7 @@ Write a concise, engaging weekly update email body (no subject line) that:
 4. Keeps it under 300 words`;
 
   const message = await client.messages.create({
-    model: 'claude-opus-4-5',
+    model: 'claude-3-5-sonnet-latest',
     max_tokens: 1024,
     messages: [{ role: 'user', content: prompt }],
   });
