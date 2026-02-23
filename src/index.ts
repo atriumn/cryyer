@@ -14,7 +14,7 @@ async function main(): Promise<void> {
   const octokit = createGitHubClient(config.githubToken);
   const anthropic = createAnthropicClient(config.anthropicApiKey);
   const resend = createEmailClient(config.resendApiKey);
-  const db = createDbClient(config.supabaseUrl, config.supabaseKey);
+  const db = createDbClient(config.supabaseUrl, config.supabaseServiceKey);
 
   const weekOf = getWeekOf();
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();

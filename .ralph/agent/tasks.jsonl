@@ -1,1 +1,3 @@
 {"id":"task-1771863098-6e1b","title":"Set up project scaffolding (package.json, tsconfig, dirs, CLAUDE.md)","status":"closed","priority":1,"blocked_by":[],"loop_id":"primary-20260223-161052","created":"2026-02-23T16:11:38.421408040+00:00","closed":"2026-02-23T16:13:55.825262419+00:00"}
+{"id":"task-1771864849-e9fe","title":"Update config to use SUPABASE_SERVICE_KEY","status":"open","priority":1,"blocked_by":[],"loop_id":"primary-20260223-163950","created":"2026-02-23T16:40:49.453119389+00:00"}
+{"id":"task-1771864852-716f","title":"Document GitHub secrets configuration in README","status":"open","priority":2,"blocked_by":[],"loop_id":"primary-20260223-163950","created":"2026-02-23T16:40:52.160112960+00:00"}
