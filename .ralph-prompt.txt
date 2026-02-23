@@ -1,22 +1,27 @@
 Implement this issue fully per the requirements.
 
-## Issue #8: Create email HTML wrapper template
+## Issue #9: Build weekly draft cron workflow
 
-Create `templates/email-wrapper.html` — a clean, responsive HTML email template for Resend.
+Create `.github/workflows/weekly-draft.yml` — runs on a cron schedule to generate draft update issues.
 
 ### Requirements
-- Simple, clean design (not a marketing newsletter — more like a personal update)
-- Variables: `{{product_name}}`, `{{subject}}`, `{{body_html}}`, `{{unsubscribe_url}}`
-- Mobile-responsive
-- Minimal branding — product name in header, unsubscribe in footer
-- Body rendered from markdown → HTML
+- Cron: `0 13 * * 1` (Monday 8am ET / 1pm UTC)
+- For each `products/*.yaml`:
+  1. Load product config
+  2. Run `gather.ts` for that product's repo
+  3. Run `summarize.ts` with activity + voice config
+  4. Create a GitHub Issue in `beacon`:
+     - Title: `[{product}] Weekly Update — {date}`
+     - Body: generated email draft (subject line + body)
+     - Labels: `draft`, `{product-name}`
+- Also support manual trigger (`workflow_dispatch`) for testing
 
-### Tone
-- Should feel like a personal email, not a corporate newsletter
-- No heavy imagery or complex layouts
-- Think: plain text with just enough formatting to be readable
+### Dependencies
+- gather.ts (#4)
+- summarize.ts (#5)
+- Product configs exist
 
-Implement all requirements from the above issue(s). Reference: #8
+Implement all requirements from the above issue(s). Reference: #9
 
 
 **MANDATORY BEFORE OUTPUTTING LOOP_COMPLETE:**
@@ -29,7 +34,7 @@ Implement all requirements from the above issue(s). Reference: #8
 4. Run typecheck: `pnpm --filter web exec tsc --noEmit` — must pass
 5. Run `git status` — working tree must be clean (all changes committed)
 6. Run `git log --oneline -5` — must show commits YOU authored on this branch
-7. Run `/home/jeff/projects/alloy/shared/scripts/ralph-review.sh --worktree /home/jeff/projects/worktrees/beacon-8 --issue 8 --project beacon`
+7. Run `/home/jeff/projects/alloy/shared/scripts/ralph-review.sh --worktree /home/jeff/projects/worktrees/beacon-9 --issue 9 --project beacon`
    - If it prints PASS — you are clear to output LOOP_COMPLETE
    - If it prints BLOCKING — fix every listed issue, re-commit, then re-run the review
    - If it prints ERROR — ignore and proceed (review service unavailable)
