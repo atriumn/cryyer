@@ -1,23 +1,24 @@
 Implement this issue fully per the requirements.
 
-## Issue #4: Build GitHub activity gatherer
+## Issue #5: Build LLM draft generator
 
-Create `src/gather.ts` — fetches weekly activity from a product's GitHub repo.
+Create `src/summarize.ts` — calls Claude API to generate a beta tester email draft in the product's voice.
 
 ### Requirements
-- Accept a product config (repo name, date range)
-- Use Octokit to fetch:
-  - Merged PRs in the last 7 days
-  - Releases published in the last 7 days
-  - Notable commits (optional, if no PRs/releases)
-- Return structured data: `{ prs: [...], releases: [...], commits: [...] }`
-- Handle repos with no activity gracefully (return empty, don't error)
+- Accept: product config (name, voice), weekly activity data, previous update (for context)
+- Build a prompt that includes:
+  - Product name and tagline
+  - Voice config (tone, perspective, style guidelines, example)
+  - Formatted weekly activity (PR titles/descriptions, release notes)
+  - Previous sent update body (to avoid repetition and maintain continuity)
+- Call Claude API (Haiku for cost, Sonnet as option)
+- Return: `{ subject: string, body: string }` (email subject line + body in markdown)
 
-### Notes
-- Uses `GITHUB_TOKEN` which has org-level read access
-- Should filter out bot/dependabot PRs
+### Edge cases
+- No activity this week → generate a "quiet week" update or a "what's coming" teaser
+- Voice should stay consistent even with varying activity levels
 
-Implement all requirements from the above issue(s). Reference: #4
+Implement all requirements from the above issue(s). Reference: #5
 
 
 **MANDATORY BEFORE OUTPUTTING LOOP_COMPLETE:**
@@ -30,7 +31,7 @@ Implement all requirements from the above issue(s). Reference: #4
 4. Run typecheck: `pnpm --filter web exec tsc --noEmit` — must pass
 5. Run `git status` — working tree must be clean (all changes committed)
 6. Run `git log --oneline -5` — must show commits YOU authored on this branch
-7. Run `/home/jeff/projects/alloy/shared/scripts/ralph-review.sh --worktree /home/jeff/projects/worktrees/beacon-4 --issue 4 --project beacon`
+7. Run `/home/jeff/projects/alloy/shared/scripts/ralph-review.sh --worktree /home/jeff/projects/worktrees/beacon-5 --issue 5 --project beacon`
    - If it prints PASS — you are clear to output LOOP_COMPLETE
    - If it prints BLOCKING — fix every listed issue, re-commit, then re-run the review
    - If it prints ERROR — ignore and proceed (review service unavailable)
