@@ -1,22 +1,32 @@
 Implement this issue fully per the requirements.
 
-## Issue #6: Build Resend email sender
+## Issue #7: Build Supabase subscriber module
 
-Create `src/send.ts` — sends emails via Resend API.
+Create `src/subscribers.ts` — queries Supabase for active beta testers per product.
 
 ### Requirements
-- Accept: product config (from_name, from_email, reply_to), subscriber list, email content (subject + HTML body)
-- Convert markdown body to HTML (use the email wrapper template)
-- Send via Resend batch API to all active subscribers
-- Return delivery stats (sent count, any failures)
-- Include unsubscribe link in email footer
+- Accept: product filter string (e.g., `"idynic"`)
+- Query `beta_testers` table: `where product = filter AND unsubscribed_at IS NULL`
+- Return: `{ email: string, name?: string }[]`
+- Handle empty lists gracefully (log warning, don't send)
 
-### Notes
-- Resend has a batch send endpoint for efficiency
-- Need to handle unsubscribe mechanism (Resend supports `List-Unsubscribe` header)
-- Rate limits: Resend free tier is 100 emails/day, 3000/month — sufficient for beta
+### Also
+- Create the Supabase migration for the `beta_testers` table:
+```sql
+create table beta_testers (
+  id uuid primary key default gen_random_uuid(),
+  email text not null,
+  product text not null,
+  name text,
+  subscribed_at timestamptz default now(),
+  unsubscribed_at timestamptz,
+  unique(email, product)
+);
 
-Implement all requirements from the above issue(s). Reference: #6
+alter table beta_testers enable row level security;
+```
+
+Implement all requirements from the above issue(s). Reference: #7
 
 
 **MANDATORY BEFORE OUTPUTTING LOOP_COMPLETE:**
@@ -29,7 +39,7 @@ Implement all requirements from the above issue(s). Reference: #6
 4. Run typecheck: `pnpm --filter web exec tsc --noEmit` — must pass
 5. Run `git status` — working tree must be clean (all changes committed)
 6. Run `git log --oneline -5` — must show commits YOU authored on this branch
-7. Run `/home/jeff/projects/alloy/shared/scripts/ralph-review.sh --worktree /home/jeff/projects/worktrees/beacon-6 --issue 6 --project beacon`
+7. Run `/home/jeff/projects/alloy/shared/scripts/ralph-review.sh --worktree /home/jeff/projects/worktrees/beacon-7 --issue 7 --project beacon`
    - If it prints PASS — you are clear to output LOOP_COMPLETE
    - If it prints BLOCKING — fix every listed issue, re-commit, then re-run the review
    - If it prints ERROR — ignore and proceed (review service unavailable)
