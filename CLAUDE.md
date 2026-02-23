@@ -30,12 +30,12 @@ dist/           — Compiled JavaScript output (gitignored)
 
 ## Environment Variables
 ```
-GITHUB_TOKEN        — GitHub personal access token
-ANTHROPIC_API_KEY   — Anthropic API key
-RESEND_API_KEY      — Resend API key
-SUPABASE_URL        — Supabase project URL
-SUPABASE_KEY        — Supabase anon/service key
-FROM_EMAIL          — Sender email address
+GITHUB_TOKEN            — GitHub personal access token
+ANTHROPIC_API_KEY       — Anthropic API key
+RESEND_API_KEY          — Resend API key
+SUPABASE_URL            — Supabase project URL
+SUPABASE_SERVICE_KEY    — Supabase service role key for subscriber queries
+FROM_EMAIL              — Sender email address
 ```
 
 ## Product Config Schema (products/*.yaml)

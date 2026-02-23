@@ -1,23 +1,24 @@
 Implement this issue fully per the requirements.
 
-## Issue #3: Project scaffolding
+## Issue #11: Configure repo secrets and access
 
-Set up the initial project structure:
+Set up the required secrets and permissions for beacon to operate.
 
-- `package.json` with dependencies (octokit, @anthropic-ai/sdk, resend, @supabase/supabase-js, yaml)
-- `tsconfig.json`
-- `.gitignore`
-- `src/` directory structure
-- `products/` directory
-- `templates/` directory
-- CLAUDE.md with project context
+### Secrets to add
+- `ANTHROPIC_API_KEY` — for Claude API draft generation
+- `RESEND_API_KEY` — for email delivery
+- `SUPABASE_URL` — beacon's Supabase project URL
+- `SUPABASE_SERVICE_KEY` — service role key for subscriber queries
 
-### Acceptance criteria
-- `npm install` works
-- TypeScript compiles
-- Directory structure matches the plan in atriumn/arqo#1
+### Access
+- Ensure `GITHUB_TOKEN` has read access to other atriumn repos (idynic, celiumn) for the activity gatherer
+- May need a fine-grained PAT or GitHub App if default token scope is insufficient for cross-repo reads
 
-Implement all requirements from the above issue(s). Reference: #3
+### Notes
+- This is a manual step — secrets must be added via GitHub UI or `gh secret set`
+- Document which Supabase project is being used
+
+Implement all requirements from the above issue(s). Reference: #11
 
 
 **MANDATORY BEFORE OUTPUTTING LOOP_COMPLETE:**
@@ -30,7 +31,7 @@ Implement all requirements from the above issue(s). Reference: #3
 4. Run typecheck: `pnpm --filter web exec tsc --noEmit` — must pass
 5. Run `git status` — working tree must be clean (all changes committed)
 6. Run `git log --oneline -5` — must show commits YOU authored on this branch
-7. Run `/home/jeff/projects/alloy/shared/scripts/ralph-review.sh --worktree /home/jeff/projects/worktrees/beacon-3 --issue 3 --project beacon`
+7. Run `/home/jeff/projects/alloy/shared/scripts/ralph-review.sh --worktree /home/jeff/projects/worktrees/beacon-11 --issue 11 --project beacon`
    - If it prints PASS — you are clear to output LOOP_COMPLETE
    - If it prints BLOCKING — fix every listed issue, re-commit, then re-run the review
    - If it prints ERROR — ignore and proceed (review service unavailable)

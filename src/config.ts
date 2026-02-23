@@ -8,7 +8,7 @@ export interface Config {
   anthropicApiKey: string;
   resendApiKey: string;
   supabaseUrl: string;
-  supabaseKey: string;
+  supabaseServiceKey: string;
   fromEmail: string;
 }
 
@@ -18,7 +18,7 @@ export function loadConfig(): Config {
     anthropicApiKey: requireEnv('ANTHROPIC_API_KEY'),
     resendApiKey: requireEnv('RESEND_API_KEY'),
     supabaseUrl: requireEnv('SUPABASE_URL'),
-    supabaseKey: requireEnv('SUPABASE_KEY'),
+    supabaseServiceKey: requireEnv('SUPABASE_SERVICE_KEY'),
     fromEmail: requireEnv('FROM_EMAIL'),
   };
 }
