@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "ts-node src/index.ts",
+    "dev": "npm run build && npm start",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts"
   },
