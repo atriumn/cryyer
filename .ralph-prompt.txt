@@ -1,24 +1,22 @@
 Implement this issue fully per the requirements.
 
-## Issue #5: Build LLM draft generator
+## Issue #6: Build Resend email sender
 
-Create `src/summarize.ts` — calls Claude API to generate a beta tester email draft in the product's voice.
+Create `src/send.ts` — sends emails via Resend API.
 
 ### Requirements
-- Accept: product config (name, voice), weekly activity data, previous update (for context)
-- Build a prompt that includes:
-  - Product name and tagline
-  - Voice config (tone, perspective, style guidelines, example)
-  - Formatted weekly activity (PR titles/descriptions, release notes)
-  - Previous sent update body (to avoid repetition and maintain continuity)
-- Call Claude API (Haiku for cost, Sonnet as option)
-- Return: `{ subject: string, body: string }` (email subject line + body in markdown)
+- Accept: product config (from_name, from_email, reply_to), subscriber list, email content (subject + HTML body)
+- Convert markdown body to HTML (use the email wrapper template)
+- Send via Resend batch API to all active subscribers
+- Return delivery stats (sent count, any failures)
+- Include unsubscribe link in email footer
 
-### Edge cases
-- No activity this week → generate a "quiet week" update or a "what's coming" teaser
-- Voice should stay consistent even with varying activity levels
+### Notes
+- Resend has a batch send endpoint for efficiency
+- Need to handle unsubscribe mechanism (Resend supports `List-Unsubscribe` header)
+- Rate limits: Resend free tier is 100 emails/day, 3000/month — sufficient for beta
 
-Implement all requirements from the above issue(s). Reference: #5
+Implement all requirements from the above issue(s). Reference: #6
 
 
 **MANDATORY BEFORE OUTPUTTING LOOP_COMPLETE:**
@@ -31,7 +29,7 @@ Implement all requirements from the above issue(s). Reference: #5
 4. Run typecheck: `pnpm --filter web exec tsc --noEmit` — must pass
 5. Run `git status` — working tree must be clean (all changes committed)
 6. Run `git log --oneline -5` — must show commits YOU authored on this branch
-7. Run `/home/jeff/projects/alloy/shared/scripts/ralph-review.sh --worktree /home/jeff/projects/worktrees/beacon-5 --issue 5 --project beacon`
+7. Run `/home/jeff/projects/alloy/shared/scripts/ralph-review.sh --worktree /home/jeff/projects/worktrees/beacon-6 --issue 6 --project beacon`
    - If it prints PASS — you are clear to output LOOP_COMPLETE
    - If it prints BLOCKING — fix every listed issue, re-commit, then re-run the review
    - If it prints ERROR — ignore and proceed (review service unavailable)
