@@ -3,8 +3,14 @@ export interface Product {
   name: string;
   tagline?: string;
   voice: string;
-  githubRepo: string;
+  repo?: string;
+  githubRepo?: string; // Deprecated: use repo instead
   emailSubjectTemplate: string;
+  supabase_table?: string;
+  product_filter?: string;
+  from_name?: string;
+  from_email?: string;
+  reply_to?: string;
 }
 
 export interface BetaTester {

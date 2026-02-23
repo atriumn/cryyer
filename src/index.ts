@@ -26,7 +26,12 @@ async function main(): Promise<void> {
   for (const product of products) {
     console.log(`Processing product: ${product.name}`);
 
-    const [owner, repo] = product.githubRepo.split('/');
+    const repoStr = product.repo || product.githubRepo;
+    if (!repoStr) {
+      console.error(`  Missing repo configuration for ${product.name}`);
+      continue;
+    }
+    const [owner, repo] = repoStr.split('/');
     const changes = await fetchWeeklyChanges(octokit, owner, repo, since);
 
     if (changes.length === 0) {
