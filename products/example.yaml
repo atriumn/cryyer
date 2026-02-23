@@ -1,0 +1,7 @@
+# Example product configuration
+# Copy this file and fill in the details for each product
+id: example-product
+name: Example Product
+voice: "Friendly and enthusiastic, with a focus on developer experience"
+githubRepo: "owner/repo"
+emailSubjectTemplate: "{{weekOf}} Weekly Update — Example Product"

@@ -1,0 +1,39 @@
+Implement this issue fully per the requirements.
+
+## Issue #3: Project scaffolding
+
+Set up the initial project structure:
+
+- `package.json` with dependencies (octokit, @anthropic-ai/sdk, resend, @supabase/supabase-js, yaml)
+- `tsconfig.json`
+- `.gitignore`
+- `src/` directory structure
+- `products/` directory
+- `templates/` directory
+- CLAUDE.md with project context
+
+### Acceptance criteria
+- `npm install` works
+- TypeScript compiles
+- Directory structure matches the plan in atriumn/arqo#1
+
+Implement all requirements from the above issue(s). Reference: #3
+
+
+**MANDATORY BEFORE OUTPUTTING LOOP_COMPLETE:**
+1. Run tests — all must pass
+2. If you created or modified any Supabase migration files:
+   a. Run `supabase migration up --local` — apply your migration to the local DB
+   b. Run `pnpm generate:types` — regenerate TypeScript types from the DB
+   c. If types changed, commit them: `git add apps/web/src/lib/supabase/database.types.ts && git commit -m 'chore: regenerate database types'`
+3. Run lint: `pnpm lint` — must pass
+4. Run typecheck: `pnpm --filter web exec tsc --noEmit` — must pass
+5. Run `git status` — working tree must be clean (all changes committed)
+6. Run `git log --oneline -5` — must show commits YOU authored on this branch
+7. Run `/home/jeff/projects/alloy/shared/scripts/ralph-review.sh --worktree /home/jeff/projects/worktrees/beacon-3 --issue 3 --project beacon`
+   - If it prints PASS — you are clear to output LOOP_COMPLETE
+   - If it prints BLOCKING — fix every listed issue, re-commit, then re-run the review
+   - If it prints ERROR — ignore and proceed (review service unavailable)
+
+If ANY check fails, keep working. Do NOT output LOOP_COMPLETE until all pass.
+Reading files and writing a plan is NOT done. Committed, tested, reviewed code is done.
