@@ -37,7 +37,9 @@ export async function generateEmailDraft(
     ? '\nSince there is no activity this week, write a brief "quiet week" acknowledgment or a forward-looking teaser about what is coming — keeping the product voice consistent.'
     : '';
 
-  const prompt = `You are writing a weekly beta tester update email for ${product.name}.
+  const taglineLine = product.tagline ? `\n**Tagline:** ${product.tagline}` : '';
+
+  const prompt = `You are writing a weekly beta tester update email for ${product.name}.${taglineLine}
 
 ## Voice & Tone Instructions
 ${product.voice}
@@ -85,7 +87,13 @@ function formatActivity(activity: GatheredActivity): string {
   if (activity.prs.length > 0) {
     lines.push('### Merged Pull Requests');
     for (const pr of activity.prs as GatheredPR[]) {
-      lines.push(`- ${pr.title} by @${pr.author} — ${pr.url}`);
+      lines.push(`- **${pr.title}** by @${pr.author} — ${pr.url}`);
+      if (pr.body) {
+        const summary = pr.body.split('\n')[0].trim();
+        if (summary) {
+          lines.push(`  ${summary}`);
+        }
+      }
     }
   }
 
