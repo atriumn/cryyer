@@ -59,10 +59,9 @@ function buildEmailHtml(
   const template = readFileSync(templatePath, 'utf-8');
   return template
     .replace('{{subject}}', subject)
-    .replace('{{productName}}', productName)
-    .replace('{{body}}', bodyHtml)
-    .replace(/\{\{unsubscribeUrl\}\}/g, unsubscribeUrl)
-    .replace(/\{\{productName\}\}/g, productName);
+    .replace(/\{\{product_name\}\}/g, productName)
+    .replace('{{body_html}}', bodyHtml)
+    .replace(/\{\{unsubscribe_url\}\}/g, unsubscribeUrl);
 }
 
 function makeUnsubscribeUrl(fromEmail: string, productId: string): string {
