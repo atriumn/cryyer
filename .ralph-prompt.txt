@@ -1,27 +1,32 @@
 Implement this issue fully per the requirements.
 
-## Issue #9: Build weekly draft cron workflow
+## Issue #10: Build send-on-close workflow
 
-Create `.github/workflows/weekly-draft.yml` — runs on a cron schedule to generate draft update issues.
+Create `.github/workflows/send-update.yml` — triggers when a draft issue is closed, sends the email.
 
 ### Requirements
-- Cron: `0 13 * * 1` (Monday 8am ET / 1pm UTC)
-- For each `products/*.yaml`:
-  1. Load product config
-  2. Run `gather.ts` for that product's repo
-  3. Run `summarize.ts` with activity + voice config
-  4. Create a GitHub Issue in `beacon`:
-     - Title: `[{product}] Weekly Update — {date}`
-     - Body: generated email draft (subject line + body)
-     - Labels: `draft`, `{product-name}`
-- Also support manual trigger (`workflow_dispatch`) for testing
+- Trigger: `issues` event, `closed` action
+- Filter: only issues with `draft` label
+- Steps:
+  1. Parse product name from issue labels
+  2. Load product config from `products/{product}.yaml`
+  3. Extract email subject + body from issue body
+  4. Fetch subscriber list from Supabase via `subscribers.ts`
+  5. Send via `send.ts` (Resend)
+  6. Add `sent` label to the issue
+  7. Post a comment with delivery stats (X emails sent, any failures)
+
+### Edge cases
+- Issue closed without `draft` label → skip
+- No subscribers for product → log warning, add comment, don't error
+- Resend failure → re-open issue, add error comment
 
 ### Dependencies
-- gather.ts (#4)
-- summarize.ts (#5)
-- Product configs exist
+- send.ts (#6)
+- subscribers.ts (#7)
+- Email template (#8)
 
-Implement all requirements from the above issue(s). Reference: #9
+Implement all requirements from the above issue(s). Reference: #10
 
 
 **MANDATORY BEFORE OUTPUTTING LOOP_COMPLETE:**
@@ -34,7 +39,7 @@ Implement all requirements from the above issue(s). Reference: #9
 4. Run typecheck: `pnpm --filter web exec tsc --noEmit` — must pass
 5. Run `git status` — working tree must be clean (all changes committed)
 6. Run `git log --oneline -5` — must show commits YOU authored on this branch
-7. Run `/home/jeff/projects/alloy/shared/scripts/ralph-review.sh --worktree /home/jeff/projects/worktrees/beacon-9 --issue 9 --project beacon`
+7. Run `/home/jeff/projects/alloy/shared/scripts/ralph-review.sh --worktree /home/jeff/projects/worktrees/beacon-10 --issue 10 --project beacon`
    - If it prints PASS — you are clear to output LOOP_COMPLETE
    - If it prints BLOCKING — fix every listed issue, re-commit, then re-run the review
    - If it prints ERROR — ignore and proceed (review service unavailable)
