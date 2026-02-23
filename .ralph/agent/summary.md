@@ -2,13 +2,13 @@
 
 **Status:** Completed successfully
 **Iterations:** 1
-**Duration:** 2m 51s
+**Duration:** 3m 56s
 
 ## Tasks
 
-- [ ] Create src/draft.ts
-- [ ] Create .github/workflows/weekly-draft.yml
-- [ ] Typecheck passes
+- [x] Create src/send-on-close.ts
+- [x] Create .github/workflows/send-update.yml
+- [ ] Typecheck
 - [ ] Commit
 
 ## Events
@@ -17,4 +17,4 @@ _No events recorded._
 
 ## Final Commit
 
-34ab5c5: feat: add weekly draft cron workflow (#9)
+18a27df: feat: add send-on-close workflow (#10)
