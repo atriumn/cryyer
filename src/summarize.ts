@@ -20,7 +20,7 @@ export async function generateEmailDraft(
   options: SummarizeOptions = {}
 ): Promise<DraftResult> {
   const modelId =
-    options.model === 'sonnet' ? 'claude-3-5-sonnet-latest' : 'claude-haiku-4-5-20251001';
+    options.model === 'sonnet' ? 'claude-3-5-sonnet-latest' : 'claude-3-5-haiku-latest';
 
   const hasActivity =
     activity.prs.length > 0 || activity.releases.length > 0 || activity.commits.length > 0;
