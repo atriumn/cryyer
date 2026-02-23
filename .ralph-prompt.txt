@@ -1,32 +1,28 @@
 Implement this issue fully per the requirements.
 
-## Issue #10: Build send-on-close workflow
+## Issue #12: Onboard Idynic — product config + voice
 
-Create `.github/workflows/send-update.yml` — triggers when a draft issue is closed, sends the email.
+Create `products/idynic.yaml` with full product config and voice definition.
 
-### Requirements
-- Trigger: `issues` event, `closed` action
-- Filter: only issues with `draft` label
-- Steps:
-  1. Parse product name from issue labels
-  2. Load product config from `products/{product}.yaml`
-  3. Extract email subject + body from issue body
-  4. Fetch subscriber list from Supabase via `subscribers.ts`
-  5. Send via `send.ts` (Resend)
-  6. Add `sent` label to the issue
-  7. Post a comment with delivery stats (X emails sent, any failures)
+### Config
+- `name`: Idynic
+- `repo`: atriumn/idynic
+- `supabase_table`: beta_testers
+- `product_filter`: idynic
+- `from_name`: TBD
+- `from_email`: TBD (needs Resend domain verification)
+- `reply_to`: TBD
 
-### Edge cases
-- Issue closed without `draft` label → skip
-- No subscribers for product → log warning, add comment, don't error
-- Resend failure → re-open issue, add error comment
+### Voice definition
+- Define tone, perspective, style guidelines, and example snippet
+- Idynic is a career companion — voice should be warm, professional, mentorship-oriented
+- Review and tune with a test generation before going live
 
-### Dependencies
-- send.ts (#6)
-- subscribers.ts (#7)
-- Email template (#8)
+### Also
+- Verify from_email domain in Resend
+- Seed initial beta testers in Supabase `beta_testers` table with `product = 'idynic'`
 
-Implement all requirements from the above issue(s). Reference: #10
+Implement all requirements from the above issue(s). Reference: #12
 
 
 **MANDATORY BEFORE OUTPUTTING LOOP_COMPLETE:**
@@ -39,7 +35,7 @@ Implement all requirements from the above issue(s). Reference: #10
 4. Run typecheck: `pnpm --filter web exec tsc --noEmit` — must pass
 5. Run `git status` — working tree must be clean (all changes committed)
 6. Run `git log --oneline -5` — must show commits YOU authored on this branch
-7. Run `/home/jeff/projects/alloy/shared/scripts/ralph-review.sh --worktree /home/jeff/projects/worktrees/beacon-10 --issue 10 --project beacon`
+7. Run `/home/jeff/projects/alloy/shared/scripts/ralph-review.sh --worktree /home/jeff/projects/worktrees/beacon-12 --issue 12 --project beacon`
    - If it prints PASS — you are clear to output LOOP_COMPLETE
    - If it prints BLOCKING — fix every listed issue, re-commit, then re-run the review
    - If it prints ERROR — ignore and proceed (review service unavailable)

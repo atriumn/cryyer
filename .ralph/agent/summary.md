@@ -2,14 +2,11 @@
 
 **Status:** Completed successfully
 **Iterations:** 1
-**Duration:** 3m 56s
+**Duration:** 3m 7s
 
 ## Tasks
 
-- [x] Create src/send-on-close.ts
-- [x] Create .github/workflows/send-update.yml
-- [ ] Typecheck
-- [ ] Commit
+_No scratchpad found._
 
 ## Events
 
@@ -17,4 +14,4 @@ _No events recorded._
 
 ## Final Commit
 
-18a27df: feat: add send-on-close workflow (#10)
+e254817: feat: add Idynic product configuration with extended schema
