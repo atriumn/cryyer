@@ -1,6 +1,7 @@
 export interface Product {
   id: string;
   name: string;
+  tagline?: string;
   voice: string;
   githubRepo: string;
   emailSubjectTemplate: string;

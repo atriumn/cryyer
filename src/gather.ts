@@ -3,6 +3,7 @@ import type { Product } from './types.js';
 
 export interface GatheredPR {
   title: string;
+  body?: string;
   url: string;
   mergedAt: string;
   author: string;
@@ -79,6 +80,7 @@ async function fetchMergedPRs(
 
       prs.push({
         title: pr.title,
+        body: pr.body ?? undefined,
         url: pr.html_url,
         mergedAt: pr.merged_at,
         author: pr.user?.login ?? 'unknown',

@@ -1,27 +1,28 @@
-# Scratchpad
+# Scratchpad — Issue #5: Build LLM draft generator
 
 ## Objective
-Implement Issue #4: Build GitHub activity gatherer (`src/gather.ts`)
-
-## Requirements
-- Accept a product config (repo name, date range)
-- Use Octokit to fetch merged PRs, releases, and optionally commits
-- Return `{ prs: [...], releases: [...], commits: [...] }`
-- Handle repos with no activity gracefully
-- Filter out bot/dependabot PRs
+Create `src/summarize.ts` — calls Claude API to generate a beta tester email draft returning `{ subject, body }`.
 
 ## Plan
-1. [x] Study codebase (types.ts, github.ts, index.ts, package.json)
-2. [ ] Create `src/gather.ts` with:
-   - `GatheredActivity` return type interface
-   - `PR`, `Release`, `Commit` interfaces
-   - `gatherWeeklyActivity(octokit, product, since)` function
-   - Filter dependabot/bot PRs
-   - Fetch commits only if no PRs/releases
-3. [ ] Run typecheck
-4. [ ] Commit
+
+### Requirements
+- Accept: Product config (name, voice), GatheredActivity (weekly data), weekOf, optional previousUpdate
+- Build prompt with: product name, voice instructions, formatted activity, previous update context
+- Call Claude Haiku by default (Sonnet as option)
+- Return `{ subject: string, body: string }`
+- Edge case: no activity → quiet week update or what's coming teaser
+
+### Approach
+- Use GatheredActivity type from gather.ts for the weekly data
+- Format PRs, releases, commits into readable sections
+- Ask Claude to return structured JSON with subject + body
+- Parse the JSON response robustly
+
+## Tasks
+- [x] Create src/summarize.ts
+- [ ] Run typecheck and verify
 
 ## Notes
-- Project uses ESM with Node16 module resolution
-- No test framework configured (no test script in package.json)
-- Uses octokit v4
+- No ESLint config in project, lint will be skipped
+- No test files exist
+- tsconfig uses Node16 module resolution — must use .js extensions in imports

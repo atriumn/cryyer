@@ -2,11 +2,12 @@
 
 **Status:** Completed successfully
 **Iterations:** 1
-**Duration:** 2m 27s
+**Duration:** 4m 9s
 
 ## Tasks
 
-_No scratchpad found._
+- [x] Create src/summarize.ts
+- [ ] Run typecheck and verify
 
 ## Events
 
@@ -14,4 +15,4 @@ _No events recorded._
 
 ## Final Commit
 
-6eb447c: feat: implement GitHub activity gatherer (src/gather.ts)
+ef3dac6: fix: add tagline to Product, PR body to GatheredPR, update prompt
