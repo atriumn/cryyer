@@ -1,0 +1,11 @@
+Hi {{testerName}},
+
+Here's your weekly update for {{productName}} for the week of {{weekOf}}:
+
+{{body}}
+
+Thanks for being a beta tester!
+
+---
+You're receiving this because you're a beta tester for {{productName}}.
+To unsubscribe, reply with "unsubscribe" in the subject line.
