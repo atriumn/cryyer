@@ -41,7 +41,11 @@ export async function gatherWeeklyActivity(
   product: Product,
   since: string
 ): Promise<GatheredActivity> {
-  const [owner, repo] = product.githubRepo.split('/');
+  const repoStr = product.repo || product.githubRepo;
+  if (!repoStr) {
+    throw new Error(`Missing repo configuration for product ${product.id}`);
+  }
+  const [owner, repo] = repoStr.split('/');
 
   const prs = await fetchMergedPRs(octokit, owner, repo, since);
   const releases = await fetchReleases(octokit, owner, repo, since);
