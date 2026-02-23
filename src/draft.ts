@@ -1,0 +1,91 @@
+import { join } from 'path';
+import { Octokit } from 'octokit';
+import Anthropic from '@anthropic-ai/sdk';
+import { loadProducts } from './config.js';
+import { gatherWeeklyActivity } from './gather.js';
+import { generateEmailDraft } from './summarize.js';
+
+async function main(): Promise<void> {
+  const githubToken = requireEnv('GITHUB_TOKEN');
+  const anthropicApiKey = requireEnv('ANTHROPIC_API_KEY');
+  const beaconRepo = requireEnv('BEACON_REPO'); // e.g. "owner/beacon"
+
+  const productsDir = join(process.cwd(), 'products');
+  const products = loadProducts(productsDir);
+
+  const octokit = new Octokit({ auth: githubToken });
+  const anthropic = new Anthropic({ apiKey: anthropicApiKey });
+
+  const [beaconOwner, beaconRepoName] = beaconRepo.split('/');
+
+  const weekOf = getWeekOf();
+  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  console.log(`Generating draft issues for week of ${weekOf}`);
+
+  for (const product of products) {
+    console.log(`Processing product: ${product.name}`);
+
+    try {
+      const activity = await gatherWeeklyActivity(octokit, product, since);
+      const draft = await generateEmailDraft(anthropic, product, activity, weekOf);
+
+      const issueTitle = `[${product.name}] Weekly Update — ${weekOf}`;
+      const issueBody = `**Subject:** ${draft.subject}\n\n---\n\n${draft.body}`;
+
+      await ensureLabel(octokit, beaconOwner, beaconRepoName, 'draft', '0075ca');
+      await ensureLabel(octokit, beaconOwner, beaconRepoName, product.id, 'e4e669');
+
+      const { data: issue } = await octokit.rest.issues.create({
+        owner: beaconOwner,
+        repo: beaconRepoName,
+        title: issueTitle,
+        body: issueBody,
+        labels: ['draft', product.id],
+      });
+
+      console.log(`  Created issue: ${issue.html_url}`);
+    } catch (err) {
+      console.error(`  Error processing ${product.name}:`, err);
+      process.exitCode = 1;
+    }
+  }
+}
+
+async function ensureLabel(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  name: string,
+  color: string
+): Promise<void> {
+  try {
+    await octokit.rest.issues.getLabel({ owner, repo, name });
+  } catch {
+    try {
+      await octokit.rest.issues.createLabel({ owner, repo, name, color });
+    } catch {
+      // Label may already exist due to a race condition; safe to ignore
+    }
+  }
+}
+
+function getWeekOf(): string {
+  const now = new Date();
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - now.getDay() + 1);
+  return monday.toISOString().split('T')[0];
+}
+
+function requireEnv(key: string): string {
+  const value = process.env[key];
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${key}`);
+  }
+  return value;
+}
+
+main().catch((err) => {
+  console.error('Fatal error:', err);
+  process.exit(1);
+});
