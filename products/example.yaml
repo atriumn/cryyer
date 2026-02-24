@@ -3,5 +3,5 @@
 id: example-product
 name: Example Product
 voice: "Friendly and enthusiastic, with a focus on developer experience"
-githubRepo: "owner/repo"
+repo: "owner/repo"
 emailSubjectTemplate: "{{weekOf}} Weekly Update — Example Product"

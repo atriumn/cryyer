@@ -2,6 +2,27 @@
   "name": "cryyer",
   "version": "0.1.0",
   "description": "Centralized beta tester update system — automated weekly emails with per-product voice powered by LLM drafts",
+  "license": "MIT",
+  "author": "Atriumn",
+  "homepage": "https://github.com/atriumn/cryyer#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/atriumn/cryyer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/atriumn/cryyer/issues"
+  },
+  "keywords": [
+    "email",
+    "newsletter",
+    "beta-testers",
+    "llm",
+    "automation",
+    "mcp"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "type": "module",
   "main": "dist/index.js",
   "bin": {
