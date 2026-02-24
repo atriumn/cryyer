@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="cryer-transparent.png" alt="Cryer" width="200">
+</p>
+
 # Cryer
 
 Automated weekly email updates for beta testers, with per-product voice powered by LLM-drafted content.
