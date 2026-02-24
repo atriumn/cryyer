@@ -15,9 +15,9 @@ npm run dev          # Build then run (npm run build && npm start)
 npm start            # Run compiled output (node dist/index.js)
 ```
 
-## What Beacon Does
+## What Cryer Does
 
-Beacon sends automated weekly email updates to beta testers, with per-product voice powered by Claude-drafted content. It follows a two-stage pipeline:
+Cryer sends automated weekly email updates to beta testers, with per-product voice powered by Claude-drafted content. It follows a two-stage pipeline:
 
 1. **Weekly Draft** (cron, Mondays): For each product, gathers GitHub activity (merged PRs, releases, notable commits), generates an email draft via Claude, and creates a GitHub issue for human review.
 2. **Send on Close**: When a draft issue is closed (approved), emails are sent to subscribers via Resend.
@@ -65,7 +65,7 @@ Required across entry points (not all needed for every entry point):
 GITHUB_TOKEN, ANTHROPIC_API_KEY, RESEND_API_KEY
 SUPABASE_URL, SUPABASE_SERVICE_KEY
 FROM_EMAIL, FROM_NAME
-BEACON_REPO          # "owner/repo" for draft issue creation
+CRYER_REPO          # "owner/repo" for draft issue creation
 ISSUE_NUMBER         # Set by GitHub Actions for send-on-close
 GITHUB_REPOSITORY    # Set by GitHub Actions
 ```
@@ -73,7 +73,7 @@ GITHUB_REPOSITORY    # Set by GitHub Actions
 ## GitHub Workflows
 
 - **`ci.yml`**: Runs on push/PR to main. Lints, typechecks, and runs tests.
-- **`weekly-draft.yml`**: Cron Monday 1pm UTC. Runs `node dist/draft.js`. Needs `GITHUB_TOKEN`, `ANTHROPIC_API_KEY`, `BEACON_REPO`.
+- **`weekly-draft.yml`**: Cron Monday 1pm UTC. Runs `node dist/draft.js`. Needs `GITHUB_TOKEN`, `ANTHROPIC_API_KEY`, `CRYER_REPO`.
 - **`send-update.yml`**: Fires on issue close (filtered to `draft` label). Runs `node dist/send-on-close.js`. Needs all Resend/Supabase secrets.
 
 ## Conventions

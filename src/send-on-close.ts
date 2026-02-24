@@ -53,7 +53,7 @@ async function main(): Promise<void> {
   const supabaseUrl = requireEnv('SUPABASE_URL');
   const supabaseServiceKey = requireEnv('SUPABASE_SERVICE_KEY');
   const fromEmail = requireEnv('FROM_EMAIL');
-  const fromName = process.env['FROM_NAME'] ?? 'Beacon Updates';
+  const fromName = process.env['FROM_NAME'] ?? 'Cryer Updates';
   const issueNumber = parseInt(requireEnv('ISSUE_NUMBER'), 10);
   const [repoOwner, repoName] = requireEnv('GITHUB_REPOSITORY').split('/');
 

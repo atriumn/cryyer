@@ -1,17 +1,17 @@
-# beacon
+# cryer
 Centralized beta tester update system — automated weekly emails with per-product voice powered by LLM drafts
 
 ## Setup
 
 ### Environment Configuration
-Beacon requires the following environment variables to operate. These must be set as GitHub repository secrets for CI/CD workflows, or as environment variables for local development.
+Cryer requires the following environment variables to operate. These must be set as GitHub repository secrets for CI/CD workflows, or as environment variables for local development.
 
 #### Required Secrets
 
 1. **`GITHUB_TOKEN`**
    - Purpose: Read access to GitHub repositories for activity gathering
    - Requirements: Must have read permissions on:
-     - `atriumn/beacon` (this repository)
+     - `atriumn/cryer` (this repository)
      - `atriumn/idynic`
      - `atriumn/celiumn`
      - Any other product repositories
@@ -56,5 +56,5 @@ gh secret set FROM_EMAIL
 ```
 
 #### Documentation
-- **Supabase Project**: Beacon uses the Supabase project at `https://[project-id].supabase.co` (set via `SUPABASE_URL` secret)
+- **Supabase Project**: Cryer uses the Supabase project at `https://[project-id].supabase.co` (set via `SUPABASE_URL` secret)
 - For detailed environment variable documentation, see [CLAUDE.md](./CLAUDE.md)

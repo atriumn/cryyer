@@ -8,7 +8,7 @@ import { generateEmailDraft } from './summarize.js';
 async function main(): Promise<void> {
   const githubToken = requireEnv('GITHUB_TOKEN');
   const anthropicApiKey = requireEnv('ANTHROPIC_API_KEY');
-  const beaconRepo = requireEnv('BEACON_REPO'); // e.g. "owner/beacon"
+  const cryerRepo = requireEnv('CRYER_REPO'); // e.g. "owner/cryer"
 
   const productsDir = join(process.cwd(), 'products');
   const products = loadProducts(productsDir);
@@ -16,7 +16,7 @@ async function main(): Promise<void> {
   const octokit = new Octokit({ auth: githubToken });
   const anthropic = new Anthropic({ apiKey: anthropicApiKey });
 
-  const [beaconOwner, beaconRepoName] = beaconRepo.split('/');
+  const [cryerOwner, cryerRepoName] = cryerRepo.split('/');
 
   const weekOf = getWeekOf();
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -33,12 +33,12 @@ async function main(): Promise<void> {
       const issueTitle = `[${product.name}] Weekly Update — ${weekOf}`;
       const issueBody = `**Subject:** ${draft.subject}\n\n---\n\n${draft.body}`;
 
-      await ensureLabel(octokit, beaconOwner, beaconRepoName, 'draft', '0075ca');
-      await ensureLabel(octokit, beaconOwner, beaconRepoName, product.id, 'e4e669');
+      await ensureLabel(octokit, cryerOwner, cryerRepoName, 'draft', '0075ca');
+      await ensureLabel(octokit, cryerOwner, cryerRepoName, product.id, 'e4e669');
 
       const { data: issue } = await octokit.rest.issues.create({
-        owner: beaconOwner,
-        repo: beaconRepoName,
+        owner: cryerOwner,
+        repo: cryerRepoName,
         title: issueTitle,
         body: issueBody,
         labels: ['draft', product.id],

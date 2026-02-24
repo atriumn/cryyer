@@ -31,6 +31,6 @@ describe('loadProducts', () => {
   });
 
   it('throws on non-existent directory', () => {
-    expect(() => loadProducts('/tmp/nonexistent-beacon-dir')).toThrow();
+    expect(() => loadProducts('/tmp/nonexistent-cryer-dir')).toThrow();
   });
 });
