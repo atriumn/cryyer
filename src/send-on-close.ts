@@ -5,7 +5,6 @@ import { Resend } from 'resend';
 import { loadProducts } from './config.js';
 import { createSubscriberStore } from './subscriber-store.js';
 import { sendWeeklyEmails } from './send.js';
-import type { BetaTester } from './types.js';
 
 function requireEnv(key: string): string {
   const value = process.env[key];
@@ -125,18 +124,10 @@ async function main(): Promise<void> {
     return;
   }
 
-  // Adapt Subscriber[] to BetaTester[] for sendWeeklyEmails
-  const betaTesters: BetaTester[] = subscribers.map((s, i) => ({
-    id: String(i),
-    email: s.email,
-    name: s.name ?? '',
-    productIds: [productId],
-  }));
-
   // Send emails
   let stats;
   try {
-    stats = await sendWeeklyEmails(resend, product, betaTesters, emailContent, fromName, fromEmail);
+    stats = await sendWeeklyEmails(resend, product, subscribers, emailContent, fromName, fromEmail);
   } catch (err) {
     // Re-open issue and add error comment on unexpected send failure
     await octokit.rest.issues.update({

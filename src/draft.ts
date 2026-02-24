@@ -1,4 +1,5 @@
 import { join } from 'path';
+import { fileURLToPath } from 'url';
 import { Octokit } from 'octokit';
 import { loadProducts } from './config.js';
 import { gatherWeeklyActivity } from './gather.js';
@@ -51,7 +52,7 @@ async function main(): Promise<void> {
   }
 }
 
-async function ensureLabel(
+export async function ensureLabel(
   octokit: Octokit,
   owner: string,
   repo: string,
@@ -69,14 +70,14 @@ async function ensureLabel(
   }
 }
 
-function getWeekOf(): string {
+export function getWeekOf(): string {
   const now = new Date();
   const monday = new Date(now);
   monday.setDate(now.getDate() - now.getDay() + 1);
   return monday.toISOString().split('T')[0];
 }
 
-function requireEnv(key: string): string {
+export function requireEnv(key: string): string {
   const value = process.env[key];
   if (!value) {
     throw new Error(`Missing required environment variable: ${key}`);
@@ -84,7 +85,9 @@ function requireEnv(key: string): string {
   return value;
 }
 
-main().catch((err) => {
-  console.error('Fatal error:', err);
-  process.exit(1);
-});
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main().catch((err) => {
+    console.error('Fatal error:', err);
+    process.exit(1);
+  });
+}

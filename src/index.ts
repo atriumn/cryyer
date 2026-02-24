@@ -1,20 +1,22 @@
 import { join } from 'path';
+import { fileURLToPath } from 'url';
+import { Octokit } from 'octokit';
+import { Resend } from 'resend';
 import { loadConfig, loadProducts } from './config.js';
-import { createGitHubClient, fetchWeeklyChanges } from './github.js';
-import { draftWeeklyUpdate } from './llm.js';
-import { createEmailClient, sendBatch } from './email.js';
+import { gatherWeeklyActivity } from './gather.js';
+import { generateEmailDraft } from './summarize.js';
+import { sendWeeklyEmails } from './send.js';
 import { createLLMProvider } from './llm-provider.js';
 import { createSubscriberStore } from './subscriber-store.js';
-import type { EmailJob } from './types.js';
 
 async function main(): Promise<void> {
   const config = loadConfig();
   const productsDir = join(process.cwd(), 'products');
   const products = loadProducts(productsDir);
 
-  const octokit = createGitHubClient(config.githubToken);
+  const octokit = new Octokit({ auth: config.githubToken });
   const llm = createLLMProvider();
-  const resend = createEmailClient(config.resendApiKey);
+  const resend = new Resend(config.resendApiKey);
   const store = createSubscriberStore();
 
   const weekOf = getWeekOf();
@@ -22,55 +24,55 @@ async function main(): Promise<void> {
 
   console.log(`Running cryyer for week of ${weekOf}`);
 
-  const jobs: EmailJob[] = [];
-
   for (const product of products) {
     console.log(`Processing product: ${product.name}`);
 
-    const repoStr = product.repo || product.githubRepo;
-    if (!repoStr) {
-      console.error(`  Missing repo configuration for ${product.name}`);
-      continue;
+    try {
+      const activity = await gatherWeeklyActivity(octokit, product, since);
+      const draft = await generateEmailDraft(llm, product, activity, weekOf);
+      const subscribers = await store.getSubscribers(product.id);
+
+      if (subscribers.length === 0) {
+        console.log(`  No subscribers for ${product.name}, skipping`);
+        continue;
+      }
+
+      const fromName = product.from_name ?? process.env['FROM_NAME'] ?? 'Cryyer Updates';
+      const fromEmail = product.from_email ?? config.fromEmail;
+      const replyTo = product.reply_to;
+
+      const stats = await sendWeeklyEmails(
+        resend,
+        product,
+        subscribers,
+        { subject: draft.subject, body: draft.body },
+        fromName,
+        fromEmail,
+        replyTo
+      );
+
+      console.log(`  ${product.name}: ${stats.sent} sent, ${stats.failed} failed`);
+
+      for (const subscriber of subscribers) {
+        await store.recordEmailSent(subscriber.email, product.id, weekOf);
+      }
+    } catch (err) {
+      console.error(`  Error processing ${product.name}:`, err);
+      process.exitCode = 1;
     }
-    const [owner, repo] = repoStr.split('/');
-    const changes = await fetchWeeklyChanges(octokit, owner, repo, since);
-
-    if (changes.length === 0) {
-      console.log(`  No changes for ${product.name}, skipping`);
-      continue;
-    }
-
-    const draft = await draftWeeklyUpdate(llm, product, changes, weekOf);
-    const subscribers = await store.getSubscribers(product.id);
-
-    for (const subscriber of subscribers) {
-      jobs.push({
-        testerId: subscriber.email,
-        productId: product.id,
-        weekOf,
-        subject: product.emailSubjectTemplate.replace('{{weekOf}}', weekOf),
-        body: draft,
-      });
-    }
-  }
-
-  console.log(`Sending ${jobs.length} emails...`);
-  const { sent, failed } = await sendBatch(resend, jobs, config.fromEmail);
-  console.log(`Done: ${sent} sent, ${failed} failed`);
-
-  for (const job of jobs) {
-    await store.recordEmailSent(job.testerId, job.productId, job.weekOf);
   }
 }
 
-function getWeekOf(): string {
+export function getWeekOf(): string {
   const now = new Date();
   const monday = new Date(now);
   monday.setDate(now.getDate() - now.getDay() + 1);
   return monday.toISOString().split('T')[0];
 }
 
-main().catch((err) => {
-  console.error('Fatal error:', err);
-  process.exit(1);
-});
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main().catch((err) => {
+    console.error('Fatal error:', err);
+    process.exit(1);
+  });
+}
