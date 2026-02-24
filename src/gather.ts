@@ -31,7 +31,7 @@ export interface GatheredActivity {
 
 const BOT_LOGINS = ['dependabot', 'dependabot[bot]', 'renovate', 'renovate[bot]', 'github-actions[bot]'];
 
-function isBot(login: string | undefined): boolean {
+export function isBot(login: string | undefined): boolean {
   if (!login) return false;
   return BOT_LOGINS.includes(login.toLowerCase()) || login.toLowerCase().endsWith('[bot]');
 }

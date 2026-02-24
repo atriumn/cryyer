@@ -1,4 +1,5 @@
 import { join } from 'path';
+import { fileURLToPath } from 'url';
 import { Octokit } from 'octokit';
 import { Resend } from 'resend';
 import { createClient } from '@supabase/supabase-js';
@@ -13,7 +14,7 @@ function requireEnv(key: string): string {
   return value;
 }
 
-function parseIssueBody(body: string): { subject: string; emailBody: string } | null {
+export function parseIssueBody(body: string): { subject: string; emailBody: string } | null {
   // Body format: **Subject:** ${subject}\n\n---\n\n${body}
   const subjectMatch = body.match(/^\*\*Subject:\*\*\s*(.+)$/m);
   if (!subjectMatch) return null;
@@ -191,7 +192,9 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((err) => {
-  console.error('Fatal error:', err);
-  process.exit(1);
-});
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main().catch((err) => {
+    console.error('Fatal error:', err);
+    process.exit(1);
+  });
+}

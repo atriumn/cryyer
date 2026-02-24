@@ -74,7 +74,7 @@ Respond with ONLY a JSON object — no explanation, no markdown fences, just the
   return parseResponse(content.text);
 }
 
-function formatActivity(activity: GatheredActivity): string {
+export function formatActivity(activity: GatheredActivity): string {
   const lines: string[] = [];
 
   if (activity.releases.length > 0) {
@@ -107,7 +107,7 @@ function formatActivity(activity: GatheredActivity): string {
   return lines.join('\n');
 }
 
-function parseResponse(text: string): DraftResult {
+export function parseResponse(text: string): DraftResult {
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
     throw new Error('Could not parse JSON response from LLM');
