@@ -2,9 +2,8 @@ import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { Octokit } from 'octokit';
 import { Resend } from 'resend';
-import { createClient } from '@supabase/supabase-js';
 import { loadProducts } from './config.js';
-import { getSubscribers } from './subscribers.js';
+import { createSubscriberStore } from './subscriber-store.js';
 import { sendWeeklyEmails } from './send.js';
 import type { BetaTester } from './types.js';
 
@@ -50,8 +49,6 @@ async function ensureLabel(
 async function main(): Promise<void> {
   const githubToken = requireEnv('GITHUB_TOKEN');
   const resendApiKey = requireEnv('RESEND_API_KEY');
-  const supabaseUrl = requireEnv('SUPABASE_URL');
-  const supabaseServiceKey = requireEnv('SUPABASE_SERVICE_KEY');
   const fromEmail = requireEnv('FROM_EMAIL');
   const fromName = process.env['FROM_NAME'] ?? 'Cryer Updates';
   const issueNumber = parseInt(requireEnv('ISSUE_NUMBER'), 10);
@@ -59,7 +56,7 @@ async function main(): Promise<void> {
 
   const octokit = new Octokit({ auth: githubToken });
   const resend = new Resend(resendApiKey);
-  const db = createClient(supabaseUrl, supabaseServiceKey);
+  const store = createSubscriberStore();
 
   // Fetch issue
   const { data: issue } = await octokit.rest.issues.get({
@@ -108,7 +105,7 @@ async function main(): Promise<void> {
   const emailContent = { subject: parsed.subject, body: parsed.emailBody };
 
   // Fetch subscribers
-  const subscribers = await getSubscribers(db, productId);
+  const subscribers = await store.getSubscribers(productId);
 
   if (subscribers.length === 0) {
     console.warn(`No active subscribers found for product: ${productId}`);

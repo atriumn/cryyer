@@ -1,3 +1,4 @@
+// @deprecated Use subscriber-store.ts (SubscriberStore) instead. This module is kept for backwards compatibility.
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { BetaTester, Product } from './types.js';
 

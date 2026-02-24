@@ -1,0 +1,16 @@
+[
+  {
+    "email": "alice@example.com",
+    "name": "Alice",
+    "productIds": ["my-product", "other-product"]
+  },
+  {
+    "email": "bob@example.com",
+    "name": "Bob",
+    "productIds": ["my-product"]
+  },
+  {
+    "email": "charlie@example.com",
+    "productIds": ["other-product"]
+  }
+]

@@ -17,6 +17,8 @@
     "@anthropic-ai/sdk": "^0.36.3",
     "@google/generative-ai": "^0.24.1",
     "@supabase/supabase-js": "^2.47.10",
+    "google-auth-library": "^10.5.0",
+    "google-spreadsheet": "^5.2.0",
     "octokit": "^4.0.2",
     "openai": "^6.24.0",
     "resend": "^4.1.2",

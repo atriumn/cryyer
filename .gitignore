@@ -28,3 +28,7 @@ Thumbs.db
 
 # TypeScript
 *.tsbuildinfo
+
+# Subscriber data (local JSON store)
+subscribers.json
+email-log.json

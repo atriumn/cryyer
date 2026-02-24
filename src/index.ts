@@ -3,8 +3,8 @@ import { loadConfig, loadProducts } from './config.js';
 import { createGitHubClient, fetchWeeklyChanges } from './github.js';
 import { draftWeeklyUpdate } from './llm.js';
 import { createEmailClient, sendBatch } from './email.js';
-import { createDbClient, getBetaTesters, recordEmailSent } from './db.js';
 import { createLLMProvider } from './llm-provider.js';
+import { createSubscriberStore } from './subscriber-store.js';
 import type { EmailJob } from './types.js';
 
 async function main(): Promise<void> {
@@ -15,7 +15,7 @@ async function main(): Promise<void> {
   const octokit = createGitHubClient(config.githubToken);
   const llm = createLLMProvider();
   const resend = createEmailClient(config.resendApiKey);
-  const db = createDbClient(config.supabaseUrl, config.supabaseServiceKey);
+  const store = createSubscriberStore();
 
   const weekOf = getWeekOf();
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -41,11 +41,11 @@ async function main(): Promise<void> {
     }
 
     const draft = await draftWeeklyUpdate(llm, product, changes, weekOf);
-    const testers = await getBetaTesters(db, product.id);
+    const subscribers = await store.getSubscribers(product.id);
 
-    for (const tester of testers) {
+    for (const subscriber of subscribers) {
       jobs.push({
-        testerId: tester.email,
+        testerId: subscriber.email,
         productId: product.id,
         weekOf,
         subject: product.emailSubjectTemplate.replace('{{weekOf}}', weekOf),
@@ -59,7 +59,7 @@ async function main(): Promise<void> {
   console.log(`Done: ${sent} sent, ${failed} failed`);
 
   for (const job of jobs) {
-    await recordEmailSent(db, job.testerId, job.productId, job.weekOf);
+    await store.recordEmailSent(job.testerId, job.productId, job.weekOf);
   }
 }
 

@@ -6,8 +6,6 @@ import type { Product } from './types.js';
 export interface Config {
   githubToken: string;
   resendApiKey: string;
-  supabaseUrl: string;
-  supabaseServiceKey: string;
   fromEmail: string;
 }
 
@@ -15,8 +13,6 @@ export function loadConfig(): Config {
   return {
     githubToken: requireEnv('GITHUB_TOKEN'),
     resendApiKey: requireEnv('RESEND_API_KEY'),
-    supabaseUrl: requireEnv('SUPABASE_URL'),
-    supabaseServiceKey: requireEnv('SUPABASE_SERVICE_KEY'),
     fromEmail: requireEnv('FROM_EMAIL'),
   };
 }

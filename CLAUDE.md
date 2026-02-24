@@ -38,9 +38,10 @@ Key modules:
 | `gather.ts` | Fetches merged PRs, releases, fallback commits via Octokit; filters bots |
 | `llm-provider.ts` | LLMProvider interface and factory; adapters for Anthropic, OpenAI, Gemini |
 | `summarize.ts` | Builds prompt with product voice, calls LLM provider, parses JSON `{subject, body}` response |
-| `subscribers.ts` | Queries Supabase for active beta testers per product |
+| `subscriber-store.ts` | SubscriberStore interface and factory; adapters for Supabase, JSON file, Google Sheets |
+| `subscribers.ts` | *(deprecated)* Legacy Supabase subscriber query; use `subscriber-store.ts` instead |
 | `send.ts` | Sends batch emails via Resend with HTML template wrapping |
-| `llm.ts` / `email.ts` / `github.ts` / `db.ts` | Thin client constructors for Resend, Octokit, Supabase; legacy LLM helper |
+| `llm.ts` / `email.ts` / `github.ts` / `db.ts` | Thin client constructors for Resend, Octokit, Supabase; legacy LLM helper. `db.ts` is deprecated in favor of `subscriber-store.ts` |
 
 ## Product Configuration
 
@@ -64,11 +65,25 @@ Required across entry points (not all needed for every entry point):
 
 ```
 GITHUB_TOKEN, RESEND_API_KEY
-SUPABASE_URL, SUPABASE_SERVICE_KEY
 FROM_EMAIL, FROM_NAME
 CRYER_REPO          # "owner/repo" for draft issue creation
 ISSUE_NUMBER         # Set by GitHub Actions for send-on-close
 GITHUB_REPOSITORY    # Set by GitHub Actions
+```
+
+### Subscriber Store Configuration
+
+```
+SUBSCRIBER_STORE             # "supabase" (default), "json", or "google-sheets"
+# Supabase (default):
+SUPABASE_URL, SUPABASE_SERVICE_KEY
+# JSON file:
+SUBSCRIBERS_JSON_PATH        # Default: ./subscribers.json
+EMAIL_LOG_JSON_PATH          # Default: ./email-log.json
+# Google Sheets:
+GOOGLE_SHEETS_SPREADSHEET_ID
+GOOGLE_SERVICE_ACCOUNT_EMAIL
+GOOGLE_PRIVATE_KEY
 ```
 
 ### LLM Provider Configuration
@@ -98,3 +113,5 @@ Default models per provider: Anthropic → `claude-3-5-haiku-latest`, OpenAI →
 - Bot activity (dependabot, renovate, github-actions) is filtered out in `gather.ts`
 - LLM provider is configurable via `LLM_PROVIDER` env var; defaults to Anthropic Claude
 - Default model per provider can be overridden via `LLM_MODEL` env var
+- Subscriber store is configurable via `SUBSCRIBER_STORE` env var; defaults to Supabase
+- `db.ts` and `subscribers.ts` are deprecated; use `subscriber-store.ts` for all subscriber access
