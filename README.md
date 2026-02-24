@@ -168,7 +168,7 @@ GOOGLE_SHEETS_SPREADSHEET_ID=1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms
 
 #### 6. Share the spreadsheet
 
-Share the spreadsheet with your service account email (from step 4) as a **Viewer**.
+Share the spreadsheet with your service account email (from step 4) as an **Editor** (required for add/remove subscriber support; Viewer is sufficient for read-only use).
 
 #### 7. Set up columns
 
@@ -232,6 +232,59 @@ Secrets needed: `GITHUB_TOKEN`, `RESEND_API_KEY`, `FROM_EMAIL`, plus the secrets
 
 Runs on push/PR to main. Lints, typechecks, and runs tests.
 
+## MCP Server (Claude Desktop)
+
+Cryer includes an MCP server that lets you review, edit, and send drafts conversationally in Claude Desktop. It also supports subscriber management.
+
+### Setup
+
+```bash
+npm run build   # compiles dist/mcp.js
+```
+
+Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
+
+```json
+{
+  "mcpServers": {
+    "cryer": {
+      "command": "node",
+      "args": ["/path/to/beacon/dist/mcp.js"],
+      "env": {
+        "GITHUB_TOKEN": "ghp_...",
+        "CRYER_REPO": "owner/repo",
+        "CRYER_ROOT": "/path/to/beacon",
+        "RESEND_API_KEY": "re_...",
+        "FROM_EMAIL": "updates@example.com",
+        "SUBSCRIBER_STORE": "json",
+        "LLM_PROVIDER": "anthropic",
+        "ANTHROPIC_API_KEY": "sk-ant-..."
+      }
+    }
+  }
+}
+```
+
+Only `GITHUB_TOKEN` and `CRYER_REPO` are needed for read-only tools (`list_drafts`, `get_draft`). Other env vars are needed for sending, regenerating, and subscriber management.
+
+### Tools
+
+| Tool | Description |
+|---|---|
+| `list_drafts` | List open draft issues |
+| `get_draft` | Get full draft content with subscriber count |
+| `update_draft` | Save revised subject + body |
+| `send_draft` | Send emails, close issue, post stats |
+| `regenerate_draft` | Re-gather activity + re-draft via LLM |
+| `list_products` | Show configured products |
+| `list_subscribers` | Show subscribers for a product |
+| `add_subscriber` | Add a subscriber to a product |
+| `remove_subscriber` | Unsubscribe someone from a product |
+
+### Prompt
+
+Use the `review_weekly_drafts` prompt for the Monday morning review workflow — it walks through each pending draft and asks whether to send, edit, regenerate, or skip.
+
 ## Development
 
 ```bash
@@ -242,4 +295,5 @@ npm run lint         # ESLint
 npm test             # run tests (vitest)
 npm run test:watch   # run tests in watch mode
 npm run dev          # build + run
+npm run mcp          # run MCP server
 ```

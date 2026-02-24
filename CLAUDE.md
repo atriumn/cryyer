@@ -13,6 +13,7 @@ npm test             # Run unit tests (vitest)
 npm run test:watch   # Run tests in watch mode
 npm run dev          # Build then run (npm run build && npm start)
 npm start            # Run compiled output (node dist/index.js)
+npm run mcp          # Run MCP server (node dist/mcp.js)
 ```
 
 ## What Cryer Does
@@ -24,11 +25,12 @@ Cryer sends automated weekly email updates to beta testers, with per-product voi
 
 ## Architecture
 
-Three distinct entry points, each compiled from `src/` to `dist/`:
+Four distinct entry points, each compiled from `src/` to `dist/`:
 
 - **`index.ts`** — Direct orchestration: gather activity, draft, query subscribers, send emails in one run.
 - **`draft.ts`** — Used by `weekly-draft.yml` workflow. Gathers activity, generates drafts via LLM, creates GitHub issues with `draft` + product-id labels.
 - **`send-on-close.ts`** — Used by `send-update.yml` workflow. Triggered on issue close, parses the draft issue body (`**Subject:** ...\n\n---\n\n<body>`), queries Supabase for subscribers, sends via Resend, posts delivery stats as issue comment.
+- **`mcp.ts`** — MCP server for Claude Desktop. Exposes 9 tools (list/get/update/send/regenerate drafts, list products, list/add/remove subscribers) and 1 prompt (`review_weekly_drafts`). Uses stdio transport. Run via `node dist/mcp.js` or `npx cryer-mcp`.
 
 Key modules:
 
@@ -38,7 +40,8 @@ Key modules:
 | `gather.ts` | Fetches merged PRs, releases, fallback commits via Octokit; filters bots |
 | `llm-provider.ts` | LLMProvider interface and factory; adapters for Anthropic, OpenAI, Gemini |
 | `summarize.ts` | Builds prompt with product voice, calls LLM provider, parses JSON `{subject, body}` response |
-| `subscriber-store.ts` | SubscriberStore interface and factory; adapters for Supabase, JSON file, Google Sheets |
+| `subscriber-store.ts` | SubscriberStore interface and factory; adapters for Supabase, JSON file, Google Sheets. Supports `getSubscribers`, `recordEmailSent`, `addSubscriber`, `removeSubscriber`. |
+| `mcp.ts` | MCP server entry point; 9 tools + 1 prompt for draft review and subscriber management |
 | `subscribers.ts` | *(deprecated)* Legacy Supabase subscriber query; use `subscriber-store.ts` instead |
 | `send.ts` | Sends batch emails via Resend with HTML template wrapping |
 | `llm.ts` / `email.ts` / `github.ts` / `db.ts` | Thin client constructors for Resend, Octokit, Supabase; legacy LLM helper. `db.ts` is deprecated in favor of `subscriber-store.ts` |
@@ -67,6 +70,7 @@ Required across entry points (not all needed for every entry point):
 GITHUB_TOKEN, RESEND_API_KEY
 FROM_EMAIL, FROM_NAME
 CRYER_REPO          # "owner/repo" for draft issue creation
+CRYER_ROOT          # Project root path (MCP server only; defaults to cwd)
 ISSUE_NUMBER         # Set by GitHub Actions for send-on-close
 GITHUB_REPOSITORY    # Set by GitHub Actions
 ```

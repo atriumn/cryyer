@@ -1,4 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
+import { writeFileSync, readFileSync, unlinkSync, existsSync } from 'fs';
+import { join } from 'path';
+import { tmpdir } from 'os';
 import { createSubscriberStore, SupabaseStore, JsonFileStore, GoogleSheetsStore } from '../subscriber-store.js';
 
 describe('createSubscriberStore', () => {
@@ -93,5 +96,104 @@ describe('createSubscriberStore', () => {
     process.env.SUPABASE_SERVICE_KEY = 'test-key';
     const store = createSubscriberStore({ store: 'json' });
     expect(store).toBeInstanceOf(JsonFileStore);
+  });
+});
+
+describe('JsonFileStore.addSubscriber', () => {
+  const tmpPath = join(tmpdir(), `cryer-test-subscribers-${Date.now()}.json`);
+
+  afterEach(() => {
+    if (existsSync(tmpPath)) unlinkSync(tmpPath);
+  });
+
+  it('adds a new subscriber to an empty file', async () => {
+    writeFileSync(tmpPath, '[]');
+    const store = new JsonFileStore(tmpPath);
+    await store.addSubscriber('my-app', 'alice@example.com', 'Alice');
+
+    const data = JSON.parse(readFileSync(tmpPath, 'utf-8'));
+    expect(data).toEqual([
+      { email: 'alice@example.com', name: 'Alice', productIds: ['my-app'] },
+    ]);
+  });
+
+  it('creates file if it does not exist', async () => {
+    const store = new JsonFileStore(tmpPath);
+    await store.addSubscriber('my-app', 'alice@example.com');
+
+    const data = JSON.parse(readFileSync(tmpPath, 'utf-8'));
+    expect(data).toHaveLength(1);
+    expect(data[0].email).toBe('alice@example.com');
+    expect(data[0].productIds).toEqual(['my-app']);
+  });
+
+  it('appends productId to existing subscriber', async () => {
+    writeFileSync(tmpPath, JSON.stringify([
+      { email: 'alice@example.com', name: 'Alice', productIds: ['app-a'] },
+    ]));
+    const store = new JsonFileStore(tmpPath);
+    await store.addSubscriber('app-b', 'alice@example.com');
+
+    const data = JSON.parse(readFileSync(tmpPath, 'utf-8'));
+    expect(data).toHaveLength(1);
+    expect(data[0].productIds).toEqual(['app-a', 'app-b']);
+  });
+
+  it('does not duplicate productId', async () => {
+    writeFileSync(tmpPath, JSON.stringify([
+      { email: 'alice@example.com', name: 'Alice', productIds: ['my-app'] },
+    ]));
+    const store = new JsonFileStore(tmpPath);
+    await store.addSubscriber('my-app', 'alice@example.com');
+
+    const data = JSON.parse(readFileSync(tmpPath, 'utf-8'));
+    expect(data[0].productIds).toEqual(['my-app']);
+  });
+});
+
+describe('JsonFileStore.removeSubscriber', () => {
+  const tmpPath = join(tmpdir(), `cryer-test-subscribers-rm-${Date.now()}.json`);
+
+  afterEach(() => {
+    if (existsSync(tmpPath)) unlinkSync(tmpPath);
+  });
+
+  it('removes productId from subscriber', async () => {
+    writeFileSync(tmpPath, JSON.stringify([
+      { email: 'alice@example.com', name: 'Alice', productIds: ['app-a', 'app-b'] },
+    ]));
+    const store = new JsonFileStore(tmpPath);
+    await store.removeSubscriber('app-a', 'alice@example.com');
+
+    const data = JSON.parse(readFileSync(tmpPath, 'utf-8'));
+    expect(data).toHaveLength(1);
+    expect(data[0].productIds).toEqual(['app-b']);
+  });
+
+  it('removes entry entirely when no productIds left', async () => {
+    writeFileSync(tmpPath, JSON.stringify([
+      { email: 'alice@example.com', name: 'Alice', productIds: ['my-app'] },
+    ]));
+    const store = new JsonFileStore(tmpPath);
+    await store.removeSubscriber('my-app', 'alice@example.com');
+
+    const data = JSON.parse(readFileSync(tmpPath, 'utf-8'));
+    expect(data).toEqual([]);
+  });
+
+  it('does nothing when file does not exist', async () => {
+    const store = new JsonFileStore(tmpPath);
+    await expect(store.removeSubscriber('my-app', 'alice@example.com')).resolves.toBeUndefined();
+  });
+
+  it('does nothing when email not found', async () => {
+    writeFileSync(tmpPath, JSON.stringify([
+      { email: 'bob@example.com', productIds: ['my-app'] },
+    ]));
+    const store = new JsonFileStore(tmpPath);
+    await store.removeSubscriber('my-app', 'alice@example.com');
+
+    const data = JSON.parse(readFileSync(tmpPath, 'utf-8'));
+    expect(data).toHaveLength(1);
   });
 });

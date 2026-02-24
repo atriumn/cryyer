@@ -9,6 +9,8 @@ export interface Subscriber {
 export interface SubscriberStore {
   getSubscribers(productId: string): Promise<Subscriber[]>;
   recordEmailSent(email: string, productId: string, weekOf: string): Promise<void>;
+  addSubscriber(productId: string, email: string, name?: string): Promise<void>;
+  removeSubscriber(productId: string, email: string): Promise<void>;
 }
 
 // --- SupabaseStore ---
@@ -45,6 +47,24 @@ export class SupabaseStore implements SubscriberStore {
       week_of: weekOf,
       sent_at: new Date().toISOString(),
     });
+    if (error) throw error;
+  }
+
+  async addSubscriber(productId: string, email: string, name?: string): Promise<void> {
+    const { error } = await this.db.from('beta_testers').insert({
+      email,
+      name: name ?? null,
+      product: productId,
+    });
+    if (error) throw error;
+  }
+
+  async removeSubscriber(productId: string, email: string): Promise<void> {
+    const { error } = await this.db
+      .from('beta_testers')
+      .update({ unsubscribed_at: new Date().toISOString() })
+      .eq('email', email)
+      .eq('product', productId);
     if (error) throw error;
   }
 }
@@ -103,6 +123,40 @@ export class JsonFileStore implements SubscriberStore {
     log.push({ email, productId, weekOf, sentAt: new Date().toISOString() });
     writeFileSync(this.emailLogPath, JSON.stringify(log, null, 2) + '\n');
   }
+
+  async addSubscriber(productId: string, email: string, name?: string): Promise<void> {
+    let entries: JsonSubscriberEntry[] = [];
+    if (existsSync(this.subscribersPath)) {
+      entries = JSON.parse(readFileSync(this.subscribersPath, 'utf-8'));
+    }
+
+    const existing = entries.find((e) => e.email === email);
+    if (existing) {
+      if (!existing.productIds.includes(productId)) {
+        existing.productIds.push(productId);
+      }
+      if (name) existing.name = name;
+    } else {
+      entries.push({ email, name, productIds: [productId] });
+    }
+
+    writeFileSync(this.subscribersPath, JSON.stringify(entries, null, 2) + '\n');
+  }
+
+  async removeSubscriber(productId: string, email: string): Promise<void> {
+    if (!existsSync(this.subscribersPath)) return;
+
+    let entries: JsonSubscriberEntry[] = JSON.parse(readFileSync(this.subscribersPath, 'utf-8'));
+    const existing = entries.find((e) => e.email === email);
+    if (!existing) return;
+
+    existing.productIds = existing.productIds.filter((id) => id !== productId);
+    if (existing.productIds.length === 0) {
+      entries = entries.filter((e) => e.email !== email);
+    }
+
+    writeFileSync(this.subscribersPath, JSON.stringify(entries, null, 2) + '\n');
+  }
 }
 
 // --- GoogleSheetsStore ---
@@ -118,18 +172,23 @@ export class GoogleSheetsStore implements SubscriberStore {
     this.privateKey = privateKey;
   }
 
-  async getSubscribers(productId: string): Promise<Subscriber[]> {
+  private async getDoc() {
     const { GoogleSpreadsheet } = await import('google-spreadsheet');
     const { JWT } = await import('google-auth-library');
 
     const auth = new JWT({
       email: this.serviceAccountEmail,
       key: this.privateKey,
-      scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     });
 
     const doc = new GoogleSpreadsheet(this.spreadsheetId, auth);
     await doc.loadInfo();
+    return doc;
+  }
+
+  async getSubscribers(productId: string): Promise<Subscriber[]> {
+    const doc = await this.getDoc();
 
     // Look for a sheet named after the productId, fall back to first sheet
     const sheet = doc.sheetsByTitle[productId] ?? doc.sheetsByIndex[0];
@@ -160,7 +219,33 @@ export class GoogleSheetsStore implements SubscriberStore {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async recordEmailSent(_email: string, _productId: string, _weekOf: string): Promise<void> {
-    // No-op: Google Sheets store is read-only
+    // No-op for Google Sheets store
+  }
+
+  async addSubscriber(productId: string, email: string, name?: string): Promise<void> {
+    const doc = await this.getDoc();
+    const sheet = doc.sheetsByTitle[productId] ?? doc.sheetsByIndex[0];
+    if (!sheet) {
+      throw new Error(`No sheet found for product: ${productId}`);
+    }
+    await sheet.addRow({ email, name: name ?? '' });
+  }
+
+  async removeSubscriber(productId: string, email: string): Promise<void> {
+    const doc = await this.getDoc();
+    const sheet = doc.sheetsByTitle[productId] ?? doc.sheetsByIndex[0];
+    if (!sheet) {
+      throw new Error(`No sheet found for product: ${productId}`);
+    }
+
+    const rows = await sheet.getRows();
+    for (const row of rows) {
+      if (row.get('email') === email) {
+        row.set('unsubscribed', 'true');
+        await row.save();
+        return;
+      }
+    }
   }
 }
 
