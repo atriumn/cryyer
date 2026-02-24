@@ -1,60 +1,245 @@
-# cryer
-Centralized beta tester update system — automated weekly emails with per-product voice powered by LLM drafts
+# Cryer
 
-## Setup
+Automated weekly email updates for beta testers, with per-product voice powered by LLM-drafted content.
 
-### Environment Configuration
-Cryer requires the following environment variables to operate. These must be set as GitHub repository secrets for CI/CD workflows, or as environment variables for local development.
+Cryer follows a two-stage pipeline:
 
-#### Required Secrets
+1. **Weekly Draft** (cron, Mondays) — gathers GitHub activity (merged PRs, releases, notable commits), generates an email draft via LLM, and creates a GitHub issue for human review.
+2. **Send on Close** — when a draft issue is closed (approved), emails are sent to subscribers via [Resend](https://resend.com).
 
-1. **`GITHUB_TOKEN`**
-   - Purpose: Read access to GitHub repositories for activity gathering
-   - Requirements: Must have read permissions on:
-     - `atriumn/cryer` (this repository)
-     - `atriumn/idynic`
-     - `atriumn/celiumn`
-     - Any other product repositories
-   - Setup: Use a fine-grained Personal Access Token (PAT) with repository read permissions if the default token scope is insufficient
-   - Set via: `gh secret set GITHUB_TOKEN`
+## Quickstart
 
-2. **`ANTHROPIC_API_KEY`**
-   - Purpose: Claude API for LLM-drafted email content generation
-   - Obtain from: [Anthropic Console](https://console.anthropic.com)
-   - Set via: `gh secret set ANTHROPIC_API_KEY`
-
-3. **`RESEND_API_KEY`**
-   - Purpose: Transactional email delivery service
-   - Obtain from: [Resend Dashboard](https://resend.com)
-   - Set via: `gh secret set RESEND_API_KEY`
-
-4. **`SUPABASE_URL`**
-   - Purpose: Supabase project URL for database and authentication
-   - Format: `https://[project-id].supabase.co`
-   - Obtain from: Supabase project dashboard
-   - Set via: `gh secret set SUPABASE_URL`
-
-5. **`SUPABASE_SERVICE_KEY`**
-   - Purpose: Supabase service role key for server-side database operations (beta tester queries, email logging)
-   - Warning: This is a service role key with elevated permissions — keep it secret and only use in server-side contexts
-   - Obtain from: Supabase project dashboard (Settings > API Keys > Service role key)
-   - Set via: `gh secret set SUPABASE_SERVICE_KEY`
-
-6. **`FROM_EMAIL`**
-   - Purpose: Sender email address for outgoing emails
-   - Format: A verified email address in your Resend account
-   - Set via: `gh secret set FROM_EMAIL`
-
-#### Setting Secrets via GitHub CLI
 ```bash
-gh secret set GITHUB_TOKEN
-gh secret set ANTHROPIC_API_KEY
-gh secret set RESEND_API_KEY
-gh secret set SUPABASE_URL
-gh secret set SUPABASE_SERVICE_KEY
-gh secret set FROM_EMAIL
+npm install
 ```
 
-#### Documentation
-- **Supabase Project**: Cryer uses the Supabase project at `https://[project-id].supabase.co` (set via `SUPABASE_URL` secret)
-- For detailed environment variable documentation, see [CLAUDE.md](./CLAUDE.md)
+### 1. Create a product config
+
+Create a YAML file in `products/` (e.g. `products/my-app.yaml`):
+
+```yaml
+id: my-app
+name: My App
+repo: owner/repo
+emailSubjectTemplate: "My App — Week of {{weekOf}}"
+voice: |
+  You are writing a weekly update email for My App beta testers.
+  Be concise, friendly, and focus on what matters to users.
+```
+
+See [Product Configuration](#product-configuration) for all fields.
+
+### 2. Add subscribers
+
+Choose a [subscriber store](#subscriber-stores) — the simplest for local dev is JSON:
+
+```bash
+export SUBSCRIBER_STORE=json
+```
+
+Create `subscribers.json` (see [`subscribers.example.json`](./subscribers.example.json)):
+
+```json
+[
+  { "email": "alice@example.com", "name": "Alice", "productIds": ["my-app"] },
+  { "email": "bob@example.com", "productIds": ["my-app"] }
+]
+```
+
+### 3. Set environment variables
+
+```bash
+export GITHUB_TOKEN=ghp_...
+export RESEND_API_KEY=re_...
+export FROM_EMAIL=updates@yourdomain.com
+export LLM_PROVIDER=anthropic          # or openai, gemini
+export ANTHROPIC_API_KEY=sk-ant-...    # key for your chosen provider
+```
+
+### 4. Run
+
+```bash
+npm run build
+npm start              # full pipeline: gather → draft → send
+```
+
+Or run the two stages separately:
+
+```bash
+node dist/draft.js         # generate drafts → create GitHub issues
+node dist/send-on-close.js # send emails when a draft issue is closed
+```
+
+## Subscriber Stores
+
+Set `SUBSCRIBER_STORE` to choose your backend. Default is `supabase`.
+
+### JSON File (simplest)
+
+```bash
+SUBSCRIBER_STORE=json
+```
+
+| Variable | Default | Description |
+|---|---|---|
+| `SUBSCRIBERS_JSON_PATH` | `./subscribers.json` | Path to subscriber data |
+| `EMAIL_LOG_JSON_PATH` | `./email-log.json` | Path to email send log |
+
+File format — array of objects with `email`, optional `name`, and `productIds`:
+
+```json
+[
+  { "email": "alice@example.com", "name": "Alice", "productIds": ["my-app", "other-app"] }
+]
+```
+
+### Supabase (default)
+
+```bash
+SUBSCRIBER_STORE=supabase  # or just don't set it
+```
+
+| Variable | Description |
+|---|---|
+| `SUPABASE_URL` | Your Supabase project URL (`https://[project-id].supabase.co`) |
+| `SUPABASE_SERVICE_KEY` | Supabase service role key |
+
+Expects a `beta_testers` table with columns: `email`, `name`, `product`, `unsubscribed_at`.
+
+### Google Sheets
+
+```bash
+SUBSCRIBER_STORE=google-sheets
+```
+
+| Variable | Description |
+|---|---|
+| `GOOGLE_SHEETS_SPREADSHEET_ID` | The ID from your spreadsheet URL |
+| `GOOGLE_SERVICE_ACCOUNT_EMAIL` | Service account email |
+| `GOOGLE_PRIVATE_KEY` | Service account private key (PEM format) |
+
+Cryer looks for a sheet tab named after the product ID (e.g. `my-app`), falling back to the first sheet. Expected columns: `email`, `name` (optional), `unsubscribed` (optional, set to `true` to exclude).
+
+Email send logging is a no-op with this backend (read-only).
+
+<details>
+<summary><strong>Google Sheets setup walkthrough</strong></summary>
+
+#### 1. Enable the Google Sheets API
+
+- Go to [console.cloud.google.com](https://console.cloud.google.com) (create a project if you don't have one)
+- Navigate to **APIs & Services > Library**
+- Search for "Google Sheets API" and click **Enable**
+
+#### 2. Create a service account
+
+- Go to **APIs & Services > Credentials**
+- Click **Create Credentials > Service account**
+- Name it (e.g. `cryer-sheets-reader`) and click **Done**
+
+#### 3. Generate a key
+
+- Click the service account you just created
+- Go to the **Keys** tab
+- Click **Add Key > Create new key > JSON**
+- Save the downloaded file
+
+#### 4. Set your environment variables
+
+From the downloaded JSON file, grab `client_email` and `private_key`:
+
+```bash
+GOOGLE_SERVICE_ACCOUNT_EMAIL=cryer-sheets-reader@your-project.iam.gserviceaccount.com
+GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIE...\n-----END PRIVATE KEY-----\n"
+```
+
+#### 5. Get the spreadsheet ID
+
+From the spreadsheet URL:
+
+```
+https://docs.google.com/spreadsheets/d/SPREADSHEET_ID_HERE/edit
+                                       ^^^^^^^^^^^^^^^^^^^^
+```
+
+```bash
+GOOGLE_SHEETS_SPREADSHEET_ID=1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms
+```
+
+#### 6. Share the spreadsheet
+
+Share the spreadsheet with your service account email (from step 4) as a **Viewer**.
+
+#### 7. Set up columns
+
+Row 1 should have these headers:
+
+| email | name | unsubscribed |
+|---|---|---|
+| alice@example.com | Alice | |
+| bob@example.com | Bob | |
+| charlie@example.com | | true |
+
+Name the sheet tab after your product ID (e.g. `my-app`), or just use the default first sheet if you have one product.
+
+</details>
+
+## LLM Providers
+
+Set `LLM_PROVIDER` to choose your LLM backend. Default is `anthropic`.
+
+| Variable | Default | Description |
+|---|---|---|
+| `LLM_PROVIDER` | `anthropic` | `anthropic`, `openai`, or `gemini` |
+| `LLM_MODEL` | Per-provider default | Override the default model |
+| `ANTHROPIC_API_KEY` | — | Required when `LLM_PROVIDER=anthropic` |
+| `OPENAI_API_KEY` | — | Required when `LLM_PROVIDER=openai` |
+| `GEMINI_API_KEY` | — | Required when `LLM_PROVIDER=gemini` |
+
+Default models: Anthropic `claude-3-5-haiku-latest`, OpenAI `gpt-4o`, Gemini `gemini-1.5-flash`.
+
+## Product Configuration
+
+Products are defined as YAML files in `products/`. Each file represents one product.
+
+| Field | Required | Description |
+|---|---|---|
+| `id` | Yes | Unique identifier, also used as GitHub issue label |
+| `name` | Yes | Display name |
+| `voice` | Yes | LLM voice/tone instructions (injected into the draft prompt) |
+| `repo` | Yes | `owner/repo` for GitHub activity gathering |
+| `emailSubjectTemplate` | Yes | Subject line template — use `{{weekOf}}` for the date |
+| `tagline` | No | Product tagline |
+| `from_name` | No | Override sender name for this product |
+| `from_email` | No | Override sender email for this product |
+| `reply_to` | No | Reply-to address |
+
+## GitHub Actions Workflows
+
+### `weekly-draft.yml`
+
+Runs every Monday at 1pm UTC. Gathers GitHub activity and creates draft issues.
+
+Secrets needed: `GITHUB_TOKEN`, `CRYER_REPO`, and the API key for your chosen `LLM_PROVIDER`.
+
+### `send-update.yml`
+
+Fires when an issue with the `draft` label is closed. Sends emails to subscribers.
+
+Secrets needed: `GITHUB_TOKEN`, `RESEND_API_KEY`, `FROM_EMAIL`, plus the secrets for your chosen `SUBSCRIBER_STORE`.
+
+### `ci.yml`
+
+Runs on push/PR to main. Lints, typechecks, and runs tests.
+
+## Development
+
+```bash
+npm install          # install dependencies
+npm run build        # compile TypeScript
+npm run typecheck    # type-check without emitting
+npm run lint         # ESLint
+npm test             # run tests (vitest)
+npm run test:watch   # run tests in watch mode
+npm run dev          # build + run
+```
