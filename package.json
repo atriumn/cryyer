@@ -12,7 +12,14 @@
   "bugs": {
     "url": "https://github.com/atriumn/cryyer/issues"
   },
-  "keywords": ["email", "newsletter", "beta-testers", "llm", "automation", "mcp"],
+  "keywords": [
+    "email",
+    "newsletter",
+    "beta-testers",
+    "llm",
+    "automation",
+    "mcp"
+  ],
   "engines": {
     "node": ">=20"
   },
