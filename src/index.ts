@@ -70,6 +70,8 @@ export function getWeekOf(): string {
   return monday.toISOString().split('T')[0];
 }
 
+export { main };
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   main().catch((err) => {
     console.error('Fatal error:', err);

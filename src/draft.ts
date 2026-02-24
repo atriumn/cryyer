@@ -85,6 +85,8 @@ export function requireEnv(key: string): string {
   return value;
 }
 
+export { main };
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   main().catch((err) => {
     console.error('Fatal error:', err);
