@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="cryer-transparent.png" alt="Cryer" width="200">
+  <img src="cryyer-transparent.png" alt="Cryyer" width="200">
 </p>
 
-# Cryer
+# Cryyer
 
 Automated weekly email updates for beta testers, with per-product voice powered by LLM-drafted content.
 
-Cryer follows a two-stage pipeline:
+Cryyer follows a two-stage pipeline:
 
 1. **Weekly Draft** (cron, Mondays) — gathers GitHub activity (merged PRs, releases, notable commits), generates an email draft via LLM, and creates a GitHub issue for human review.
 2. **Send on Close** — when a draft issue is closed (approved), emails are sent to subscribers via [Resend](https://resend.com).
@@ -122,7 +122,7 @@ SUBSCRIBER_STORE=google-sheets
 | `GOOGLE_SERVICE_ACCOUNT_EMAIL` | Service account email |
 | `GOOGLE_PRIVATE_KEY` | Service account private key (PEM format) |
 
-Cryer looks for a sheet tab named after the product ID (e.g. `my-app`), falling back to the first sheet. Expected columns: `email`, `name` (optional), `unsubscribed` (optional, set to `true` to exclude).
+Cryyer looks for a sheet tab named after the product ID (e.g. `my-app`), falling back to the first sheet. Expected columns: `email`, `name` (optional), `unsubscribed` (optional, set to `true` to exclude).
 
 Email send logging is a no-op with this backend (read-only).
 
@@ -139,7 +139,7 @@ Email send logging is a no-op with this backend (read-only).
 
 - Go to **APIs & Services > Credentials**
 - Click **Create Credentials > Service account**
-- Name it (e.g. `cryer-sheets-reader`) and click **Done**
+- Name it (e.g. `cryyer-sheets-reader`) and click **Done**
 
 #### 3. Generate a key
 
@@ -153,7 +153,7 @@ Email send logging is a no-op with this backend (read-only).
 From the downloaded JSON file, grab `client_email` and `private_key`:
 
 ```bash
-GOOGLE_SERVICE_ACCOUNT_EMAIL=cryer-sheets-reader@your-project.iam.gserviceaccount.com
+GOOGLE_SERVICE_ACCOUNT_EMAIL=cryyer-sheets-reader@your-project.iam.gserviceaccount.com
 GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIE...\n-----END PRIVATE KEY-----\n"
 ```
 
@@ -224,7 +224,7 @@ Products are defined as YAML files in `products/`. Each file represents one prod
 
 Runs every Monday at 1pm UTC. Gathers GitHub activity and creates draft issues.
 
-Secrets needed: `GITHUB_TOKEN`, `CRYER_REPO`, and the API key for your chosen `LLM_PROVIDER`.
+Secrets needed: `GITHUB_TOKEN`, `CRYYER_REPO`, and the API key for your chosen `LLM_PROVIDER`.
 
 ### `send-update.yml`
 
@@ -238,7 +238,7 @@ Runs on push/PR to main. Lints, typechecks, and runs tests.
 
 ## MCP Server (Claude Desktop)
 
-Cryer includes an MCP server that lets you review, edit, and send drafts conversationally in Claude Desktop. It also supports subscriber management.
+Cryyer includes an MCP server that lets you review, edit, and send drafts conversationally in Claude Desktop. It also supports subscriber management.
 
 ### Setup
 
@@ -251,13 +251,13 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 ```json
 {
   "mcpServers": {
-    "cryer": {
+    "cryyer": {
       "command": "node",
       "args": ["/path/to/beacon/dist/mcp.js"],
       "env": {
         "GITHUB_TOKEN": "ghp_...",
-        "CRYER_REPO": "owner/repo",
-        "CRYER_ROOT": "/path/to/beacon",
+        "CRYYER_REPO": "owner/repo",
+        "CRYYER_ROOT": "/path/to/beacon",
         "RESEND_API_KEY": "re_...",
         "FROM_EMAIL": "updates@example.com",
         "SUBSCRIBER_STORE": "json",
@@ -269,7 +269,7 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 }
 ```
 
-Only `GITHUB_TOKEN` and `CRYER_REPO` are needed for read-only tools (`list_drafts`, `get_draft`). Other env vars are needed for sending, regenerating, and subscriber management.
+Only `GITHUB_TOKEN` and `CRYYER_REPO` are needed for read-only tools (`list_drafts`, `get_draft`). Other env vars are needed for sending, regenerating, and subscriber management.
 
 ### Tools
 

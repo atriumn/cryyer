@@ -50,7 +50,7 @@ async function main(): Promise<void> {
   const githubToken = requireEnv('GITHUB_TOKEN');
   const resendApiKey = requireEnv('RESEND_API_KEY');
   const fromEmail = requireEnv('FROM_EMAIL');
-  const fromName = process.env['FROM_NAME'] ?? 'Cryer Updates';
+  const fromName = process.env['FROM_NAME'] ?? 'Cryyer Updates';
   const issueNumber = parseInt(requireEnv('ISSUE_NUMBER'), 10);
   const [repoOwner, repoName] = requireEnv('GITHUB_REPOSITORY').split('/');
 

@@ -16,9 +16,9 @@ npm start            # Run compiled output (node dist/index.js)
 npm run mcp          # Run MCP server (node dist/mcp.js)
 ```
 
-## What Cryer Does
+## What Cryyer Does
 
-Cryer sends automated weekly email updates to beta testers, with per-product voice powered by LLM-drafted content. It supports multiple LLM providers (Anthropic Claude, OpenAI, Google Gemini) via a configurable adapter pattern. It follows a two-stage pipeline:
+Cryyer sends automated weekly email updates to beta testers, with per-product voice powered by LLM-drafted content. It supports multiple LLM providers (Anthropic Claude, OpenAI, Google Gemini) via a configurable adapter pattern. It follows a two-stage pipeline:
 
 1. **Weekly Draft** (cron, Mondays): For each product, gathers GitHub activity (merged PRs, releases, notable commits), generates an email draft via Claude, and creates a GitHub issue for human review.
 2. **Send on Close**: When a draft issue is closed (approved), emails are sent to subscribers via Resend.
@@ -30,7 +30,7 @@ Four distinct entry points, each compiled from `src/` to `dist/`:
 - **`index.ts`** — Direct orchestration: gather activity, draft, query subscribers, send emails in one run.
 - **`draft.ts`** — Used by `weekly-draft.yml` workflow. Gathers activity, generates drafts via LLM, creates GitHub issues with `draft` + product-id labels.
 - **`send-on-close.ts`** — Used by `send-update.yml` workflow. Triggered on issue close, parses the draft issue body (`**Subject:** ...\n\n---\n\n<body>`), queries Supabase for subscribers, sends via Resend, posts delivery stats as issue comment.
-- **`mcp.ts`** — MCP server for Claude Desktop. Exposes 9 tools (list/get/update/send/regenerate drafts, list products, list/add/remove subscribers) and 1 prompt (`review_weekly_drafts`). Uses stdio transport. Run via `node dist/mcp.js` or `npx cryer-mcp`.
+- **`mcp.ts`** — MCP server for Claude Desktop. Exposes 9 tools (list/get/update/send/regenerate drafts, list products, list/add/remove subscribers) and 1 prompt (`review_weekly_drafts`). Uses stdio transport. Run via `node dist/mcp.js` or `npx cryyer-mcp`.
 
 Key modules:
 
@@ -69,8 +69,8 @@ Required across entry points (not all needed for every entry point):
 ```
 GITHUB_TOKEN, RESEND_API_KEY
 FROM_EMAIL, FROM_NAME
-CRYER_REPO          # "owner/repo" for draft issue creation
-CRYER_ROOT          # Project root path (MCP server only; defaults to cwd)
+CRYYER_REPO          # "owner/repo" for draft issue creation
+CRYYER_ROOT          # Project root path (MCP server only; defaults to cwd)
 ISSUE_NUMBER         # Set by GitHub Actions for send-on-close
 GITHUB_REPOSITORY    # Set by GitHub Actions
 ```
@@ -105,7 +105,7 @@ Default models per provider: Anthropic → `claude-3-5-haiku-latest`, OpenAI →
 ## GitHub Workflows
 
 - **`ci.yml`**: Runs on push/PR to main. Lints, typechecks, and runs tests.
-- **`weekly-draft.yml`**: Cron Monday 1pm UTC. Runs `node dist/draft.js`. Needs `GITHUB_TOKEN`, `CRYER_REPO`, and the API key for the configured `LLM_PROVIDER`.
+- **`weekly-draft.yml`**: Cron Monday 1pm UTC. Runs `node dist/draft.js`. Needs `GITHUB_TOKEN`, `CRYYER_REPO`, and the API key for the configured `LLM_PROVIDER`.
 - **`send-update.yml`**: Fires on issue close (filtered to `draft` label). Runs `node dist/send-on-close.js`. Needs all Resend/Supabase secrets.
 
 ## Conventions

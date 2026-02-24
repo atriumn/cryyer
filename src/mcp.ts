@@ -23,7 +23,7 @@ import type { Product, BetaTester } from './types.js';
 
 // --- Helpers ---
 
-const projectRoot = process.env['CRYER_ROOT'] ?? process.cwd();
+const projectRoot = process.env['CRYYER_ROOT'] ?? process.cwd();
 
 function requireEnv(key: string): string {
   const value = process.env[key];
@@ -31,11 +31,11 @@ function requireEnv(key: string): string {
   return value;
 }
 
-export function getCryerRepo(): { owner: string; repo: string } {
-  const cryerRepo = requireEnv('CRYER_REPO');
-  const parts = cryerRepo.split('/');
+export function getCryyerRepo(): { owner: string; repo: string } {
+  const cryyerRepo = requireEnv('CRYYER_REPO');
+  const parts = cryyerRepo.split('/');
   if (parts.length !== 2 || !parts[0] || !parts[1]) {
-    throw new Error(`Invalid CRYER_REPO format: "${cryerRepo}". Expected "owner/repo".`);
+    throw new Error(`Invalid CRYYER_REPO format: "${cryyerRepo}". Expected "owner/repo".`);
   }
   return { owner: parts[0], repo: parts[1] };
 }
@@ -89,7 +89,7 @@ async function ensureLabel(
 // --- MCP Server ---
 
 const server = new McpServer({
-  name: 'cryer',
+  name: 'cryyer',
   version: '0.1.0',
 });
 
@@ -100,7 +100,7 @@ server.tool(
   'List open draft issues awaiting review',
   {},
   async () => {
-    const { owner, repo } = getCryerRepo();
+    const { owner, repo } = getCryyerRepo();
     const octokit = new Octokit({ auth: requireEnv('GITHUB_TOKEN') });
 
     const { data: issues } = await octokit.rest.issues.listForRepo({
@@ -135,7 +135,7 @@ server.tool(
   'Get the full content of a draft issue',
   { issue_number: z.number().int().positive().describe('The GitHub issue number') },
   async ({ issue_number }) => {
-    const { owner, repo } = getCryerRepo();
+    const { owner, repo } = getCryyerRepo();
     const octokit = new Octokit({ auth: requireEnv('GITHUB_TOKEN') });
 
     const { data: issue } = await octokit.rest.issues.get({
@@ -194,7 +194,7 @@ server.tool(
     body: z.string().describe('The new email body (markdown)'),
   },
   async ({ issue_number, subject, body }) => {
-    const { owner, repo } = getCryerRepo();
+    const { owner, repo } = getCryyerRepo();
     const octokit = new Octokit({ auth: requireEnv('GITHUB_TOKEN') });
 
     const issueBody = formatIssueBody(subject, body);
@@ -216,11 +216,11 @@ server.tool(
   'Send the draft email to subscribers, close the issue, and add a sent label',
   { issue_number: z.number().int().positive().describe('The GitHub issue number') },
   async ({ issue_number }) => {
-    const { owner, repo } = getCryerRepo();
+    const { owner, repo } = getCryyerRepo();
     const githubToken = requireEnv('GITHUB_TOKEN');
     const resendApiKey = requireEnv('RESEND_API_KEY');
     const fromEmail = requireEnv('FROM_EMAIL');
-    const fromName = process.env['FROM_NAME'] ?? 'Cryer Updates';
+    const fromName = process.env['FROM_NAME'] ?? 'Cryyer Updates';
 
     const octokit = new Octokit({ auth: githubToken });
 
@@ -336,7 +336,7 @@ server.tool(
   'Re-gather GitHub activity and regenerate the draft using the LLM with the product voice',
   { issue_number: z.number().int().positive().describe('The GitHub issue number') },
   async ({ issue_number }) => {
-    const { owner, repo } = getCryerRepo();
+    const { owner, repo } = getCryyerRepo();
     const octokit = new Octokit({ auth: requireEnv('GITHUB_TOKEN') });
 
     const { data: issue } = await octokit.rest.issues.get({
@@ -499,7 +499,7 @@ server.prompt(
 async function main(): Promise<void> {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error('Cryer MCP server running on stdio');
+  console.error('Cryyer MCP server running on stdio');
 }
 
 main().catch((err) => {

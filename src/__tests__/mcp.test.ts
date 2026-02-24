@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { formatIssueBody, getCryerRepo, extractProductLabel } from '../mcp.js';
+import { formatIssueBody, getCryyerRepo, extractProductLabel } from '../mcp.js';
 import { parseIssueBody } from '../send-on-close.js';
 
 describe('formatIssueBody / parseIssueBody round-trip', () => {
@@ -40,27 +40,27 @@ describe('formatIssueBody / parseIssueBody round-trip', () => {
   });
 });
 
-describe('getCryerRepo', () => {
+describe('getCryyerRepo', () => {
   const originalEnv = { ...process.env };
 
   afterEach(() => {
     process.env = { ...originalEnv };
   });
 
-  it('parses owner/repo from CRYER_REPO', () => {
-    process.env['CRYER_REPO'] = 'acme/cryer';
-    const result = getCryerRepo();
-    expect(result).toEqual({ owner: 'acme', repo: 'cryer' });
+  it('parses owner/repo from CRYYER_REPO', () => {
+    process.env['CRYYER_REPO'] = 'acme/cryyer';
+    const result = getCryyerRepo();
+    expect(result).toEqual({ owner: 'acme', repo: 'cryyer' });
   });
 
-  it('throws when CRYER_REPO is missing', () => {
-    delete process.env['CRYER_REPO'];
-    expect(() => getCryerRepo()).toThrow('Missing required environment variable: CRYER_REPO');
+  it('throws when CRYYER_REPO is missing', () => {
+    delete process.env['CRYYER_REPO'];
+    expect(() => getCryyerRepo()).toThrow('Missing required environment variable: CRYYER_REPO');
   });
 
   it('throws on invalid format', () => {
-    process.env['CRYER_REPO'] = 'just-a-name';
-    expect(() => getCryerRepo()).toThrow('Invalid CRYER_REPO format');
+    process.env['CRYYER_REPO'] = 'just-a-name';
+    expect(() => getCryyerRepo()).toThrow('Invalid CRYYER_REPO format');
   });
 });
 

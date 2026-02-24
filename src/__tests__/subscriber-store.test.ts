@@ -100,7 +100,7 @@ describe('createSubscriberStore', () => {
 });
 
 describe('JsonFileStore.addSubscriber', () => {
-  const tmpPath = join(tmpdir(), `cryer-test-subscribers-${Date.now()}.json`);
+  const tmpPath = join(tmpdir(), `cryyer-test-subscribers-${Date.now()}.json`);
 
   afterEach(() => {
     if (existsSync(tmpPath)) unlinkSync(tmpPath);
@@ -152,7 +152,7 @@ describe('JsonFileStore.addSubscriber', () => {
 });
 
 describe('JsonFileStore.removeSubscriber', () => {
-  const tmpPath = join(tmpdir(), `cryer-test-subscribers-rm-${Date.now()}.json`);
+  const tmpPath = join(tmpdir(), `cryyer-test-subscribers-rm-${Date.now()}.json`);
 
   afterEach(() => {
     if (existsSync(tmpPath)) unlinkSync(tmpPath);

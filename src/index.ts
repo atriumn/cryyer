@@ -20,7 +20,7 @@ async function main(): Promise<void> {
   const weekOf = getWeekOf();
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-  console.log(`Running cryer for week of ${weekOf}`);
+  console.log(`Running cryyer for week of ${weekOf}`);
 
   const jobs: EmailJob[] = [];
 

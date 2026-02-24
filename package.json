@@ -1,11 +1,11 @@
 {
-  "name": "cryer",
+  "name": "cryyer",
   "version": "0.1.0",
   "description": "Centralized beta tester update system — automated weekly emails with per-product voice powered by LLM drafts",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "cryer-mcp": "./dist/mcp.js"
+    "cryyer-mcp": "./dist/mcp.js"
   },
   "scripts": {
     "build": "tsc",

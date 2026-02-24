@@ -7,7 +7,7 @@ import { createLLMProvider } from './llm-provider.js';
 
 async function main(): Promise<void> {
   const githubToken = requireEnv('GITHUB_TOKEN');
-  const cryerRepo = requireEnv('CRYER_REPO'); // e.g. "owner/cryer"
+  const cryyerRepo = requireEnv('CRYYER_REPO'); // e.g. "owner/cryyer"
 
   const productsDir = join(process.cwd(), 'products');
   const products = loadProducts(productsDir);
@@ -15,7 +15,7 @@ async function main(): Promise<void> {
   const octokit = new Octokit({ auth: githubToken });
   const llm = createLLMProvider();
 
-  const [cryerOwner, cryerRepoName] = cryerRepo.split('/');
+  const [cryyerOwner, cryyerRepoName] = cryyerRepo.split('/');
 
   const weekOf = getWeekOf();
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -32,12 +32,12 @@ async function main(): Promise<void> {
       const issueTitle = `[${product.name}] Weekly Update — ${weekOf}`;
       const issueBody = `**Subject:** ${draft.subject}\n\n---\n\n${draft.body}`;
 
-      await ensureLabel(octokit, cryerOwner, cryerRepoName, 'draft', '0075ca');
-      await ensureLabel(octokit, cryerOwner, cryerRepoName, product.id, 'e4e669');
+      await ensureLabel(octokit, cryyerOwner, cryyerRepoName, 'draft', '0075ca');
+      await ensureLabel(octokit, cryyerOwner, cryyerRepoName, product.id, 'e4e669');
 
       const { data: issue } = await octokit.rest.issues.create({
-        owner: cryerOwner,
-        repo: cryerRepoName,
+        owner: cryyerOwner,
+        repo: cryyerRepoName,
         title: issueTitle,
         body: issueBody,
         labels: ['draft', product.id],
