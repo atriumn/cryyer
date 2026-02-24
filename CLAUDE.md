@@ -17,7 +17,7 @@ npm start            # Run compiled output (node dist/index.js)
 
 ## What Cryer Does
 
-Cryer sends automated weekly email updates to beta testers, with per-product voice powered by Claude-drafted content. It follows a two-stage pipeline:
+Cryer sends automated weekly email updates to beta testers, with per-product voice powered by LLM-drafted content. It supports multiple LLM providers (Anthropic Claude, OpenAI, Google Gemini) via a configurable adapter pattern. It follows a two-stage pipeline:
 
 1. **Weekly Draft** (cron, Mondays): For each product, gathers GitHub activity (merged PRs, releases, notable commits), generates an email draft via Claude, and creates a GitHub issue for human review.
 2. **Send on Close**: When a draft issue is closed (approved), emails are sent to subscribers via Resend.
@@ -36,10 +36,11 @@ Key modules:
 |---|---|
 | `config.ts` | Loads env vars, discovers and parses `products/*.yaml` |
 | `gather.ts` | Fetches merged PRs, releases, fallback commits via Octokit; filters bots |
-| `summarize.ts` | Builds prompt with product voice, calls Claude, parses JSON `{subject, body}` response |
+| `llm-provider.ts` | LLMProvider interface and factory; adapters for Anthropic, OpenAI, Gemini |
+| `summarize.ts` | Builds prompt with product voice, calls LLM provider, parses JSON `{subject, body}` response |
 | `subscribers.ts` | Queries Supabase for active beta testers per product |
 | `send.ts` | Sends batch emails via Resend with HTML template wrapping |
-| `llm.ts` / `email.ts` / `github.ts` / `db.ts` | Thin client constructors for Anthropic, Resend, Octokit, Supabase |
+| `llm.ts` / `email.ts` / `github.ts` / `db.ts` | Thin client constructors for Resend, Octokit, Supabase; legacy LLM helper |
 
 ## Product Configuration
 
@@ -62,7 +63,7 @@ The `voice` field is injected directly into the Claude prompt and controls the t
 Required across entry points (not all needed for every entry point):
 
 ```
-GITHUB_TOKEN, ANTHROPIC_API_KEY, RESEND_API_KEY
+GITHUB_TOKEN, RESEND_API_KEY
 SUPABASE_URL, SUPABASE_SERVICE_KEY
 FROM_EMAIL, FROM_NAME
 CRYER_REPO          # "owner/repo" for draft issue creation
@@ -70,10 +71,22 @@ ISSUE_NUMBER         # Set by GitHub Actions for send-on-close
 GITHUB_REPOSITORY    # Set by GitHub Actions
 ```
 
+### LLM Provider Configuration
+
+```
+LLM_PROVIDER         # "anthropic" (default), "openai", or "gemini"
+LLM_MODEL            # Override default model (e.g. "gpt-4o", "gemini-1.5-pro")
+ANTHROPIC_API_KEY    # Required when LLM_PROVIDER=anthropic (or unset)
+OPENAI_API_KEY       # Required when LLM_PROVIDER=openai
+GEMINI_API_KEY       # Required when LLM_PROVIDER=gemini
+```
+
+Default models per provider: Anthropic → `claude-3-5-haiku-latest`, OpenAI → `gpt-4o`, Gemini → `gemini-1.5-flash`.
+
 ## GitHub Workflows
 
 - **`ci.yml`**: Runs on push/PR to main. Lints, typechecks, and runs tests.
-- **`weekly-draft.yml`**: Cron Monday 1pm UTC. Runs `node dist/draft.js`. Needs `GITHUB_TOKEN`, `ANTHROPIC_API_KEY`, `CRYER_REPO`.
+- **`weekly-draft.yml`**: Cron Monday 1pm UTC. Runs `node dist/draft.js`. Needs `GITHUB_TOKEN`, `CRYER_REPO`, and the API key for the configured `LLM_PROVIDER`.
 - **`send-update.yml`**: Fires on issue close (filtered to `draft` label). Runs `node dist/send-on-close.js`. Needs all Resend/Supabase secrets.
 
 ## Conventions
@@ -83,4 +96,5 @@ GITHUB_REPOSITORY    # Set by GitHub Actions
 - Shared types in `src/types.ts`
 - `repo` is the preferred field in product YAML; `githubRepo` is deprecated
 - Bot activity (dependabot, renovate, github-actions) is filtered out in `gather.ts`
-- LLM defaults to Haiku; Sonnet available via `options.model`
+- LLM provider is configurable via `LLM_PROVIDER` env var; defaults to Anthropic Claude
+- Default model per provider can be overridden via `LLM_MODEL` env var

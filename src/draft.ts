@@ -1,20 +1,19 @@
 import { join } from 'path';
 import { Octokit } from 'octokit';
-import Anthropic from '@anthropic-ai/sdk';
 import { loadProducts } from './config.js';
 import { gatherWeeklyActivity } from './gather.js';
 import { generateEmailDraft } from './summarize.js';
+import { createLLMProvider } from './llm-provider.js';
 
 async function main(): Promise<void> {
   const githubToken = requireEnv('GITHUB_TOKEN');
-  const anthropicApiKey = requireEnv('ANTHROPIC_API_KEY');
   const cryerRepo = requireEnv('CRYER_REPO'); // e.g. "owner/cryer"
 
   const productsDir = join(process.cwd(), 'products');
   const products = loadProducts(productsDir);
 
   const octokit = new Octokit({ auth: githubToken });
-  const anthropic = new Anthropic({ apiKey: anthropicApiKey });
+  const llm = createLLMProvider();
 
   const [cryerOwner, cryerRepoName] = cryerRepo.split('/');
 
@@ -28,7 +27,7 @@ async function main(): Promise<void> {
 
     try {
       const activity = await gatherWeeklyActivity(octokit, product, since);
-      const draft = await generateEmailDraft(anthropic, product, activity, weekOf);
+      const draft = await generateEmailDraft(llm, product, activity, weekOf);
 
       const issueTitle = `[${product.name}] Weekly Update — ${weekOf}`;
       const issueBody = `**Subject:** ${draft.subject}\n\n---\n\n${draft.body}`;

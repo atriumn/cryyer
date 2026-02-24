@@ -5,7 +5,6 @@ import type { Product } from './types.js';
 
 export interface Config {
   githubToken: string;
-  anthropicApiKey: string;
   resendApiKey: string;
   supabaseUrl: string;
   supabaseServiceKey: string;
@@ -15,7 +14,6 @@ export interface Config {
 export function loadConfig(): Config {
   return {
     githubToken: requireEnv('GITHUB_TOKEN'),
-    anthropicApiKey: requireEnv('ANTHROPIC_API_KEY'),
     resendApiKey: requireEnv('RESEND_API_KEY'),
     supabaseUrl: requireEnv('SUPABASE_URL'),
     supabaseServiceKey: requireEnv('SUPABASE_SERVICE_KEY'),

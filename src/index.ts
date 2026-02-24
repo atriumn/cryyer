@@ -1,9 +1,10 @@
 import { join } from 'path';
 import { loadConfig, loadProducts } from './config.js';
 import { createGitHubClient, fetchWeeklyChanges } from './github.js';
-import { createAnthropicClient, draftWeeklyUpdate } from './llm.js';
+import { draftWeeklyUpdate } from './llm.js';
 import { createEmailClient, sendBatch } from './email.js';
 import { createDbClient, getBetaTesters, recordEmailSent } from './db.js';
+import { createLLMProvider } from './llm-provider.js';
 import type { EmailJob } from './types.js';
 
 async function main(): Promise<void> {
@@ -12,7 +13,7 @@ async function main(): Promise<void> {
   const products = loadProducts(productsDir);
 
   const octokit = createGitHubClient(config.githubToken);
-  const anthropic = createAnthropicClient(config.anthropicApiKey);
+  const llm = createLLMProvider();
   const resend = createEmailClient(config.resendApiKey);
   const db = createDbClient(config.supabaseUrl, config.supabaseServiceKey);
 
@@ -39,7 +40,7 @@ async function main(): Promise<void> {
       continue;
     }
 
-    const draft = await draftWeeklyUpdate(anthropic, product, changes, weekOf);
+    const draft = await draftWeeklyUpdate(llm, product, changes, weekOf);
     const testers = await getBetaTesters(db, product.id);
 
     for (const tester of testers) {

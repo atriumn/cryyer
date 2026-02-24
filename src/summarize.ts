@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk';
+import type { LLMProvider } from './llm-provider.js';
 import type { Product } from './types.js';
 import type { GatheredActivity, GatheredPR, GatheredRelease, GatheredCommit } from './gather.js';
 
@@ -7,21 +7,13 @@ export interface DraftResult {
   body: string;
 }
 
-export interface SummarizeOptions {
-  model?: 'haiku' | 'sonnet';
-}
-
 export async function generateEmailDraft(
-  client: Anthropic,
+  provider: LLMProvider,
   product: Product,
   activity: GatheredActivity,
   weekOf: string,
   previousUpdate?: string,
-  options: SummarizeOptions = {}
 ): Promise<DraftResult> {
-  const modelId =
-    options.model === 'sonnet' ? 'claude-3-5-sonnet-latest' : 'claude-3-5-haiku-latest';
-
   const hasActivity =
     activity.prs.length > 0 || activity.releases.length > 0 || activity.commits.length > 0;
 
@@ -60,18 +52,8 @@ Respond with ONLY a JSON object — no explanation, no markdown fences, just the
   "body": "<email body in markdown>"
 }`;
 
-  const message = await client.messages.create({
-    model: modelId,
-    max_tokens: 1024,
-    messages: [{ role: 'user', content: prompt }],
-  });
-
-  const content = message.content[0];
-  if (content.type !== 'text') {
-    throw new Error('Unexpected response type from Anthropic API');
-  }
-
-  return parseResponse(content.text);
+  const text = await provider.generate(prompt, 1024);
+  return parseResponse(text);
 }
 
 export function formatActivity(activity: GatheredActivity): string {
