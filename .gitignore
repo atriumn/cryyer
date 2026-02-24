@@ -32,3 +32,7 @@ Thumbs.db
 # Subscriber data (local JSON store)
 subscribers.json
 email-log.json
+
+# Ralph
+.ralph/
+.ralph-prompt.txt
