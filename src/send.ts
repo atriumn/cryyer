@@ -1,7 +1,11 @@
 import { readFileSync } from 'fs';
-import { join } from 'path';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
 import { Resend } from 'resend';
-import type { BetaTester, Product } from './types.js';
+import type { Product } from './types.js';
+import type { Subscriber } from './subscriber-store.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export interface EmailContent {
   subject: string;
@@ -55,7 +59,7 @@ function buildEmailHtml(
   productName: string,
   unsubscribeUrl: string
 ): string {
-  const templatePath = join(process.cwd(), 'templates', 'email-wrapper.html');
+  const templatePath = join(__dirname, '..', 'templates', 'email-wrapper.html');
   const template = readFileSync(templatePath, 'utf-8');
   return template
     .replace('{{subject}}', subject)
@@ -72,7 +76,7 @@ function makeUnsubscribeUrl(fromEmail: string, productId: string): string {
 export async function sendWeeklyEmails(
   client: Resend,
   product: Product,
-  subscribers: BetaTester[],
+  subscribers: Subscriber[],
   content: EmailContent,
   fromName: string,
   fromEmail: string,

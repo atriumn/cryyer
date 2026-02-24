@@ -25,6 +25,17 @@
   },
   "type": "module",
   "main": "dist/index.js",
+  "files": [
+    "dist/",
+    "templates/",
+    "products/",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": "./dist/index.js",
+    "./mcp": "./dist/mcp.js"
+  },
   "bin": {
     "cryyer-mcp": "./dist/mcp.js"
   },
@@ -35,26 +46,28 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "mcp": "node dist/mcp.js"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.36.3",
+    "@anthropic-ai/sdk": "^0.78.0",
     "@google/generative-ai": "^0.24.1",
     "@modelcontextprotocol/sdk": "^1.27.0",
     "@supabase/supabase-js": "^2.47.10",
     "google-auth-library": "^10.5.0",
     "google-spreadsheet": "^5.2.0",
-    "octokit": "^4.0.2",
+    "octokit": "^5.0.5",
     "openai": "^6.24.0",
-    "resend": "^4.1.2",
+    "resend": "^6.9.2",
     "yaml": "^2.7.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@types/node": "^22.10.7",
+    "@types/node": "^25.3.0",
     "@typescript-eslint/eslint-plugin": "^8.56.1",
     "@typescript-eslint/parser": "^8.56.1",
+    "@vitest/coverage-v8": "^4.0.18",
     "eslint": "^10.0.2",
     "typescript": "^5.7.3",
     "vitest": "^4.0.18"

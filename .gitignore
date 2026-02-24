@@ -36,3 +36,6 @@ email-log.json
 # Ralph
 .ralph/
 .ralph-prompt.txt
+
+# Coverage
+coverage/
