@@ -1,0 +1,67 @@
+---
+title: Environment Variables
+description: Complete reference for all Cryyer environment variables.
+---
+
+## Core
+
+| Variable | Required | Description |
+|---|---|---|
+| `GITHUB_TOKEN` | Yes | GitHub personal access token |
+| `RESEND_API_KEY` | Yes | Resend API key for sending emails |
+| `FROM_EMAIL` | Yes | Default sender email address |
+| `FROM_NAME` | No | Default sender name |
+| `CRYYER_REPO` | Workflows | `owner/repo` for draft issue creation |
+| `CRYYER_ROOT` | MCP only | Project root path (defaults to cwd) |
+| `ISSUE_NUMBER` | CI only | Set by GitHub Actions for send-on-close |
+| `GITHUB_REPOSITORY` | CI only | Set by GitHub Actions |
+
+## LLM Provider
+
+| Variable | Default | Description |
+|---|---|---|
+| `LLM_PROVIDER` | `anthropic` | `anthropic`, `openai`, or `gemini` |
+| `LLM_MODEL` | Per-provider | Override the default model |
+| `ANTHROPIC_API_KEY` | — | Required when `LLM_PROVIDER=anthropic` |
+| `OPENAI_API_KEY` | — | Required when `LLM_PROVIDER=openai` |
+| `GEMINI_API_KEY` | — | Required when `LLM_PROVIDER=gemini` |
+
+Default models: Anthropic `claude-3-5-haiku-latest`, OpenAI `gpt-4o`, Gemini `gemini-1.5-flash`.
+
+See [LLM Providers](/llm-providers) for setup details.
+
+## Subscriber Store
+
+| Variable | Default | Description |
+|---|---|---|
+| `SUBSCRIBER_STORE` | `supabase` | `supabase`, `json`, or `google-sheets` |
+
+### Supabase
+
+| Variable | Description |
+|---|---|
+| `SUPABASE_URL` | Your Supabase project URL |
+| `SUPABASE_SERVICE_KEY` | Supabase service role key |
+
+### JSON File
+
+| Variable | Default | Description |
+|---|---|---|
+| `SUBSCRIBERS_JSON_PATH` | `./subscribers.json` | Path to subscriber data |
+| `EMAIL_LOG_JSON_PATH` | `./email-log.json` | Path to email send log |
+
+### Google Sheets
+
+| Variable | Description |
+|---|---|
+| `GOOGLE_SHEETS_SPREADSHEET_ID` | The ID from your spreadsheet URL |
+| `GOOGLE_SERVICE_ACCOUNT_EMAIL` | Service account email |
+| `GOOGLE_PRIVATE_KEY` | Service account private key (PEM format) |
+
+See [Subscriber Stores](/subscriber-stores) for setup details.
+
+## Waitlist (Site only)
+
+| Variable | Description |
+|---|---|
+| `RESEND_AUDIENCE_ID` | Resend Audience ID for waitlist signups |

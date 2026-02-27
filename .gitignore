@@ -39,3 +39,8 @@ email-log.json
 
 # Coverage
 coverage/
+
+# Site build output
+site/dist/
+site/.astro/
+site/.vercel/

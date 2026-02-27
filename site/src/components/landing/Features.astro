@@ -1,0 +1,64 @@
+---
+const features = [
+  {
+    icon: "✦",
+    title: "AI-Drafted Emails",
+    description:
+      "LLM-powered drafts with per-product voice. Your updates sound like you, not a robot.",
+  },
+  {
+    icon: "⟡",
+    title: "GitHub Activity",
+    description:
+      "Automatically gathers merged PRs, releases, and notable commits. No manual changelog writing.",
+  },
+  {
+    icon: "◇",
+    title: "Human-in-the-Loop",
+    description:
+      "Drafts become GitHub issues for review. Edit, approve, or regenerate before sending.",
+  },
+  {
+    icon: "△",
+    title: "3 LLM Providers",
+    description: "Choose Anthropic Claude, OpenAI, or Google Gemini. Switch anytime with one env var.",
+  },
+  {
+    icon: "○",
+    title: "3 Subscriber Stores",
+    description:
+      "Supabase, JSON file, or Google Sheets. Use what fits your workflow.",
+  },
+  {
+    icon: "□",
+    title: "MCP Server",
+    description:
+      "Review and send drafts conversationally in Claude Desktop. Manage subscribers too.",
+  },
+];
+---
+
+<section id="features" class="px-6 py-20 md:py-28">
+  <div class="mx-auto max-w-6xl">
+    <div class="mb-16 text-center">
+      <h2 class="mb-4 text-3xl font-bold text-white md:text-4xl">Everything you need</h2>
+      <p class="text-lg text-[#bec4ca]">
+        From gathering activity to sending emails — fully automated, fully customizable.
+      </p>
+    </div>
+
+    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {
+        features.map((feature) => (
+          <div class="group rounded-xl border border-white/10 bg-white/[0.03] p-6 transition-colors hover:border-[#c9a84c]/30 hover:bg-white/[0.05]">
+            <div class="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-[#c9a84c]/10 text-lg text-[#c9a84c]">
+              {feature.icon}
+            </div>
+            <h3 class="mb-2 text-lg font-semibold text-white">{feature.title}</h3>
+            <p class="text-sm leading-relaxed text-[#7c8694]">{feature.description}</p>
+          </div>
+        ))
+      }
+    </div>
+  </div>
+</section>

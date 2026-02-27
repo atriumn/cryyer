@@ -1,0 +1,85 @@
+---
+title: Getting Started
+description: Get Cryyer up and running in 5 minutes.
+---
+
+Cryyer sends automated weekly email updates to your beta testers, with per-product voice powered by LLM-drafted content.
+
+## Install
+
+```bash
+npm install
+```
+
+## 1. Create a product config
+
+Create a YAML file in `products/` (e.g. `products/my-app.yaml`):
+
+```yaml
+id: my-app
+name: My App
+repo: owner/repo
+emailSubjectTemplate: "My App — Week of {{weekOf}}"
+voice: |
+  You are writing a weekly update email for My App beta testers.
+  Be concise, friendly, and focus on what matters to users.
+```
+
+See [Product Configuration](/configuration/product-config) for all fields.
+
+## 2. Add subscribers
+
+Choose a [subscriber store](/subscriber-stores) — the simplest for local dev is JSON:
+
+```bash
+export SUBSCRIBER_STORE=json
+```
+
+Create `subscribers.json`:
+
+```json
+[
+  { "email": "alice@example.com", "name": "Alice", "productIds": ["my-app"] },
+  { "email": "bob@example.com", "productIds": ["my-app"] }
+]
+```
+
+## 3. Set environment variables
+
+```bash
+export GITHUB_TOKEN=ghp_...
+export RESEND_API_KEY=re_...
+export FROM_EMAIL=updates@yourdomain.com
+export LLM_PROVIDER=anthropic          # or openai, gemini
+export ANTHROPIC_API_KEY=sk-ant-...    # key for your chosen provider
+```
+
+See [Environment Variables](/configuration/environment) for the full reference.
+
+## 4. Run
+
+```bash
+npm run build
+npm start              # full pipeline: gather → draft → send
+```
+
+Or run the two stages separately:
+
+```bash
+node dist/draft.js         # generate drafts → create GitHub issues
+node dist/send-on-close.js # send emails when a draft issue is closed
+```
+
+## How it works
+
+Cryyer follows a two-stage pipeline:
+
+1. **Weekly Draft** (cron, Mondays) — gathers GitHub activity (merged PRs, releases, notable commits), generates an email draft via LLM, and creates a GitHub issue for human review.
+2. **Send on Close** — when a draft issue is closed (approved), emails are sent to subscribers via [Resend](https://resend.com).
+
+## Next steps
+
+- [Configure your products](/configuration/product-config)
+- [Choose a subscriber store](/subscriber-stores)
+- [Pick an LLM provider](/llm-providers)
+- [Set up GitHub Actions](/github-actions) for full automation

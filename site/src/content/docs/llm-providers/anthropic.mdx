@@ -1,0 +1,35 @@
+---
+title: Anthropic (Claude)
+description: Use Anthropic Claude as your LLM provider.
+---
+
+Anthropic Claude is the default LLM provider, recommended for best writing quality.
+
+## Setup
+
+```bash
+export LLM_PROVIDER=anthropic  # or just don't set it — this is the default
+export ANTHROPIC_API_KEY=sk-ant-...
+```
+
+## Configuration
+
+| Variable | Default | Description |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | — | Your Anthropic API key |
+| `LLM_MODEL` | `claude-3-5-haiku-latest` | Override the default model |
+
+## Available models
+
+Any Anthropic model ID works. Common options:
+
+- `claude-3-5-haiku-latest` (default) — fast and affordable
+- `claude-sonnet-4-5-20250514` — higher quality drafts
+- `claude-opus-4-20250514` — maximum quality
+
+## Get an API key
+
+1. Go to [console.anthropic.com](https://console.anthropic.com)
+2. Create an account or sign in
+3. Navigate to **API Keys**
+4. Create a new key

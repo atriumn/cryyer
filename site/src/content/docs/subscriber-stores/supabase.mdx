@@ -1,0 +1,53 @@
+---
+title: Supabase
+description: Use Supabase as your subscriber store.
+---
+
+Supabase is the default subscriber store — production-ready with full CRUD and email logging.
+
+## Setup
+
+```bash
+export SUBSCRIBER_STORE=supabase  # or just don't set it — this is the default
+```
+
+## Configuration
+
+| Variable | Description |
+|---|---|
+| `SUPABASE_URL` | Your Supabase project URL (`https://[project-id].supabase.co`) |
+| `SUPABASE_SERVICE_KEY` | Supabase service role key |
+
+## Database schema
+
+Cryyer expects a `beta_testers` table with the following columns:
+
+| Column | Type | Description |
+|---|---|---|
+| `email` | text | Subscriber email address |
+| `name` | text | Display name (optional) |
+| `product` | text | Product ID |
+| `unsubscribed_at` | timestamp | Set to exclude from sends |
+
+### Create the table
+
+```sql
+create table beta_testers (
+  id uuid default gen_random_uuid() primary key,
+  email text not null,
+  name text,
+  product text not null,
+  unsubscribed_at timestamp with time zone,
+  created_at timestamp with time zone default now()
+);
+
+create index idx_beta_testers_product on beta_testers (product);
+create unique index idx_beta_testers_email_product on beta_testers (email, product);
+```
+
+## How it works
+
+- `getSubscribers` queries active subscribers (where `unsubscribed_at` is null) filtered by product ID.
+- `addSubscriber` inserts a new row.
+- `removeSubscriber` sets `unsubscribed_at` to the current timestamp (soft delete).
+- `recordEmailSent` logs the send event.

@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+/* Cryyer color scheme: Navy + Gold */
+:root {
+  --sl-color-accent-low: #1a2736;
+  --sl-color-accent: #c9a84c;
+  --sl-color-accent-high: #f0e6c8;
+  --sl-color-white: #f8f9fa;
+  --sl-color-gray-1: #e3e6e9;
+  --sl-color-gray-2: #bec4ca;
+  --sl-color-gray-3: #7c8694;
+  --sl-color-gray-4: #4a5568;
+  --sl-color-gray-5: #2d3748;
+  --sl-color-gray-6: #1a2736;
+  --sl-color-black: #0d1520;
+}
+
+:root[data-theme="dark"] {
+  --sl-color-accent-low: #2a1f0a;
+  --sl-color-accent: #c9a84c;
+  --sl-color-accent-high: #f0e6c8;
+  --sl-color-white: #f8f9fa;
+  --sl-color-gray-1: #e3e6e9;
+  --sl-color-gray-2: #bec4ca;
+  --sl-color-gray-3: #7c8694;
+  --sl-color-gray-4: #4a5568;
+  --sl-color-gray-5: #2d3748;
+  --sl-color-gray-6: #1a2736;
+  --sl-color-black: #0d1520;
+}
+
+/* Starlight nav link accent */
+[data-theme="dark"] .sl-markdown-content a {
+  color: var(--sl-color-accent);
+}

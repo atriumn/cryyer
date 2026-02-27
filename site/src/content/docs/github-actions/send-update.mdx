@@ -1,0 +1,37 @@
+---
+title: Send Update
+description: Automated email sending when a draft issue is closed.
+---
+
+The `send-update.yml` workflow fires when an issue with the `draft` label is closed. It sends emails to all subscribers for the associated product.
+
+## What it does
+
+1. Detects the closed issue has the `draft` label
+2. Parses the issue body for subject and email content
+3. Queries your subscriber store for active subscribers
+4. Sends emails via Resend
+5. Posts delivery stats as an issue comment
+
+## Issue body format
+
+The workflow expects the draft issue body to follow this format:
+
+```
+**Subject:** Your email subject line here
+
+---
+
+Your email body HTML content here...
+```
+
+## Required secrets
+
+| Secret | Description |
+|---|---|
+| `GITHUB_TOKEN` | GitHub personal access token |
+| `RESEND_API_KEY` | Resend API key |
+| `FROM_EMAIL` | Sender email address |
+| Subscriber store secrets | Depends on your `SUBSCRIBER_STORE` choice |
+
+See [Environment Variables](/configuration/environment) for the full list.

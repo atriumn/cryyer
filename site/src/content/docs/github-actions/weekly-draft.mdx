@@ -1,0 +1,35 @@
+---
+title: Weekly Draft
+description: Automated weekly draft generation workflow.
+---
+
+The `weekly-draft.yml` workflow runs every Monday at 1pm UTC. It gathers GitHub activity for each configured product and creates draft issues.
+
+## What it does
+
+1. Checks out the repo and installs dependencies
+2. Builds the TypeScript source
+3. Runs `node dist/draft.js`
+4. For each product in `products/`:
+   - Fetches merged PRs, releases, and notable commits from the past week
+   - Generates an email draft via your configured LLM provider
+   - Creates a GitHub issue with the `draft` label and the product ID label
+
+## Required secrets
+
+| Secret | Description |
+|---|---|
+| `GITHUB_TOKEN` | GitHub personal access token |
+| `CRYYER_REPO` | `owner/repo` for draft issue creation |
+| `LLM_PROVIDER` | Your chosen LLM provider |
+| API key for your provider | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or `GEMINI_API_KEY` |
+
+## Customizing the schedule
+
+Edit the cron expression in `weekly-draft.yml`:
+
+```yaml
+on:
+  schedule:
+    - cron: "0 13 * * 1"  # Monday 1pm UTC
+```

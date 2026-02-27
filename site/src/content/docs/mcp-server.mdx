@@ -1,0 +1,71 @@
+---
+title: MCP Server
+description: Use Cryyer from Claude Desktop with the MCP server.
+---
+
+Cryyer includes an MCP (Model Context Protocol) server that lets you review, edit, and send drafts conversationally in Claude Desktop. It also supports subscriber management.
+
+## Setup
+
+```bash
+npm run build   # compiles dist/mcp.js
+```
+
+Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
+
+```json
+{
+  "mcpServers": {
+    "cryyer": {
+      "command": "node",
+      "args": ["/path/to/cryyer/dist/mcp.js"],
+      "env": {
+        "GITHUB_TOKEN": "ghp_...",
+        "CRYYER_REPO": "owner/repo",
+        "CRYYER_ROOT": "/path/to/cryyer",
+        "RESEND_API_KEY": "re_...",
+        "FROM_EMAIL": "updates@example.com",
+        "SUBSCRIBER_STORE": "json",
+        "LLM_PROVIDER": "anthropic",
+        "ANTHROPIC_API_KEY": "sk-ant-..."
+      }
+    }
+  }
+}
+```
+
+Only `GITHUB_TOKEN` and `CRYYER_REPO` are needed for read-only tools (`list_drafts`, `get_draft`). Other env vars are needed for sending, regenerating, and subscriber management.
+
+## Tools
+
+| Tool | Description |
+|---|---|
+| `list_drafts` | List open draft issues |
+| `get_draft` | Get full draft content with subscriber count |
+| `update_draft` | Save revised subject + body |
+| `send_draft` | Send emails, close issue, post stats |
+| `regenerate_draft` | Re-gather activity + re-draft via LLM |
+| `list_products` | Show configured products |
+| `list_subscribers` | Show subscribers for a product |
+| `add_subscriber` | Add a subscriber to a product |
+| `remove_subscriber` | Unsubscribe someone from a product |
+
+## Prompt
+
+Use the `review_weekly_drafts` prompt for the Monday morning review workflow — it walks through each pending draft and asks whether to send, edit, regenerate, or skip.
+
+## Alternative: npx
+
+You can also run the MCP server via npx without cloning the repo:
+
+```json
+{
+  "mcpServers": {
+    "cryyer": {
+      "command": "npx",
+      "args": ["cryyer-mcp"],
+      "env": { ... }
+    }
+  }
+}
+```

@@ -1,0 +1,21 @@
+{
+  "name": "cryyer-site",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@astrojs/mdx": "^4.3.13",
+    "@astrojs/starlight": "^0.37.6",
+    "@astrojs/vercel": "^9.0.4",
+    "@tailwindcss/vite": "^4.2.1",
+    "astro": "^5.18.0",
+    "resend": "^6.9.2",
+    "sharp": "^0.34.5",
+    "tailwindcss": "^4.2.1"
+  }
+}

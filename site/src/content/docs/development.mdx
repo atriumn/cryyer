@@ -1,0 +1,62 @@
+---
+title: Development
+description: Set up your local development environment for Cryyer.
+---
+
+## Commands
+
+```bash
+npm install          # install dependencies
+npm run build        # compile TypeScript
+npm run typecheck    # type-check without emitting
+npm run lint         # ESLint
+npm test             # run tests (vitest)
+npm run test:watch   # run tests in watch mode
+npm run dev          # build + run
+npm run mcp          # run MCP server
+```
+
+## Project structure
+
+```
+src/
+├── index.ts              # Full pipeline entry point
+├── draft.ts              # Draft generation entry point
+├── send-on-close.ts      # Send on issue close entry point
+├── mcp.ts                # MCP server entry point
+├── config.ts             # Env vars + product YAML loading
+├── gather.ts             # GitHub activity fetching
+├── llm-provider.ts       # LLM adapter pattern
+├── summarize.ts          # Prompt building + LLM calls
+├── subscriber-store.ts   # Subscriber store adapter pattern
+├── send.ts               # Email sending via Resend
+└── types.ts              # Shared TypeScript types
+```
+
+## Key conventions
+
+- **ESM modules** — `"type": "module"` in package.json, imports use `.js` extensions
+- **TypeScript strict mode** — target ES2022, module Node16
+- **Adapter pattern** — LLM providers and subscriber stores use a factory + interface pattern
+- **Bot filtering** — dependabot, renovate, and github-actions activity is filtered out in `gather.ts`
+- **Product config** — products are YAML files in `products/`, loaded at startup by `config.ts`
+
+## Testing
+
+Tests use [Vitest](https://vitest.dev) and are located alongside source files or in `src/__tests__/`.
+
+```bash
+npm test             # run once
+npm run test:watch   # watch mode
+```
+
+## Entry points
+
+Cryyer has four distinct entry points, each compiled from `src/` to `dist/`:
+
+| Entry point | Purpose | Typical usage |
+|---|---|---|
+| `index.ts` | Full pipeline (gather → draft → send) | Local dev, manual runs |
+| `draft.ts` | Generate drafts, create GitHub issues | `weekly-draft.yml` workflow |
+| `send-on-close.ts` | Send emails when issue is closed | `send-update.yml` workflow |
+| `mcp.ts` | MCP server for Claude Desktop | Interactive review |

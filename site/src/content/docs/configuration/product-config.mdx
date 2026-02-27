@@ -1,0 +1,53 @@
+---
+title: Product Configuration
+description: How to define products in Cryyer.
+---
+
+Products are defined as YAML files in `products/`. Each file represents one product that Cryyer tracks and sends updates for.
+
+## Example
+
+```yaml
+id: my-app
+name: My App
+repo: owner/repo
+emailSubjectTemplate: "My App — Week of {{weekOf}}"
+voice: |
+  You are writing a weekly update email for My App beta testers.
+  Be concise, friendly, and focus on what matters to users.
+```
+
+## Fields
+
+| Field | Required | Description |
+|---|---|---|
+| `id` | Yes | Unique identifier, also used as GitHub issue label |
+| `name` | Yes | Display name |
+| `voice` | Yes | LLM voice/tone instructions (injected into the draft prompt) |
+| `repo` | Yes | `owner/repo` for GitHub activity gathering |
+| `emailSubjectTemplate` | Yes | Subject line template — use `{{weekOf}}` for the date |
+| `tagline` | No | Product tagline |
+| `from_name` | No | Override sender name for this product |
+| `from_email` | No | Override sender email for this product |
+| `reply_to` | No | Reply-to address |
+
+## Voice field
+
+The `voice` field is injected directly into the LLM prompt and controls the tone of generated emails. Use a multi-line string to give detailed instructions about your product's communication style.
+
+```yaml
+voice: |
+  You are writing a weekly update for Acme Cloud beta testers.
+  Tone: professional but approachable. Use "we" not "I".
+  Focus on user-facing changes. Skip internal refactors.
+  Keep paragraphs short — these are busy developers.
+```
+
+## Subject template
+
+The `emailSubjectTemplate` supports a `{{weekOf}}` placeholder that gets replaced with the current week's date:
+
+```yaml
+emailSubjectTemplate: "My App — Week of {{weekOf}}"
+# → "My App — Week of January 6, 2025"
+```

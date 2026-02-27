@@ -1,0 +1,32 @@
+---
+title: LLM Providers
+description: Choose which LLM generates your email drafts.
+---
+
+Cryyer supports three LLM providers for generating email drafts. Set the `LLM_PROVIDER` environment variable to choose yours. Default is `anthropic`.
+
+| Provider | Default Model | Best for |
+|---|---|---|
+| [Anthropic](/llm-providers/anthropic) | `claude-3-5-haiku-latest` | Best writing quality |
+| [OpenAI](/llm-providers/openai) | `gpt-4o` | Wide ecosystem |
+| [Gemini](/llm-providers/gemini) | `gemini-1.5-flash` | Speed and cost |
+
+## Configuration
+
+| Variable | Default | Description |
+|---|---|---|
+| `LLM_PROVIDER` | `anthropic` | `anthropic`, `openai`, or `gemini` |
+| `LLM_MODEL` | Per-provider default | Override the default model |
+
+## Model override
+
+You can use any model from your chosen provider by setting `LLM_MODEL`:
+
+```bash
+export LLM_PROVIDER=anthropic
+export LLM_MODEL=claude-sonnet-4-5-20250514  # use Sonnet instead of Haiku
+```
+
+## How it works
+
+Cryyer uses an adapter pattern — all providers implement the same `LLMProvider` interface. The draft prompt includes your product's `voice` configuration and the gathered GitHub activity, and the LLM returns a structured JSON response with `subject` and `body` fields.

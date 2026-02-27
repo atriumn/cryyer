@@ -1,0 +1,19 @@
+---
+title: CI
+description: Continuous integration workflow for linting, typechecking, and testing.
+---
+
+The `ci.yml` workflow runs on every push and pull request to main. It ensures code quality stays high.
+
+## What it does
+
+1. Checks out the repo
+2. Sets up Node.js
+3. Installs dependencies
+4. Runs linting (`npm run lint`)
+5. Runs type checking (`npm run typecheck`)
+6. Runs tests (`npm test`)
+
+## No secrets required
+
+The CI workflow doesn't need any API keys or secrets — it only runs static analysis and unit tests.

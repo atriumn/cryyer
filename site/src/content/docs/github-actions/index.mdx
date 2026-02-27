@@ -1,0 +1,21 @@
+---
+title: GitHub Actions
+description: Automate Cryyer with GitHub Actions workflows.
+---
+
+Cryyer ships with three GitHub Actions workflows for full automation:
+
+| Workflow | Trigger | Purpose |
+|---|---|---|
+| [Weekly Draft](/github-actions/weekly-draft) | Cron (Monday 1pm UTC) | Gather activity, create draft issues |
+| [Send Update](/github-actions/send-update) | Issue closed with `draft` label | Send emails to subscribers |
+| [CI](/github-actions/ci) | Push/PR to main | Lint, typecheck, test |
+
+## The two-stage pipeline
+
+The weekly draft and send update workflows together form Cryyer's core automation:
+
+1. **Monday**: `weekly-draft.yml` runs, gathers GitHub activity, generates email drafts via LLM, and creates GitHub issues with the `draft` label.
+2. **Review**: You review the draft issues — edit the content directly in GitHub if needed.
+3. **Approve**: Close the issue to approve the draft.
+4. **Send**: `send-update.yml` fires on issue close, sends emails to all subscribers, and posts delivery stats as an issue comment.

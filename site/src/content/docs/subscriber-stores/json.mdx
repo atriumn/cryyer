@@ -1,0 +1,53 @@
+---
+title: JSON File Store
+description: Use a local JSON file for subscriber data.
+---
+
+The simplest subscriber store — perfect for local development and small lists.
+
+## Setup
+
+```bash
+export SUBSCRIBER_STORE=json
+```
+
+## Configuration
+
+| Variable | Default | Description |
+|---|---|---|
+| `SUBSCRIBERS_JSON_PATH` | `./subscribers.json` | Path to subscriber data |
+| `EMAIL_LOG_JSON_PATH` | `./email-log.json` | Path to email send log |
+
+## File format
+
+Create a `subscribers.json` file with an array of subscriber objects:
+
+```json
+[
+  {
+    "email": "alice@example.com",
+    "name": "Alice",
+    "productIds": ["my-app", "other-app"]
+  },
+  {
+    "email": "bob@example.com",
+    "productIds": ["my-app"]
+  }
+]
+```
+
+Each subscriber has:
+
+| Field | Required | Description |
+|---|---|---|
+| `email` | Yes | Subscriber email address |
+| `name` | No | Display name |
+| `productIds` | Yes | Array of product IDs they're subscribed to |
+
+## Email logging
+
+Sent emails are logged to `email-log.json` (or your configured path). This is a simple append-only JSON array.
+
+## Example
+
+See [`subscribers.example.json`](https://github.com/jyoung/cryyer/blob/main/subscribers.example.json) in the repo.

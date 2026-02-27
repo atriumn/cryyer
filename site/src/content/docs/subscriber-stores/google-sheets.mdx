@@ -1,0 +1,85 @@
+---
+title: Google Sheets
+description: Use a Google Spreadsheet as your subscriber store.
+---
+
+Google Sheets is great for non-technical teams who want a familiar spreadsheet UI for managing subscribers.
+
+## Setup
+
+```bash
+export SUBSCRIBER_STORE=google-sheets
+```
+
+## Configuration
+
+| Variable | Description |
+|---|---|
+| `GOOGLE_SHEETS_SPREADSHEET_ID` | The ID from your spreadsheet URL |
+| `GOOGLE_SERVICE_ACCOUNT_EMAIL` | Service account email |
+| `GOOGLE_PRIVATE_KEY` | Service account private key (PEM format) |
+
+## How it works
+
+Cryyer looks for a sheet tab named after the product ID (e.g. `my-app`), falling back to the first sheet. Expected columns: `email`, `name` (optional), `unsubscribed` (optional, set to `true` to exclude).
+
+Email send logging is a no-op with this backend (read-only).
+
+## Setup walkthrough
+
+### 1. Enable the Google Sheets API
+
+- Go to [console.cloud.google.com](https://console.cloud.google.com) (create a project if you don't have one)
+- Navigate to **APIs & Services > Library**
+- Search for "Google Sheets API" and click **Enable**
+
+### 2. Create a service account
+
+- Go to **APIs & Services > Credentials**
+- Click **Create Credentials > Service account**
+- Name it (e.g. `cryyer-sheets-reader`) and click **Done**
+
+### 3. Generate a key
+
+- Click the service account you just created
+- Go to the **Keys** tab
+- Click **Add Key > Create new key > JSON**
+- Save the downloaded file
+
+### 4. Set your environment variables
+
+From the downloaded JSON file, grab `client_email` and `private_key`:
+
+```bash
+GOOGLE_SERVICE_ACCOUNT_EMAIL=cryyer-sheets-reader@your-project.iam.gserviceaccount.com
+GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIE...\n-----END PRIVATE KEY-----\n"
+```
+
+### 5. Get the spreadsheet ID
+
+From the spreadsheet URL:
+
+```
+https://docs.google.com/spreadsheets/d/SPREADSHEET_ID_HERE/edit
+                                       ^^^^^^^^^^^^^^^^^^^^
+```
+
+```bash
+GOOGLE_SHEETS_SPREADSHEET_ID=1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms
+```
+
+### 6. Share the spreadsheet
+
+Share the spreadsheet with your service account email (from step 4) as an **Editor** (required for add/remove subscriber support; Viewer is sufficient for read-only use).
+
+### 7. Set up columns
+
+Row 1 should have these headers:
+
+| email | name | unsubscribed |
+|---|---|---|
+| alice@example.com | Alice | |
+| bob@example.com | Bob | |
+| charlie@example.com | | true |
+
+Name the sheet tab after your product ID (e.g. `my-app`), or just use the default first sheet if you have one product.

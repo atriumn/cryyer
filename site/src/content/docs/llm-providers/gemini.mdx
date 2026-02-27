@@ -1,0 +1,33 @@
+---
+title: Gemini
+description: Use Google Gemini as your LLM provider.
+---
+
+## Setup
+
+```bash
+export LLM_PROVIDER=gemini
+export GEMINI_API_KEY=AI...
+```
+
+## Configuration
+
+| Variable | Default | Description |
+|---|---|---|
+| `GEMINI_API_KEY` | — | Your Google AI API key |
+| `LLM_MODEL` | `gemini-1.5-flash` | Override the default model |
+
+## Available models
+
+Any Gemini model ID works. Common options:
+
+- `gemini-1.5-flash` (default) — fast and cost-effective
+- `gemini-1.5-pro` — higher quality
+- `gemini-2.0-flash` — latest generation
+
+## Get an API key
+
+1. Go to [aistudio.google.com](https://aistudio.google.com)
+2. Sign in with your Google account
+3. Click **Get API key**
+4. Create a key for your project
