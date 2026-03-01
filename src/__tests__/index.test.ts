@@ -39,6 +39,10 @@ import { createLLMProvider } from '../llm-provider.js';
 import { createSubscriberStore } from '../subscriber-store.js';
 
 describe('getWeekOf', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('returns a date string in YYYY-MM-DD format', () => {
     const result = getWeekOf();
     expect(result).toMatch(/^\d{4}-\d{2}-\d{2}$/);
@@ -52,14 +56,18 @@ describe('getWeekOf', () => {
   });
 
   it('returns the start of the current week', () => {
+    // Pin to a specific Wednesday to avoid timezone/week-boundary flakiness
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-04T12:00:00Z')); // Wednesday, March 4, 2026
     const result = getWeekOf();
-    const resultDate = new Date(result);
-    const now = new Date();
-    // The result should be within the last 7 days
-    const diffMs = now.getTime() - resultDate.getTime();
-    const diffDays = diffMs / (1000 * 60 * 60 * 24);
-    expect(diffDays).toBeGreaterThanOrEqual(0);
-    expect(diffDays).toBeLessThan(7);
+    expect(result).toBe('2026-03-02'); // Monday of that week
+  });
+
+  it('returns the correct Monday when today is Sunday', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-08T12:00:00Z')); // Sunday, March 8, 2026
+    const result = getWeekOf();
+    expect(result).toBe('2026-03-02'); // Monday of that week (not next Monday)
   });
 });
 

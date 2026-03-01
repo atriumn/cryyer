@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 
+# Lock files (pnpm is the canonical package manager; npm lock file is excluded)
+package-lock.json
+
 # Build output
 dist/
 
@@ -28,6 +31,10 @@ Thumbs.db
 
 # TypeScript
 *.tsbuildinfo
+
+# Product configs (keep only example.yaml; user configs stay local)
+products/*.yaml
+!products/example.yaml
 
 # Subscriber data (local JSON store)
 subscribers.json
