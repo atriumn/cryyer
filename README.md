@@ -4,7 +4,18 @@
 
 # Cryyer
 
+<p align="center">
+  <a href="https://github.com/atriumn/cryyer/actions/workflows/ci.yml"><img src="https://github.com/atriumn/cryyer/actions/workflows/ci.yml/badge.svg" alt="CI Status"></a>
+  <a href="https://www.npmjs.com/package/cryyer"><img src="https://img.shields.io/npm/v/cryyer.svg" alt="npm version"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
+  <a href="./package.json"><img src="https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg" alt="Node.js >= 20"></a>
+</p>
+
 Automated weekly email updates for beta testers, with per-product voice powered by LLM-drafted content.
+
+**Website**: [cryyer.dev](https://cryyer.dev)
+**GitHub**: [atriumn/cryyer](https://github.com/atriumn/cryyer)
+**Issues**: [Report a bug](https://github.com/atriumn/cryyer/issues)
 
 Cryyer follows a two-stage pipeline:
 
