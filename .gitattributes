@@ -1,0 +1,3 @@
+# Mark lock files as binary to avoid noisy diffs
+package-lock.json binary
+pnpm-lock.yaml binary
