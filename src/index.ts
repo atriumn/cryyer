@@ -2,27 +2,47 @@ import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { Octokit } from 'octokit';
 import { Resend } from 'resend';
-import { loadConfig, loadProducts } from './config.js';
+import { loadProducts } from './config.js';
 import { gatherWeeklyActivity } from './gather.js';
 import { generateEmailDraft } from './summarize.js';
 import { sendWeeklyEmails } from './send.js';
 import { createLLMProvider } from './llm-provider.js';
 import { createSubscriberStore } from './subscriber-store.js';
 
+export function isDryRun(): boolean {
+  return process.env['DRY_RUN'] === 'true' || process.argv.includes('--dry-run');
+}
+
+function requireEnv(key: string): string {
+  const value = process.env[key];
+  if (!value) throw new Error(`Missing required environment variable: ${key}`);
+  return value;
+}
+
 async function main(): Promise<void> {
-  const config = loadConfig();
+  const dryRun = isDryRun();
+
+  const githubToken = requireEnv('GITHUB_TOKEN');
+  // Resend credentials are only needed when actually sending emails
+  const resendApiKey = dryRun ? (process.env['RESEND_API_KEY'] ?? '') : requireEnv('RESEND_API_KEY');
+  const fromEmail = dryRun ? (process.env['FROM_EMAIL'] ?? '') : requireEnv('FROM_EMAIL');
+
   const productsDir = join(process.cwd(), 'products');
   const products = loadProducts(productsDir);
 
-  const octokit = new Octokit({ auth: config.githubToken });
+  const octokit = new Octokit({ auth: githubToken });
   const llm = createLLMProvider();
-  const resend = new Resend(config.resendApiKey);
+  const resend = dryRun ? null : new Resend(resendApiKey);
   const store = createSubscriberStore();
 
   const weekOf = getWeekOf();
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-  console.log(`Running cryyer for week of ${weekOf}`);
+  if (dryRun) {
+    console.log(`[DRY RUN] Running cryyer preview for week of ${weekOf}`);
+  } else {
+    console.log(`Running cryyer for week of ${weekOf}`);
+  }
 
   for (const product of products) {
     console.log(`Processing product: ${product.name}`);
@@ -32,22 +52,31 @@ async function main(): Promise<void> {
       const draft = await generateEmailDraft(llm, product, activity, weekOf);
       const subscribers = await store.getSubscribers(product.id);
 
+      if (dryRun) {
+        console.log(`\n[DRY RUN] ${product.name}:`);
+        console.log(`  Subscribers: ${subscribers.length}`);
+        console.log(`  Subject: ${draft.subject}`);
+        console.log(`\n${draft.body}`);
+        console.log('---');
+        continue;
+      }
+
       if (subscribers.length === 0) {
         console.log(`  No subscribers for ${product.name}, skipping`);
         continue;
       }
 
-      const fromName = product.from_name ?? process.env['FROM_NAME'] ?? 'Cryyer Updates';
-      const fromEmail = product.from_email ?? config.fromEmail;
+      const productFromName = product.from_name ?? process.env['FROM_NAME'] ?? 'Cryyer Updates';
+      const productFromEmail = product.from_email ?? fromEmail;
       const replyTo = product.reply_to;
 
       const stats = await sendWeeklyEmails(
-        resend,
+        resend!,
         product,
         subscribers,
         { subject: draft.subject, body: draft.body },
-        fromName,
-        fromEmail,
+        productFromName,
+        productFromEmail,
         replyTo
       );
 

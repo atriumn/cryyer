@@ -37,7 +37,8 @@
     "./mcp": "./dist/mcp.js"
   },
   "bin": {
-    "cryyer-mcp": "./dist/mcp.js"
+    "cryyer-mcp": "./dist/mcp.js",
+    "cryyer": "./dist/init.js"
   },
   "scripts": {
     "build": "tsc",
@@ -48,7 +49,9 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
-    "mcp": "node dist/mcp.js"
+    "mcp": "node dist/mcp.js",
+    "check": "node dist/check.js",
+    "init": "node dist/init.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",

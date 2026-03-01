@@ -12,6 +12,10 @@ function requireEnv(key: string): string {
   return value;
 }
 
+export function isDryRun(): boolean {
+  return process.env['DRY_RUN'] === 'true' || process.argv.includes('--dry-run');
+}
+
 export function parseIssueBody(body: string): { subject: string; emailBody: string } | null {
   // Body format: **Subject:** ${subject}\n\n---\n\n${body}
   const subjectMatch = body.match(/^\*\*Subject:\*\*\s*(.+)$/m);
@@ -46,15 +50,17 @@ async function ensureLabel(
 }
 
 async function main(): Promise<void> {
+  const dryRun = isDryRun();
   const githubToken = requireEnv('GITHUB_TOKEN');
-  const resendApiKey = requireEnv('RESEND_API_KEY');
-  const fromEmail = requireEnv('FROM_EMAIL');
+  // Resend credentials only needed when actually sending
+  const resendApiKey = dryRun ? (process.env['RESEND_API_KEY'] ?? '') : requireEnv('RESEND_API_KEY');
+  const fromEmail = dryRun ? (process.env['FROM_EMAIL'] ?? '') : requireEnv('FROM_EMAIL');
   const fromName = process.env['FROM_NAME'] ?? 'Cryyer Updates';
   const issueNumber = parseInt(requireEnv('ISSUE_NUMBER'), 10);
   const [repoOwner, repoName] = requireEnv('GITHUB_REPOSITORY').split('/');
 
   const octokit = new Octokit({ auth: githubToken });
-  const resend = new Resend(resendApiKey);
+  const resend = dryRun ? null : new Resend(resendApiKey);
   const store = createSubscriberStore();
 
   // Fetch issue
@@ -124,10 +130,20 @@ async function main(): Promise<void> {
     return;
   }
 
+  // In dry-run mode, print what would be sent instead of sending
+  if (dryRun) {
+    console.log(`\n[DRY RUN] ${product.name} — would send email:`);
+    console.log(`  Subscribers: ${subscribers.length}`);
+    console.log(`  Subject: ${emailContent.subject}`);
+    console.log(`\n${emailContent.body}`);
+    console.log('---');
+    return;
+  }
+
   // Send emails
   let stats;
   try {
-    stats = await sendWeeklyEmails(resend, product, subscribers, emailContent, fromName, fromEmail);
+    stats = await sendWeeklyEmails(resend!, product, subscribers, emailContent, fromName, fromEmail);
   } catch (err) {
     // Re-open issue and add error comment on unexpected send failure
     await octokit.rest.issues.update({
@@ -179,6 +195,8 @@ async function main(): Promise<void> {
     process.exitCode = 1;
   }
 }
+
+export { main };
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   main().catch((err) => {
