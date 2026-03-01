@@ -5,15 +5,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build & Development Commands
 
 ```bash
-npm install          # Install dependencies
-npm run build        # Compile TypeScript to dist/
-npm run typecheck    # Type-check without emitting
-npm run lint         # ESLint on src/
-npm test             # Run unit tests (vitest)
-npm run test:watch   # Run tests in watch mode
-npm run dev          # Build then run (npm run build && npm start)
-npm start            # Run compiled output (node dist/index.js)
-npm run mcp          # Run MCP server (node dist/mcp.js)
+pnpm install         # Install dependencies
+pnpm run build       # Compile TypeScript to dist/
+pnpm run typecheck   # Type-check without emitting
+pnpm run lint        # ESLint on src/
+pnpm test            # Run unit tests (vitest)
+pnpm run test:watch  # Run tests in watch mode
+pnpm run dev         # Build then run (pnpm run build && pnpm start)
+pnpm start           # Run compiled output (node dist/index.js)
+pnpm run mcp         # Run MCP server (node dist/mcp.js)
 ```
 
 ## What Cryyer Does
@@ -42,9 +42,7 @@ Key modules:
 | `summarize.ts` | Builds prompt with product voice, calls LLM provider, parses JSON `{subject, body}` response |
 | `subscriber-store.ts` | SubscriberStore interface and factory; adapters for Supabase, JSON file, Google Sheets. Supports `getSubscribers`, `recordEmailSent`, `addSubscriber`, `removeSubscriber`. |
 | `mcp.ts` | MCP server entry point; 9 tools + 1 prompt for draft review and subscriber management |
-| `subscribers.ts` | *(deprecated)* Legacy Supabase subscriber query; use `subscriber-store.ts` instead |
 | `send.ts` | Sends batch emails via Resend with HTML template wrapping |
-| `llm.ts` / `email.ts` / `github.ts` / `db.ts` | Thin client constructors for Resend, Octokit, Supabase; legacy LLM helper. `db.ts` is deprecated in favor of `subscriber-store.ts` |
 
 ## Product Configuration
 
@@ -118,4 +116,16 @@ Default models per provider: Anthropic → `claude-3-5-haiku-latest`, OpenAI →
 - LLM provider is configurable via `LLM_PROVIDER` env var; defaults to Anthropic Claude
 - Default model per provider can be overridden via `LLM_MODEL` env var
 - Subscriber store is configurable via `SUBSCRIBER_STORE` env var; defaults to Supabase
-- `db.ts` and `subscribers.ts` are deprecated; use `subscriber-store.ts` for all subscriber access
+- `dist/` is gitignored and never committed; run `pnpm run build` to generate it
+- pnpm is the canonical package manager; `package-lock.json` is gitignored
+- Product configs in `products/*.yaml` are gitignored except `products/example.yaml`
+
+## Removed Files
+
+The following files were deprecated and have been removed from `src/`:
+
+- `db.ts` — replaced by `subscriber-store.ts` (removed in #39)
+- `subscribers.ts` — replaced by `subscriber-store.ts` (removed in #39)
+- `llm.ts` — replaced by `llm-provider.ts` (removed in #40)
+- `email.ts` — thin Resend wrapper, unused (removed in #40)
+- `github.ts` — thin Octokit wrapper, unused (removed in #40)

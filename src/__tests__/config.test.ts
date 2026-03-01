@@ -7,7 +7,7 @@ describe('loadProducts', () => {
 
   it('loads all YAML product files', () => {
     const products = loadProducts(productsDir);
-    expect(products.length).toBeGreaterThanOrEqual(2);
+    expect(products.length).toBeGreaterThanOrEqual(1);
   });
 
   it('parses product fields correctly', () => {

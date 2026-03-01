@@ -14,7 +14,7 @@ Cryyer follows a two-stage pipeline:
 ## Quickstart
 
 ```bash
-npm install
+pnpm install
 ```
 
 ### 1. Create a product config
@@ -52,19 +52,29 @@ Create `subscribers.json` (see [`subscribers.example.json`](./subscribers.exampl
 
 ### 3. Set environment variables
 
+Copy `.env.example` to `.env` and fill in your values:
+
 ```bash
-export GITHUB_TOKEN=ghp_...
-export RESEND_API_KEY=re_...
-export FROM_EMAIL=updates@yourdomain.com
-export LLM_PROVIDER=anthropic          # or openai, gemini
-export ANTHROPIC_API_KEY=sk-ant-...    # key for your chosen provider
+cp .env.example .env
 ```
+
+At minimum you need:
+
+```bash
+GITHUB_TOKEN=ghp_...
+RESEND_API_KEY=re_...
+FROM_EMAIL=updates@yourdomain.com
+LLM_PROVIDER=anthropic          # or openai, gemini
+ANTHROPIC_API_KEY=sk-ant-...    # key for your chosen provider
+```
+
+See [`.env.example`](./.env.example) for all variables and their descriptions.
 
 ### 4. Run
 
 ```bash
-npm run build
-npm start              # full pipeline: gather → draft → send
+pnpm run build
+pnpm start             # full pipeline: gather → draft → send
 ```
 
 Or run the two stages separately:
@@ -292,12 +302,12 @@ Use the `review_weekly_drafts` prompt for the Monday morning review workflow —
 ## Development
 
 ```bash
-npm install          # install dependencies
-npm run build        # compile TypeScript
-npm run typecheck    # type-check without emitting
-npm run lint         # ESLint
-npm test             # run tests (vitest)
-npm run test:watch   # run tests in watch mode
-npm run dev          # build + run
-npm run mcp          # run MCP server
+pnpm install         # install dependencies
+pnpm run build       # compile TypeScript
+pnpm run typecheck   # type-check without emitting
+pnpm run lint        # ESLint
+pnpm test            # run tests (vitest)
+pnpm run test:watch  # run tests in watch mode
+pnpm run dev         # build + run
+pnpm run mcp         # run MCP server
 ```
