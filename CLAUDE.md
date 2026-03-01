@@ -11,7 +11,7 @@ pnpm run typecheck   # Type-check without emitting
 pnpm run lint        # ESLint on src/
 pnpm test            # Run unit tests (vitest)
 pnpm run test:watch  # Run tests in watch mode
-pnpm run dev         # Build then run (npm run build && npm start)
+pnpm run dev         # Build then run (pnpm run build && pnpm start)
 pnpm start           # Run compiled output (node dist/index.js)
 pnpm run mcp         # Run MCP server (node dist/mcp.js)
 ```
@@ -116,3 +116,16 @@ Default models per provider: Anthropic → `claude-3-5-haiku-latest`, OpenAI →
 - LLM provider is configurable via `LLM_PROVIDER` env var; defaults to Anthropic Claude
 - Default model per provider can be overridden via `LLM_MODEL` env var
 - Subscriber store is configurable via `SUBSCRIBER_STORE` env var; defaults to Supabase
+- `dist/` is gitignored and never committed; run `pnpm run build` to generate it
+- pnpm is the canonical package manager; `package-lock.json` is gitignored
+- Product configs in `products/*.yaml` are gitignored except `products/example.yaml`
+
+## Removed Files
+
+The following files were deprecated and have been removed from `src/`:
+
+- `db.ts` — replaced by `subscriber-store.ts` (removed in #39)
+- `subscribers.ts` — replaced by `subscriber-store.ts` (removed in #39)
+- `llm.ts` — replaced by `llm-provider.ts` (removed in #40)
+- `email.ts` — thin Resend wrapper, unused (removed in #40)
+- `github.ts` — thin Octokit wrapper, unused (removed in #40)
