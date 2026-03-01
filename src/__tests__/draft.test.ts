@@ -19,7 +19,7 @@ vi.mock('octokit', () => ({
   Octokit: vi.fn(function OctokitMock() {}),
 }));
 
-import { getWeekOf, requireEnv, ensureLabel, main } from '../draft.js';
+import { getWeekOf, requireEnv, ensureLabel, isDryRun, main } from '../draft.js';
 import { loadProducts } from '../config.js';
 import { gatherWeeklyActivity } from '../gather.js';
 import { generateEmailDraft } from '../summarize.js';
@@ -242,5 +242,106 @@ describe('main orchestration', () => {
   it('throws when CRYYER_REPO is missing', async () => {
     delete process.env['CRYYER_REPO'];
     await expect(main()).rejects.toThrow('Missing required environment variable: CRYYER_REPO');
+  });
+});
+
+describe('isDryRun', () => {
+  const originalEnv = { ...process.env };
+  const originalArgv = [...process.argv];
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+    process.argv = [...originalArgv];
+  });
+
+  it('returns false by default', () => {
+    delete process.env['DRY_RUN'];
+    process.argv = process.argv.filter((a) => a !== '--dry-run');
+    expect(isDryRun()).toBe(false);
+  });
+
+  it('returns true when DRY_RUN=true', () => {
+    process.env['DRY_RUN'] = 'true';
+    expect(isDryRun()).toBe(true);
+  });
+
+  it('returns true when --dry-run flag is passed', () => {
+    delete process.env['DRY_RUN'];
+    process.argv = [...process.argv, '--dry-run'];
+    expect(isDryRun()).toBe(true);
+  });
+});
+
+describe('dry-run mode', () => {
+  const originalEnv = { ...process.env };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env['GITHUB_TOKEN'] = 'test-token';
+    process.env['ANTHROPIC_API_KEY'] = 'test-key';
+    process.env['DRY_RUN'] = 'true';
+    // CRYYER_REPO is intentionally not set to verify it's not required in dry-run
+    delete process.env['CRYYER_REPO'];
+  });
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+  });
+
+  it('prints draft to stdout and skips issue creation when DRY_RUN=true', async () => {
+    const mockProduct = {
+      id: 'test-app',
+      name: 'Test App',
+      voice: 'friendly',
+      repo: 'owner/test-app',
+      emailSubjectTemplate: 'Weekly update {{weekOf}}',
+    };
+    const mockActivity = { prs: [], releases: [], commits: [] };
+    const mockDraft = { subject: 'Test Subject', body: 'Test body content' };
+
+    (loadProducts as Mock).mockReturnValue([mockProduct]);
+    (gatherWeeklyActivity as Mock).mockResolvedValue(mockActivity);
+    (generateEmailDraft as Mock).mockResolvedValue(mockDraft);
+
+    const mockOctokitInstance = {
+      rest: {
+        issues: {
+          getLabel: vi.fn(),
+          createLabel: vi.fn(),
+          create: vi.fn(),
+        },
+      },
+    };
+    (Octokit as unknown as Mock).mockImplementation(function () {
+      return mockOctokitInstance;
+    });
+    (createLLMProvider as Mock).mockReturnValue({});
+
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await main();
+
+    // Issue creation should NOT have been called
+    expect(mockOctokitInstance.rest.issues.create).not.toHaveBeenCalled();
+    expect(mockOctokitInstance.rest.issues.getLabel).not.toHaveBeenCalled();
+
+    // Output should contain the draft content
+    const output = consoleSpy.mock.calls.map((c) => String(c[0])).join('\n');
+    expect(output).toContain('[DRY RUN]');
+    expect(output).toContain('Test Subject');
+
+    consoleSpy.mockRestore();
+  });
+
+  it('does not require CRYYER_REPO in dry-run mode', async () => {
+    delete process.env['CRYYER_REPO'];
+
+    (loadProducts as Mock).mockReturnValue([]);
+    (Octokit as unknown as Mock).mockImplementation(function () {
+      return { rest: { issues: {} } };
+    });
+    (createLLMProvider as Mock).mockReturnValue({});
+
+    await expect(main()).resolves.toBeUndefined();
   });
 });
