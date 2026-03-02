@@ -1,0 +1,72 @@
+#!/usr/bin/env node
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+function getVersion(): string {
+  const pkg = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf-8'));
+  return pkg.version as string;
+}
+
+function printHelp(): void {
+  console.log(`
+cryyer — automated weekly email updates for beta testers
+
+Usage:
+  cryyer <command> [options]
+
+Commands:
+  init          Interactive product setup
+  check         Validate config and connections
+  run           Full pipeline: gather → draft → send
+  draft         Generate drafts → create GitHub issues
+  send          Send emails for a closed draft issue
+
+Options:
+  --help, -h    Show this help message
+  --version, -V Print version
+
+Run 'cryyer <command> --help' for more information on a command.
+`.trimStart());
+}
+
+async function run(): Promise<void> {
+  const args = process.argv.slice(2);
+  const command = args[0];
+
+  if (!command || command === '--help' || command === '-h') {
+    printHelp();
+    return;
+  }
+
+  if (command === '--version' || command === '-V') {
+    console.log(getVersion());
+    return;
+  }
+
+  const commands: Record<string, string> = {
+    init: './init.js',
+    check: './check.js',
+    run: './index.js',
+    draft: './draft.js',
+    send: './send-on-close.js',
+  };
+
+  const modulePath = commands[command];
+  if (!modulePath) {
+    console.error(`Unknown command: ${command}\n`);
+    printHelp();
+    process.exitCode = 1;
+    return;
+  }
+
+  const mod = await import(modulePath) as { main: () => Promise<void> };
+  await mod.main();
+}
+
+run().catch((err) => {
+  console.error('Fatal error:', err);
+  process.exit(1);
+});

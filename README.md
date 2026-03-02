@@ -25,45 +25,24 @@ Cryyer follows a two-stage pipeline:
 ## Quickstart
 
 ```bash
-pnpm install
+npm install -g cryyer   # or: npx cryyer
 ```
 
-### 1. Create a product config
+### 1. Initialize a product
 
-Create a YAML file in `products/` (e.g. `products/my-app.yaml`):
-
-```yaml
-id: my-app
-name: My App
-repo: owner/repo
-emailSubjectTemplate: "My App — Week of {{weekOf}}"
-voice: |
-  You are writing a weekly update email for My App beta testers.
-  Be concise, friendly, and focus on what matters to users.
-```
-
-See [Product Configuration](#product-configuration) for all fields.
-
-### 2. Add subscribers
-
-Choose a [subscriber store](#subscriber-stores) — the simplest for local dev is JSON:
+Run the interactive setup to create a product config and scaffold your `.env`:
 
 ```bash
-export SUBSCRIBER_STORE=json
+npx cryyer init
 ```
 
-Create `subscribers.json` (see [`subscribers.example.json`](./subscribers.example.json)):
+This walks you through product name, GitHub repo, email subject template, and voice/tone — then writes a `products/*.yaml` file and optionally creates `.env` from `.env.example`.
 
-```json
-[
-  { "email": "alice@example.com", "name": "Alice", "productIds": ["my-app"] },
-  { "email": "bob@example.com", "productIds": ["my-app"] }
-]
-```
+You can also create `products/*.yaml` files manually — see [Product Configuration](#product-configuration) for all fields.
 
-### 3. Set environment variables
+### 2. Set environment variables
 
-Copy `.env.example` to `.env` and fill in your values:
+Fill in your `.env` (or copy `.env.example` if you didn't scaffold it above):
 
 ```bash
 cp .env.example .env
@@ -81,18 +60,50 @@ ANTHROPIC_API_KEY=sk-ant-...    # key for your chosen provider
 
 See [`.env.example`](./.env.example) for all variables and their descriptions.
 
-### 4. Run
+### 3. Add subscribers
+
+Choose a [subscriber store](#subscriber-stores) — the simplest for local dev is JSON:
 
 ```bash
-pnpm run build
-pnpm start             # full pipeline: gather → draft → send
+export SUBSCRIBER_STORE=json
+```
+
+Create `subscribers.json` (see [`subscribers.example.json`](./subscribers.example.json)):
+
+```json
+[
+  { "email": "alice@example.com", "name": "Alice", "productIds": ["my-app"] },
+  { "email": "bob@example.com", "productIds": ["my-app"] }
+]
+```
+
+### 4. Validate your setup
+
+```bash
+npx cryyer check
+```
+
+This verifies your product configs, GitHub token, LLM provider API key, subscriber store, and email (Resend) configuration — and reports what's missing or misconfigured.
+
+### 5. Run
+
+Preview your first draft without sending:
+
+```bash
+npx cryyer run --dry-run
+```
+
+When you're ready to run for real:
+
+```bash
+npx cryyer run          # full pipeline: gather → draft → send
 ```
 
 Or run the two stages separately:
 
 ```bash
-node dist/draft.js         # generate drafts → create GitHub issues
-node dist/send-on-close.js # send emails when a draft issue is closed
+npx cryyer draft        # generate drafts → create GitHub issues
+npx cryyer send         # send emails when a draft issue is closed
 ```
 
 ## Subscriber Stores
@@ -315,6 +326,8 @@ Use the `review_weekly_drafts` prompt for the Monday morning review workflow —
 ```bash
 pnpm install         # install dependencies
 pnpm run build       # compile TypeScript
+pnpm run init        # interactive product setup + .env scaffolding
+pnpm run check       # validate config, tokens, and connections
 pnpm run typecheck   # type-check without emitting
 pnpm run lint        # ESLint
 pnpm test            # run tests (vitest)

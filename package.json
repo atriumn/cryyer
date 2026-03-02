@@ -45,7 +45,7 @@
   },
   "bin": {
     "cryyer-mcp": "./dist/mcp.js",
-    "cryyer": "./dist/init.js"
+    "cryyer": "./dist/cli.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

@@ -80,8 +80,8 @@ export async function main(): Promise<void> {
     console.log('\nDone! Next steps:');
     console.log(`  1. Review: ${outputPath}`);
     console.log('  2. Set required environment variables (see .env.example)');
-    console.log('  3. Run: pnpm run check  (validate your setup)');
-    console.log('  4. Run: DRY_RUN=true pnpm run dev  (preview emails)');
+    console.log('  3. Run: cryyer check  (validate your setup)');
+    console.log('  4. Run: cryyer run --dry-run  (preview emails)');
   } finally {
     rl.close();
   }
