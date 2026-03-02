@@ -268,15 +268,26 @@ Secrets needed: `GITHUB_TOKEN`, `RESEND_API_KEY`, `FROM_EMAIL`, plus the secrets
 
 Runs on push/PR to main. Lints, typechecks, and runs tests.
 
-## MCP Server (Claude Desktop)
+## MCP Server
 
-Cryyer includes an MCP server that lets you review, edit, and send drafts conversationally in Claude Desktop. It also supports subscriber management.
+Cryyer includes an MCP server that lets you review, edit, and send drafts conversationally from any MCP client. It also supports subscriber management.
 
-### Setup
+The MCP server uses stdio transport and is available as a separate binary: `cryyer-mcp`.
+
+### Standalone usage
 
 ```bash
-npm run build   # compiles dist/mcp.js
+npx cryyer-mcp
 ```
+
+Or if installed locally:
+
+```bash
+pnpm run build   # compiles dist/mcp.js
+node dist/mcp.js
+```
+
+### Claude Desktop
 
 Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
 
@@ -284,12 +295,12 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 {
   "mcpServers": {
     "cryyer": {
-      "command": "node",
-      "args": ["/path/to/beacon/dist/mcp.js"],
+      "command": "npx",
+      "args": ["cryyer-mcp"],
       "env": {
         "GITHUB_TOKEN": "ghp_...",
         "CRYYER_REPO": "owner/repo",
-        "CRYYER_ROOT": "/path/to/beacon",
+        "CRYYER_ROOT": "/path/to/cryyer",
         "RESEND_API_KEY": "re_...",
         "FROM_EMAIL": "updates@example.com",
         "SUBSCRIBER_STORE": "json",
@@ -301,7 +312,25 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 }
 ```
 
+### Other MCP clients (Cline, Continue, Windsurf, etc.)
+
+Any MCP client that supports stdio transport can use Cryyer. The generic config is:
+
+- **Command**: `npx cryyer-mcp` (or `node /path/to/cryyer/dist/mcp.js`)
+- **Transport**: stdio
+- **Environment variables**: same as above
+
 Only `GITHUB_TOKEN` and `CRYYER_REPO` are needed for read-only tools (`list_drafts`, `get_draft`). Other env vars are needed for sending, regenerating, and subscriber management.
+
+### Debugging
+
+Test the server interactively with the MCP Inspector:
+
+```bash
+npx @modelcontextprotocol/inspector node dist/mcp.js
+```
+
+All log output goes to stderr (stdout is reserved for JSON-RPC). If something isn't working, check stderr for error messages.
 
 ### Tools
 
