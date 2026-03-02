@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
