@@ -20,7 +20,7 @@ export default defineConfig({
         {
           icon: "github",
           label: "GitHub",
-          href: "https://github.com/jyoung/cryyer",
+          href: "https://github.com/atriumn/cryyer",
         },
       ],
       customCss: ["./src/styles/global.css"],
