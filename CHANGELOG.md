@@ -4,6 +4,13 @@ All notable changes to Cryyer are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.5](https://github.com/atriumn/cryyer/compare/v0.1.4...v0.1.5) (2026-03-03)
+
+
+### Features
+
+* upgrade default Anthropic model to claude-sonnet-4-5 ([964a441](https://github.com/atriumn/cryyer/commit/964a4415f54d0b34a25261ce2e5ddbe41076bc5c))
+
 ## [0.1.4](https://github.com/atriumn/cryyer/compare/v0.1.3...v0.1.4) (2026-03-03)
 
 
