@@ -4,6 +4,18 @@ All notable changes to Cryyer are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.9](https://github.com/atriumn/cryyer/compare/v0.1.8...v0.1.9) (2026-03-03)
+
+
+### Features
+
+* add `cryyer preview` command to show gathered activity ([567e2cf](https://github.com/atriumn/cryyer/commit/567e2cfa4b666f62ea3e89fc75087f2c3b1d49dc))
+
+
+### Bug Fixes
+
+* improve LLM response parsing for Gemini compatibility ([4f59ff6](https://github.com/atriumn/cryyer/commit/4f59ff60204f4dc74deb7fe0990471f8ba23abda))
+
 ## [0.1.8](https://github.com/atriumn/cryyer/compare/v0.1.7...v0.1.8) (2026-03-03)
 
 
