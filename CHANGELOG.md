@@ -4,6 +4,13 @@ All notable changes to Cryyer are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.8](https://github.com/atriumn/cryyer/compare/v0.1.7...v0.1.8) (2026-03-03)
+
+
+### Features
+
+* add composite actions, draft-file/send-file CLI commands, and release email dogfooding ([038743b](https://github.com/atriumn/cryyer/commit/038743b6447f30ce4bc64c6767b73465333f10c9))
+
 ## [0.1.7](https://github.com/atriumn/cryyer/compare/v0.1.6...v0.1.7) (2026-03-03)
 
 
