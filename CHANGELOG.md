@@ -4,6 +4,15 @@ All notable changes to Cryyer are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.2](https://github.com/atriumn/cryyer/compare/v0.1.1...v0.1.2) (2026-03-03)
+
+
+### Bug Fixes
+
+* add packageManager field to fix release workflow ([8e93b18](https://github.com/atriumn/cryyer/commit/8e93b1826e56017dcf0b7136ac357dafacac78dd))
+* remove duplicate pnpm version from ci.yml ([38046e4](https://github.com/atriumn/cryyer/commit/38046e4a7b8cfc60f1e88c262fe36aab09c1a781))
+* replace jyoung GitHub links with atriumn in docs site ([23473d8](https://github.com/atriumn/cryyer/commit/23473d8c4cd979f08efd0a4c3a5c6229651708da))
+
 ## [0.1.1](https://github.com/atriumn/cryyer/compare/v0.1.0...v0.1.1) (2026-03-03)
 
 
