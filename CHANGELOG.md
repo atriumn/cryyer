@@ -4,6 +4,13 @@ All notable changes to Cryyer are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.7](https://github.com/atriumn/cryyer/compare/v0.1.6...v0.1.7) (2026-03-03)
+
+
+### Features
+
+* add pluggable email provider (Gmail support) and token guidance in init ([27d2ed7](https://github.com/atriumn/cryyer/commit/27d2ed708707ce035b8db31ca830b817faa78417))
+
 ## [0.1.6](https://github.com/atriumn/cryyer/compare/v0.1.5...v0.1.6) (2026-03-03)
 
 
