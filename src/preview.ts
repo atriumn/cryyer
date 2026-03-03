@@ -12,6 +12,17 @@ export function parseArgv(argv: string[]): {
 } {
   const args = argv[0] === 'preview' ? argv.slice(1) : argv;
 
+  if (args.includes('--help') || args.includes('-h')) {
+    console.log(`Usage: cryyer preview --product <id> [options]
+
+Options:
+  --product <id>    Product ID (required)
+  --since <date>    Start date for activity window (default: 7 days ago)
+  --repo <o/r>      Override repo from product config
+  --help, -h        Show this help message`);
+    process.exit(0);
+  }
+
   let productId = '';
   let since: string | undefined;
   let repo: string | undefined;
