@@ -4,6 +4,13 @@ All notable changes to Cryyer are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.11](https://github.com/atriumn/cryyer/compare/v0.1.10...v0.1.11) (2026-03-03)
+
+
+### Features
+
+* add --help flag to preview command ([b056559](https://github.com/atriumn/cryyer/commit/b056559303d2297ec81d12faa773436089ea8754))
+
 ## [0.1.10](https://github.com/atriumn/cryyer/compare/v0.1.9...v0.1.10) (2026-03-03)
 
 
