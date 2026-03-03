@@ -97,6 +97,9 @@ export async function main(): Promise<void> {
 
   const activity = await gatherWeeklyActivity(octokit, product, sinceDate);
   console.log(formatActivity(activity));
+
+  const total = activity.prs.length + activity.releases.length + activity.commits.length;
+  console.log(`Total: ${total} item${total !== 1 ? 's' : ''}`);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
