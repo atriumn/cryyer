@@ -1,3 +1,9 @@
+export interface ProductFilter {
+  labels?: string[];
+  paths?: string[];
+  tag_prefix?: string;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -7,7 +13,8 @@ export interface Product {
   githubRepo?: string; // Deprecated: use repo instead
   emailSubjectTemplate: string;
   supabase_table?: string;
-  product_filter?: string;
+  product_filter?: string; // Deprecated: use filter.labels instead
+  filter?: ProductFilter;
   from_name?: string;
   from_email?: string;
   reply_to?: string;

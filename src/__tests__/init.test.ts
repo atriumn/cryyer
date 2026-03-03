@@ -16,7 +16,7 @@ vi.mock('fs', async (importOriginal) => {
   };
 });
 
-import { sanitizeId, buildEnvContent, buildSubscribersJson, buildGitignoreContent, main } from '../init.js';
+import { sanitizeId, buildEnvContent, buildSubscribersJson, buildGitignoreContent, buildDraftWorkflowContent, buildSendWorkflowContent, main } from '../init.js';
 import type { InitAnswers } from '../init.js';
 import { createInterface } from 'readline/promises';
 import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync } from 'fs';
@@ -194,6 +194,8 @@ describe('main (init)', () => {
     'ghp_test',           // github token
     're_test',            // resend key
     'updates@acme.dev',   // from email
+    // Workflow setup
+    'Y',                  // set up workflows
   ];
 
   function setupFreshDir() {
@@ -285,6 +287,7 @@ describe('main (init)', () => {
       '1',            // JSON store
       '1',            // Resend
       'ghp_test', 're_test', 'updates@acme.dev',
+      'n',            // skip workflows
     ]);
 
     await main();
@@ -311,6 +314,7 @@ describe('main (init)', () => {
       'supa_key',                     // supabase key
       '1',                            // Resend
       'ghp_test', 're_test', 'updates@acme.dev',
+      'n',                            // skip workflows
     ]);
 
     await main();
@@ -359,8 +363,8 @@ describe('main (init)', () => {
       throw new Error(`Unexpected read: ${path}`);
     });
 
-    // Full answers + 'N' to overwrite .env
-    makeRl([...freshAnswers, 'N']);
+    // Full answers with 'N' for .env overwrite (inserted before workflow prompt)
+    makeRl([...freshAnswers.slice(0, -1), 'N', 'n']);
 
     await main();
 
@@ -422,6 +426,7 @@ describe('main (init)', () => {
       '2',                        // Gmail
       'ghp_test',                 // github token (no resend key prompt)
       'updates@acme.dev',         // from email
+      'n',                        // skip workflows
     ]);
 
     await main();
@@ -438,6 +443,33 @@ describe('main (init)', () => {
     expect(envCalls.length).toBeGreaterThan(0);
     const envContent = envCalls[0][1] as string;
     expect(envContent).not.toContain('RESEND_API_KEY');
+  });
+
+  it('creates workflow files when user opts in', async () => {
+    setupFreshDir();
+    makeRl(freshAnswers);
+
+    await main();
+
+    // .github/workflows/ directory should be created
+    expect(mkdirSync).toHaveBeenCalledWith(
+      expect.stringContaining('.github/workflows'),
+      { recursive: true }
+    );
+
+    // draft-email.yml
+    expect(writeFileSync).toHaveBeenCalledWith(
+      expect.stringContaining('draft-email.yml'),
+      expect.stringContaining('atriumn/cryyer/.github/actions/draft-file@v0'),
+      'utf-8'
+    );
+
+    // send-email.yml
+    expect(writeFileSync).toHaveBeenCalledWith(
+      expect.stringContaining('send-email.yml'),
+      expect.stringContaining('atriumn/cryyer/.github/actions/send-file@v0'),
+      'utf-8'
+    );
   });
 
   it('appends cryyer entries to existing .gitignore', async () => {

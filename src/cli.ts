@@ -24,6 +24,8 @@ Commands:
   run           Full pipeline: gather → draft → send
   draft         Generate drafts → create GitHub issues
   send          Send emails for a closed draft issue
+  draft-file    Generate a draft → write to markdown file
+  send-file     Send emails from a draft markdown file
 
 Options:
   --help, -h    Show this help message
@@ -54,6 +56,8 @@ async function run(): Promise<void> {
     run: './index.js',
     draft: './draft.js',
     send: './send-on-close.js',
+    'draft-file': './draft-file.js',
+    'send-file': './send-file.js',
   };
 
   const modulePath = commands[command];

@@ -25,11 +25,13 @@ Cryyer sends automated weekly email updates to beta testers, with per-product vo
 
 ## Architecture
 
-Four distinct entry points, each compiled from `src/` to `dist/`:
+Six distinct entry points, each compiled from `src/` to `dist/`:
 
 - **`index.ts`** — Direct orchestration: gather activity, draft, query subscribers, send emails in one run.
 - **`draft.ts`** — Used by `weekly-draft.yml` workflow. Gathers activity, generates drafts via LLM, creates GitHub issues with `draft` + product-id labels.
 - **`send-on-close.ts`** — Used by `send-update.yml` workflow. Triggered on issue close, parses the draft issue body (`**Subject:** ...\n\n---\n\n<body>`), queries Supabase for subscribers, sends via Resend, posts delivery stats as issue comment.
+- **`draft-file.ts`** — CLI command `cryyer draft-file`. Gathers activity, generates LLM draft, writes a YAML front matter markdown file. Designed for release-triggered pipelines where the draft is committed to a PR branch. Accepts `--product`, `--output`, `--since`, `--repo` flags.
+- **`send-file.ts`** — CLI command `cryyer send-file`. Reads a YAML front matter draft file (`---\nsubject: ...\n---\n\n<body>`), loads product config, fetches subscribers, sends emails. Accepts `<path>`, `--product`, `--dry-run` flags. Designed for post-release email delivery.
 - **`mcp.ts`** — MCP server for Claude Desktop. Exposes 9 tools (list/get/update/send/regenerate drafts, list products, list/add/remove subscribers) and 1 prompt (`review_weekly_drafts`). Uses stdio transport. Run via `node dist/mcp.js` or `npx cryyer-mcp`.
 
 Key modules:
@@ -46,6 +48,8 @@ Key modules:
 | `auth.ts` | `cryyer auth gmail` — OAuth 2.0 flow for Gmail authorization |
 | `gmail-oauth.ts` | Google OAuth client ID/secret constants |
 | `send.ts` | Builds email messages, delegates sending to EmailProvider |
+| `draft-file.ts` | CLI: `cryyer draft-file` — gather activity → LLM draft → write YAML front matter file |
+| `send-file.ts` | CLI: `cryyer send-file` — read YAML front matter draft → send emails to subscribers |
 
 ## Product Configuration
 
@@ -59,9 +63,23 @@ repo: string                   # "owner/repo" for activity gathering
 emailSubjectTemplate: string   # Template with {{weekOf}} placeholder
 # Optional:
 tagline, supabase_table, product_filter, from_name, from_email, reply_to
+filter:                        # Optional monorepo filtering
+  labels: ["admin-portal"]     # Filter PRs by GitHub label (uses Search API)
+  paths: ["apps/admin/"]       # Filter commits by path prefix
+  tag_prefix: "admin/"         # Filter releases by tag prefix
 ```
 
 The `voice` field is injected directly into the Claude prompt and controls the tone of generated emails.
+
+### Monorepo Filtering
+
+For monorepos with multiple products, use the `filter` block to scope activity gathering per product. All filter fields are optional — omitting the `filter` block gathers all repo activity (default behavior).
+
+- **`paths`**: Filters PRs by checking changed files (via `pulls.listFiles`) — only PRs touching files under these prefixes are included. Also scopes fallback commits to these paths. Easiest option, no labeling workflow needed.
+- **`labels`**: PRs are fetched via GitHub Search API filtered by these labels (single API call). More efficient than `paths` but requires PRs to be labeled. When both `labels` and `paths` are set, `labels` is used for PRs.
+- **`tag_prefix`**: Releases are filtered to only include those whose tag starts with this prefix (e.g. `"admin/"` matches `"admin/v1.2.0"`).
+
+The deprecated `product_filter` string field is treated as `{ labels: [product_filter] }` for backward compatibility.
 
 ## Environment Variables
 
@@ -118,6 +136,51 @@ Default models per provider: Anthropic → `claude-sonnet-4-5-20250514`, OpenAI 
 - **`ci.yml`**: Runs on push/PR to main. Lints, typechecks, and runs tests.
 - **`weekly-draft.yml`**: Cron Monday 1pm UTC. Runs `node dist/draft.js`. Needs `GITHUB_TOKEN`, `CRYYER_REPO`, and the API key for the configured `LLM_PROVIDER`.
 - **`send-update.yml`**: Fires on issue close (filtered to `draft` label). Runs `node dist/send-on-close.js`. Needs all Resend/Supabase secrets.
+
+## Composite GitHub Actions
+
+Reusable composite actions that consumer repos reference directly. `cryyer init` can scaffold thin wrapper workflows that use these actions.
+
+### `atriumn/cryyer/.github/actions/draft-file@v0`
+
+Wraps `cryyer draft-file`. Computes `--since` from the previous git tag if not provided.
+
+| Input | Required | Default | Description |
+|---|---|---|---|
+| `product` | yes | — | Product ID (matches `products/*.yaml`) |
+| `version` | yes | — | Release version (used in default output path) |
+| `llm-api-key` | yes | — | API key for the LLM provider |
+| `since` | no | auto (prev tag) | ISO date or git ref for activity window start |
+| `repo` | no | — | Override repo from product config |
+| `output` | no | `drafts/v{version}.md` | Output file path |
+| `llm-provider` | no | `anthropic` | LLM provider (anthropic, openai, gemini) |
+| `llm-model` | no | — | Override default LLM model |
+| `github-token` | no | `${{ github.token }}` | GitHub token for API access |
+| `cryyer-version` | no | `latest` | Cryyer package version |
+
+**Output:** `draft-path` — path to the generated draft file.
+
+### `atriumn/cryyer/.github/actions/send-file@v0`
+
+Wraps `cryyer send-file`. Maps all credential inputs to env vars for email and subscriber store factories.
+
+| Input | Required | Default | Description |
+|---|---|---|---|
+| `product` | yes | — | Product ID |
+| `draft-path` | yes | — | Path to the draft markdown file |
+| `from-email` | yes | — | Sender email address |
+| `email-provider` | no | `resend` | Email provider (resend, gmail) |
+| `email-api-key` | no | — | Resend API key |
+| `gmail-refresh-token` | no | — | Gmail OAuth refresh token |
+| `from-name` | no | `Cryyer Updates` | Sender display name |
+| `subscriber-store` | no | `json` | Subscriber store (json, supabase, google-sheets) |
+| `supabase-url` | no | — | Supabase project URL |
+| `supabase-service-key` | no | — | Supabase service role key |
+| `google-sheets-spreadsheet-id` | no | — | Google Sheets spreadsheet ID |
+| `google-service-account-email` | no | — | Google service account email |
+| `google-private-key` | no | — | Google service account private key |
+| `dry-run` | no | `false` | Preview without sending |
+| `cryyer-version` | no | `latest` | Cryyer package version |
 
 ## Conventions
 

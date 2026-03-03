@@ -1,0 +1,86 @@
+name: Cryyer Send File
+description: Send emails to subscribers from a YAML front matter draft file
+
+inputs:
+  product:
+    description: Product ID (matches products/*.yaml)
+    required: true
+  draft-path:
+    description: Path to the draft markdown file
+    required: true
+  from-email:
+    description: Sender email address
+    required: true
+  email-provider:
+    description: Email provider (resend, gmail)
+    required: false
+    default: resend
+  email-api-key:
+    description: Resend API key (required when email-provider is resend)
+    required: false
+  gmail-refresh-token:
+    description: Gmail OAuth refresh token (required when email-provider is gmail)
+    required: false
+  from-name:
+    description: Sender display name
+    required: false
+    default: Cryyer Updates
+  subscriber-store:
+    description: Subscriber store (json, supabase, google-sheets)
+    required: false
+    default: json
+  supabase-url:
+    description: Supabase project URL (required when subscriber-store is supabase)
+    required: false
+  supabase-service-key:
+    description: Supabase service role key (required when subscriber-store is supabase)
+    required: false
+  google-sheets-spreadsheet-id:
+    description: Google Sheets spreadsheet ID (required when subscriber-store is google-sheets)
+    required: false
+  google-service-account-email:
+    description: Google service account email (required when subscriber-store is google-sheets)
+    required: false
+  google-private-key:
+    description: Google service account private key (required when subscriber-store is google-sheets)
+    required: false
+  dry-run:
+    description: Preview emails without sending
+    required: false
+    default: "false"
+  cryyer-version:
+    description: Cryyer package version to use
+    required: false
+    default: latest
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+
+    - name: Send emails
+      shell: bash
+      env:
+        EMAIL_PROVIDER: ${{ inputs.email-provider }}
+        RESEND_API_KEY: ${{ inputs.email-api-key }}
+        GMAIL_REFRESH_TOKEN: ${{ inputs.gmail-refresh-token }}
+        FROM_EMAIL: ${{ inputs.from-email }}
+        FROM_NAME: ${{ inputs.from-name }}
+        SUBSCRIBER_STORE: ${{ inputs.subscriber-store }}
+        SUPABASE_URL: ${{ inputs.supabase-url }}
+        SUPABASE_SERVICE_KEY: ${{ inputs.supabase-service-key }}
+        GOOGLE_SHEETS_SPREADSHEET_ID: ${{ inputs.google-sheets-spreadsheet-id }}
+        GOOGLE_SERVICE_ACCOUNT_EMAIL: ${{ inputs.google-service-account-email }}
+        GOOGLE_PRIVATE_KEY: ${{ inputs.google-private-key }}
+      run: |
+        DRY_RUN_FLAG=""
+        if [ "${{ inputs.dry-run }}" = "true" ]; then
+          DRY_RUN_FLAG="--dry-run"
+        fi
+        npx cryyer@${{ inputs.cryyer-version }} send-file \
+          ${{ inputs.draft-path }} \
+          --product ${{ inputs.product }} \
+          $DRY_RUN_FLAG

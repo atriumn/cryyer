@@ -5,3 +5,9 @@ name: Example Product
 voice: "Friendly and enthusiastic, with a focus on developer experience"
 repo: "owner/repo"
 emailSubjectTemplate: "{{weekOf}} Weekly Update — Example Product"
+
+# Optional: filter activity for monorepo products
+# filter:
+#   labels: ["example-product"]   # Filter PRs by GitHub label
+#   paths: ["apps/example/"]      # Filter commits by path prefix
+#   tag_prefix: "example/"        # Filter releases by tag prefix

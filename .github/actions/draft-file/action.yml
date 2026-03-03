@@ -1,0 +1,88 @@
+name: Cryyer Draft File
+description: Gather GitHub activity and generate an LLM-drafted email as a YAML front matter markdown file
+
+inputs:
+  product:
+    description: Product ID (matches products/*.yaml)
+    required: true
+  version:
+    description: Release version (used in default output path)
+    required: true
+  llm-api-key:
+    description: API key for the configured LLM provider
+    required: true
+  since:
+    description: ISO date or git ref for activity window start. Auto-computed from previous tag if omitted.
+    required: false
+  repo:
+    description: Override GitHub repo (owner/repo) from product config
+    required: false
+  output:
+    description: Output file path (default drafts/v{version}.md)
+    required: false
+  llm-provider:
+    description: LLM provider (anthropic, openai, gemini)
+    required: false
+    default: anthropic
+  llm-model:
+    description: Override default LLM model
+    required: false
+  github-token:
+    description: GitHub token for API access
+    required: false
+    default: ${{ github.token }}
+  cryyer-version:
+    description: Cryyer package version to use
+    required: false
+    default: latest
+
+outputs:
+  draft-path:
+    description: Path to the generated draft file
+    value: ${{ steps.draft.outputs.draft-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+
+    - name: Compute since date
+      id: since
+      if: ${{ !inputs.since }}
+      shell: bash
+      run: |
+        PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+        if [ -n "$PREV_TAG" ]; then
+          SINCE=$(git log -1 --format=%aI "$PREV_TAG")
+        else
+          SINCE=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null \
+              || date -u -v-7d +%Y-%m-%dT%H:%M:%SZ)
+        fi
+        echo "value=$SINCE" >> "$GITHUB_OUTPUT"
+
+    - name: Generate draft
+      id: draft
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        LLM_PROVIDER: ${{ inputs.llm-provider }}
+        LLM_MODEL: ${{ inputs.llm-model }}
+        ANTHROPIC_API_KEY: ${{ inputs.llm-provider == 'anthropic' && inputs.llm-api-key || '' }}
+        OPENAI_API_KEY: ${{ inputs.llm-provider == 'openai' && inputs.llm-api-key || '' }}
+        GEMINI_API_KEY: ${{ inputs.llm-provider == 'gemini' && inputs.llm-api-key || '' }}
+      run: |
+        OUTPUT="${{ inputs.output || format('drafts/v{0}.md', inputs.version) }}"
+        SINCE="${{ inputs.since || steps.since.outputs.value }}"
+        REPO_FLAG=""
+        if [ -n "${{ inputs.repo }}" ]; then
+          REPO_FLAG="--repo ${{ inputs.repo }}"
+        fi
+        npx cryyer@${{ inputs.cryyer-version }} draft-file \
+          --product ${{ inputs.product }} \
+          --output "$OUTPUT" \
+          --since "$SINCE" \
+          $REPO_FLAG
+        echo "draft-path=$OUTPUT" >> "$GITHUB_OUTPUT"

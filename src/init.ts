@@ -130,6 +130,11 @@ export function buildSubscribersJson(productId: string): string {
   return JSON.stringify(data, null, 2) + '\n';
 }
 
+const EMAIL_SECRET_NAMES: Record<string, string> = {
+  resend: 'RESEND_API_KEY',
+  gmail: 'GMAIL_REFRESH_TOKEN',
+};
+
 const GITIGNORE_ENTRIES = ['.env', 'subscribers.json', 'email-log.json'];
 const GITIGNORE_HEADER = '# cryyer';
 
@@ -147,6 +152,107 @@ export function buildGitignoreContent(existing: string | null): string {
 
   const suffix = existing.endsWith('\n') ? '' : '\n';
   return existing + suffix + '\n' + GITIGNORE_HEADER + '\n' + missing.join('\n') + '\n';
+}
+
+export function buildDraftWorkflowContent(productId: string, llmProvider: string): string {
+  const secretName = LLM_KEY_NAMES[llmProvider] ?? 'ANTHROPIC_API_KEY';
+  return `name: Draft Email
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  draft:
+    if: startsWith(github.head_ref, 'release-please--')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: \${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Extract version from PR title
+        id: version
+        run: |
+          VERSION=$(echo "\${{ github.event.pull_request.title }}" | grep -oP '\\d+\\.\\d+\\.\\d+' || echo "0.0.0")
+          echo "value=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Generate draft
+        uses: atriumn/cryyer/.github/actions/draft-file@v0
+        id: draft
+        with:
+          product: ${productId}
+          version: \${{ steps.version.outputs.value }}
+          llm-api-key: \${{ secrets.${secretName} }}
+          llm-provider: ${llmProvider}
+
+      - name: Commit draft
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add \${{ steps.draft.outputs.draft-path }}
+          git diff --cached --quiet || git commit -m "chore: draft email for v\${{ steps.version.outputs.value }}"
+          git push
+`;
+}
+
+export function buildSendWorkflowContent(
+  productId: string,
+  emailProvider: string,
+  subscriberStore: string,
+): string {
+  const emailInputs: string[] = [];
+  if (emailProvider === 'resend') {
+    emailInputs.push(`          email-api-key: \${{ secrets.RESEND_API_KEY }}`);
+  } else if (emailProvider === 'gmail') {
+    emailInputs.push(`          gmail-refresh-token: \${{ secrets.GMAIL_REFRESH_TOKEN }}`);
+  }
+
+  const storeInputs: string[] = [];
+  if (subscriberStore === 'supabase') {
+    storeInputs.push(`          supabase-url: \${{ secrets.SUPABASE_URL }}`);
+    storeInputs.push(`          supabase-service-key: \${{ secrets.SUPABASE_SERVICE_KEY }}`);
+  } else if (subscriberStore === 'google-sheets') {
+    storeInputs.push(`          google-sheets-spreadsheet-id: \${{ secrets.GOOGLE_SHEETS_SPREADSHEET_ID }}`);
+    storeInputs.push(`          google-service-account-email: \${{ secrets.GOOGLE_SERVICE_ACCOUNT_EMAIL }}`);
+    storeInputs.push(`          google-private-key: \${{ secrets.GOOGLE_PRIVATE_KEY }}`);
+  }
+
+  const extraInputs = [...emailInputs, ...storeInputs].join('\n');
+  const extraBlock = extraInputs ? '\n' + extraInputs : '';
+
+  return `name: Send Email
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION=\${{ github.event.release.tag_name }}
+          VERSION="\${VERSION#v}"
+          echo "value=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Send emails
+        uses: atriumn/cryyer/.github/actions/send-file@v0
+        with:
+          product: ${productId}
+          draft-path: drafts/v\${{ steps.version.outputs.value }}.md
+          from-email: \${{ secrets.FROM_EMAIL }}
+          email-provider: ${emailProvider}
+          subscriber-store: ${subscriberStore}${extraBlock}
+`;
 }
 
 function parseSelection(raw: string, options: readonly string[], defaultIndex: number): string {
@@ -351,6 +457,47 @@ export async function main(): Promise<void> {
       created.push(['.gitignore', existingGitignore ? 'Updated with cryyer entries' : 'Ignores .env and data files']);
     }
 
+    // --- Phase 6: GitHub Actions workflows ---
+    const rawSetupWorkflows = await rl.question('? Set up GitHub Actions for release-triggered emails? (Y/n): ');
+    const setupWorkflows = rawSetupWorkflows.trim().toLowerCase() !== 'n';
+    const workflowSecrets: string[] = [];
+
+    if (setupWorkflows) {
+      const workflowsDir = join(cwd, '.github', 'workflows');
+      mkdirSync(workflowsDir, { recursive: true });
+
+      const draftWorkflowPath = join(workflowsDir, 'draft-email.yml');
+      let writeDraftWorkflow = true;
+      if (existsSync(draftWorkflowPath)) {
+        const rawOverwrite = await rl.question('  draft-email.yml already exists. Overwrite? (y/N): ');
+        writeDraftWorkflow = rawOverwrite.trim().toLowerCase() === 'y';
+      }
+      if (writeDraftWorkflow) {
+        writeFileSync(draftWorkflowPath, buildDraftWorkflowContent(productId, llmProvider), 'utf-8');
+        created.push(['.github/workflows/draft-email.yml', 'Draft email on release PR']);
+      }
+
+      const sendWorkflowPath = join(workflowsDir, 'send-email.yml');
+      let writeSendWorkflow = true;
+      if (existsSync(sendWorkflowPath)) {
+        const rawOverwrite = await rl.question('  send-email.yml already exists. Overwrite? (y/N): ');
+        writeSendWorkflow = rawOverwrite.trim().toLowerCase() === 'y';
+      }
+      if (writeSendWorkflow) {
+        writeFileSync(sendWorkflowPath, buildSendWorkflowContent(productId, emailProvider, subscriberStore), 'utf-8');
+        created.push(['.github/workflows/send-email.yml', 'Send email on release']);
+      }
+
+      workflowSecrets.push(LLM_KEY_NAMES[llmProvider]);
+      workflowSecrets.push('FROM_EMAIL');
+      if (emailProvider === 'resend') workflowSecrets.push('RESEND_API_KEY');
+      if (emailProvider === 'gmail') workflowSecrets.push('GMAIL_REFRESH_TOKEN');
+      if (subscriberStore === 'supabase') workflowSecrets.push('SUPABASE_URL', 'SUPABASE_SERVICE_KEY');
+      if (subscriberStore === 'google-sheets') workflowSecrets.push('GOOGLE_SHEETS_SPREADSHEET_ID', 'GOOGLE_SERVICE_ACCOUNT_EMAIL', 'GOOGLE_PRIVATE_KEY');
+    }
+
+    console.log('');
+
     // --- Summary ---
     if (created.length > 0) {
       console.log('  Created:');
@@ -363,6 +510,10 @@ export async function main(): Promise<void> {
     console.log('');
     console.log('  Next steps:');
     let step = 1;
+    if (workflowSecrets.length > 0) {
+      console.log(`    ${step}. Set GitHub secrets  ${workflowSecrets.join(', ')}`);
+      step++;
+    }
     if (emailProvider === 'gmail') {
       console.log(`    ${step}. Authorize Gmail     npx cryyer auth gmail`);
       step++;

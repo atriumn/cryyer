@@ -43,6 +43,67 @@ voice: |
   Keep paragraphs short — these are busy developers.
 ```
 
+## Monorepo filtering
+
+If multiple products share the same repo (a monorepo), you can add a `filter` block so each product only gets its own activity:
+
+```yaml
+id: admin-portal
+name: Admin Portal
+repo: myorg/monorepo
+emailSubjectTemplate: "Admin Portal — Week of {{weekOf}}"
+voice: "..."
+filter:
+  labels: ["admin-portal"]
+  paths: ["apps/admin/"]
+  tag_prefix: "admin/"
+```
+
+All three filter fields are optional — use any combination. Without a `filter` block, Cryyer gathers all activity from the repo (the default).
+
+| Field | What it filters | How it works |
+|---|---|---|
+| `paths` | PRs + commits | Includes only PRs that touch files under these path prefixes (checks changed files per PR). Also scopes fallback commits to these paths. **This is the easiest option** — no labeling or tagging workflow needed. |
+| `labels` | PRs | Uses the GitHub Search API to fetch only merged PRs with these labels. A single API call, but requires your PRs to be labeled. |
+| `tag_prefix` | Releases | Only includes releases whose tag starts with this prefix (e.g. `"admin/"` matches `"admin/v1.2.0"` but not `"ios/v3.0.0"`). |
+
+### Example: three products, one repo
+
+The simplest setup — just use `paths`:
+
+```yaml
+# products/admin-portal.yaml
+id: admin-portal
+repo: myorg/monorepo
+filter:
+  paths: ["apps/admin/"]
+  tag_prefix: "admin/"        # optional, if you use tag prefixes for releases
+# ...
+
+# products/ios-app.yaml
+id: ios-app
+repo: myorg/monorepo
+filter:
+  paths: ["apps/ios/"]
+  tag_prefix: "ios/"
+# ...
+
+# products/api.yaml
+id: api
+repo: myorg/monorepo
+filter:
+  paths: ["packages/api/", "libs/shared/"]
+# ...
+```
+
+### Labels vs paths
+
+`paths` checks each PR's changed files — no setup required, but makes one API call per PR. For most weekly digests (5–20 PRs) this is fine.
+
+`labels` uses the GitHub Search API — a single API call no matter how many PRs exist, but requires your team to label PRs. If you already label PRs by area, this is more efficient.
+
+If both `labels` and `paths` are set, `labels` is used for PRs (more efficient) and `paths` still applies to fallback commits.
+
 ## Subject template
 
 The `emailSubjectTemplate` supports a `{{weekOf}}` placeholder that gets replaced with the current week's date:

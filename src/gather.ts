@@ -1,5 +1,5 @@
 import { Octokit } from 'octokit';
-import type { Product } from './types.js';
+import type { Product, ProductFilter } from './types.js';
 
 export interface GatheredPR {
   title: string;
@@ -36,6 +36,12 @@ export function isBot(login: string | undefined): boolean {
   return BOT_LOGINS.includes(login.toLowerCase()) || login.toLowerCase().endsWith('[bot]');
 }
 
+export function resolveFilter(product: Product): ProductFilter | undefined {
+  if (product.filter) return product.filter;
+  if (product.product_filter) return { labels: [product.product_filter] };
+  return undefined;
+}
+
 export async function gatherWeeklyActivity(
   octokit: Octokit,
   product: Product,
@@ -46,13 +52,20 @@ export async function gatherWeeklyActivity(
     throw new Error(`Missing repo configuration for product ${product.id}`);
   }
   const [owner, repo] = repoStr.split('/');
+  const filter = resolveFilter(product);
 
-  const prs = await fetchMergedPRs(octokit, owner, repo, since);
-  const releases = await fetchReleases(octokit, owner, repo, since);
+  let prs: GatheredPR[];
+  if (filter?.labels?.length) {
+    prs = await fetchMergedPRsByLabel(octokit, owner, repo, since, filter.labels);
+  } else {
+    prs = await fetchMergedPRs(octokit, owner, repo, since, filter?.paths);
+  }
+
+  const releases = await fetchReleases(octokit, owner, repo, since, filter?.tag_prefix);
 
   let commits: GatheredCommit[] = [];
   if (prs.length === 0 && releases.length === 0) {
-    commits = await fetchNotableCommits(octokit, owner, repo, since);
+    commits = await fetchNotableCommits(octokit, owner, repo, since, filter?.paths);
   }
 
   return { prs, releases, commits };
@@ -62,7 +75,8 @@ async function fetchMergedPRs(
   octokit: Octokit,
   owner: string,
   repo: string,
-  since: string
+  since: string,
+  paths?: string[]
 ): Promise<GatheredPR[]> {
   try {
     const { data: pulls } = await octokit.rest.pulls.list({
@@ -82,6 +96,11 @@ async function fetchMergedPRs(
       if (new Date(pr.merged_at) < sinceDate) continue;
       if (isBot(pr.user?.login)) continue;
 
+      if (paths?.length) {
+        const touches = await prTouchesPaths(octokit, owner, repo, pr.number, paths);
+        if (!touches) continue;
+      }
+
       prs.push({
         title: pr.title,
         body: pr.body ?? undefined,
@@ -97,11 +116,63 @@ async function fetchMergedPRs(
   }
 }
 
+async function prTouchesPaths(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  pullNumber: number,
+  paths: string[]
+): Promise<boolean> {
+  try {
+    const { data: files } = await octokit.rest.pulls.listFiles({
+      owner,
+      repo,
+      pull_number: pullNumber,
+      per_page: 100,
+    });
+    return files.some((f) => paths.some((p) => f.filename.startsWith(p)));
+  } catch {
+    return false;
+  }
+}
+
+export async function fetchMergedPRsByLabel(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  since: string,
+  labels: string[]
+): Promise<GatheredPR[]> {
+  try {
+    const labelQuery = labels.map((l) => `label:"${l}"`).join(' ');
+    const q = `repo:${owner}/${repo} is:pr is:merged merged:>=${since} ${labelQuery}`;
+    const { data } = await octokit.rest.search.issuesAndPullRequests({
+      q,
+      per_page: 100,
+      sort: 'updated',
+      order: 'desc',
+    });
+
+    return data.items
+      .filter((item) => !isBot(item.user?.login))
+      .map((item) => ({
+        title: item.title,
+        body: item.body ?? undefined,
+        url: item.html_url,
+        mergedAt: item.pull_request?.merged_at ?? '',
+        author: item.user?.login ?? 'unknown',
+      }));
+  } catch {
+    return [];
+  }
+}
+
 async function fetchReleases(
   octokit: Octokit,
   owner: string,
   repo: string,
-  since: string
+  since: string,
+  tagPrefix?: string
 ): Promise<GatheredRelease[]> {
   try {
     const { data: releases } = await octokit.rest.repos.listReleases({
@@ -116,6 +187,7 @@ async function fetchReleases(
     for (const release of releases) {
       if (!release.published_at) continue;
       if (new Date(release.published_at) < sinceDate) continue;
+      if (tagPrefix && !release.tag_name.startsWith(tagPrefix)) continue;
 
       result.push({
         name: release.name ?? release.tag_name,
@@ -135,9 +207,39 @@ async function fetchNotableCommits(
   octokit: Octokit,
   owner: string,
   repo: string,
-  since: string
+  since: string,
+  paths?: string[]
 ): Promise<GatheredCommit[]> {
   try {
+    if (paths?.length) {
+      const seen = new Set<string>();
+      const result: GatheredCommit[] = [];
+
+      for (const path of paths) {
+        const { data: commits } = await octokit.rest.repos.listCommits({
+          owner,
+          repo,
+          since,
+          path,
+          per_page: 20,
+        });
+
+        for (const c of commits) {
+          if (seen.has(c.sha)) continue;
+          seen.add(c.sha);
+          if (isBot(c.author?.login)) continue;
+          result.push({
+            message: c.commit.message.split('\n')[0],
+            url: c.html_url,
+            sha: c.sha.slice(0, 7),
+            author: c.author?.login ?? c.commit.author?.name ?? 'unknown',
+          });
+        }
+      }
+
+      return result;
+    }
+
     const { data: commits } = await octokit.rest.repos.listCommits({
       owner,
       repo,

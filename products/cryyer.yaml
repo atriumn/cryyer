@@ -1,0 +1,11 @@
+# Product configuration for Cryyer itself (dogfooding)
+id: cryyer
+name: Cryyer
+voice: |
+  Approachable and upbeat, like a teammate sharing good news over coffee.
+  Professional but not stiff — sprinkle in personality without forcing it.
+  Assume readers are developers who know what a PR is, but skip deep implementation details.
+  Focus on what changed and why they should care, not how the sausage is made.
+  Keep it scannable: short paragraphs, clear structure.
+repo: "atriumn/cryyer"
+emailSubjectTemplate: "{{weekOf}} Cryyer Update"

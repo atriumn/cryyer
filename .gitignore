@@ -35,9 +35,10 @@ Thumbs.db
 # Product configs (keep only example.yaml; user configs stay local)
 products/*.yaml
 !products/example.yaml
+!products/cryyer.yaml
 
 # Subscriber data (local JSON store)
-subscribers.json
+# subscribers.json is committed for cryyer's own dogfooding
 email-log.json
 
 # Ralph
