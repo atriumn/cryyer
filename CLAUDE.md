@@ -98,7 +98,7 @@ OPENAI_API_KEY       # Required when LLM_PROVIDER=openai
 GEMINI_API_KEY       # Required when LLM_PROVIDER=gemini
 ```
 
-Default models per provider: Anthropic → `claude-3-5-haiku-latest`, OpenAI → `gpt-4o`, Gemini → `gemini-1.5-flash`.
+Default models per provider: Anthropic → `claude-sonnet-4-5-20250514`, OpenAI → `gpt-4o`, Gemini → `gemini-1.5-flash`.
 
 ## GitHub Workflows
 

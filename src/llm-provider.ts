@@ -8,7 +8,7 @@ export class AnthropicProvider implements LLMProvider {
 
   constructor(apiKey: string, model?: string) {
     this.apiKey = apiKey;
-    this.model = model || 'claude-3-5-haiku-latest';
+    this.model = model || 'claude-sonnet-4-5-20250514';
   }
 
   async generate(prompt: string, maxTokens: number): Promise<string> {

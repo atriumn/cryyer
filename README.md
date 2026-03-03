@@ -232,7 +232,7 @@ Set `LLM_PROVIDER` to choose your LLM backend. Default is `anthropic`.
 | `OPENAI_API_KEY` | — | Required when `LLM_PROVIDER=openai` |
 | `GEMINI_API_KEY` | — | Required when `LLM_PROVIDER=gemini` |
 
-Default models: Anthropic `claude-3-5-haiku-latest`, OpenAI `gpt-4o`, Gemini `gemini-1.5-flash`.
+Default models: Anthropic `claude-sonnet-4-5-20250514`, OpenAI `gpt-4o`, Gemini `gemini-1.5-flash`.
 
 ## Product Configuration
 
