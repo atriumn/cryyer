@@ -90,12 +90,25 @@ export function formatActivity(activity: GatheredActivity): string {
 }
 
 export function parseResponse(text: string): DraftResult {
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error('Could not parse JSON response from LLM');
-  }
+  // Strip markdown code fences (```json ... ``` or ``` ... ```)
+  let cleaned = text.replace(/^```(?:json)?\s*\n?/gm, '').replace(/\n?```\s*$/gm, '').trim();
 
-  const parsed = JSON.parse(jsonMatch[0]) as unknown;
+  // Try parsing the cleaned text directly first
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    // Fall back to extracting the first JSON object
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error(`Could not parse JSON response from LLM. Raw response:\n${text}`);
+    }
+    try {
+      parsed = JSON.parse(jsonMatch[0]);
+    } catch {
+      throw new Error(`Could not parse JSON response from LLM. Raw response:\n${text}`);
+    }
+  }
 
   if (
     typeof parsed !== 'object' ||
@@ -103,7 +116,7 @@ export function parseResponse(text: string): DraftResult {
     typeof (parsed as Record<string, unknown>).subject !== 'string' ||
     typeof (parsed as Record<string, unknown>).body !== 'string'
   ) {
-    throw new Error('Invalid response structure from LLM: expected { subject, body }');
+    throw new Error(`Invalid response structure from LLM: expected { subject, body }. Raw response:\n${text}`);
   }
 
   const result = parsed as { subject: string; body: string };

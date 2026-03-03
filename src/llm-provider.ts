@@ -71,7 +71,7 @@ export class GeminiProvider implements LLMProvider {
 
     const genModel = client.getGenerativeModel({
       model: this.model,
-      generationConfig: { maxOutputTokens: maxTokens },
+      generationConfig: { maxOutputTokens: maxTokens, responseMimeType: 'application/json' },
     });
     const result = await genModel.generateContent(prompt);
     const text = result.response.text();
