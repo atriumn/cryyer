@@ -31,6 +31,8 @@
     "dist/",
     "templates/",
     "products/example.yaml",
+    ".env.example",
+    "subscribers.example.json",
     "README.md",
     "LICENSE"
   ],

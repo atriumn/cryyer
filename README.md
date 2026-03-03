@@ -25,72 +25,22 @@ Cryyer follows a two-stage pipeline:
 ## Quickstart
 
 ```bash
-npm install -g cryyer   # or: npx cryyer
-```
-
-### 1. Initialize a product
-
-Run the interactive setup to create a product config and scaffold your `.env`:
-
-```bash
+mkdir my-updates && cd my-updates
 npx cryyer init
 ```
 
-This walks you through product name, GitHub repo, email subject template, and voice/tone — then writes a `products/*.yaml` file and optionally creates `.env` from `.env.example`.
+The interactive setup walks you through product name, GitHub repo, voice/tone, LLM provider, subscriber store, and API keys — then creates everything you need:
 
-You can also create `products/*.yaml` files manually — see [Product Configuration](#product-configuration) for all fields.
+- `products/*.yaml` — product configuration
+- `.env` — API keys and settings
+- `subscribers.json` — subscriber list (when using JSON store)
+- `.gitignore` — ignores `.env` and data files
 
-### 2. Set environment variables
-
-Fill in your `.env` (or copy `.env.example` if you didn't scaffold it above):
-
-```bash
-cp .env.example .env
-```
-
-At minimum you need:
+Then:
 
 ```bash
-GITHUB_TOKEN=ghp_...
-RESEND_API_KEY=re_...
-FROM_EMAIL=updates@yourdomain.com
-LLM_PROVIDER=anthropic          # or openai, gemini
-ANTHROPIC_API_KEY=sk-ant-...    # key for your chosen provider
-```
-
-See [`.env.example`](./.env.example) for all variables and their descriptions.
-
-### 3. Add subscribers
-
-Choose a [subscriber store](#subscriber-stores) — the simplest for local dev is JSON:
-
-```bash
-export SUBSCRIBER_STORE=json
-```
-
-Create `subscribers.json` (see [`subscribers.example.json`](./subscribers.example.json)):
-
-```json
-[
-  { "email": "alice@example.com", "name": "Alice", "productIds": ["my-app"] },
-  { "email": "bob@example.com", "productIds": ["my-app"] }
-]
-```
-
-### 4. Validate your setup
-
-```bash
-npx cryyer check
-```
-
-This verifies your product configs, GitHub token, LLM provider API key, subscriber store, and email (Resend) configuration — and reports what's missing or misconfigured.
-
-### 5. Run
-
-Preview your first draft without sending:
-
-```bash
-npx cryyer run --dry-run
+npx cryyer check         # validate your setup
+npx cryyer run --dry-run  # preview a draft email
 ```
 
 When you're ready to run for real:
@@ -105,6 +55,8 @@ Or run the two stages separately:
 npx cryyer draft        # generate drafts → create GitHub issues
 npx cryyer send         # send emails when a draft issue is closed
 ```
+
+You can also create `products/*.yaml` files manually — see [Product Configuration](#product-configuration) for all fields, and [`.env.example`](./.env.example) for all environment variables.
 
 ## Subscriber Stores
 
