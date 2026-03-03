@@ -4,6 +4,13 @@ All notable changes to Cryyer are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.4](https://github.com/atriumn/cryyer/compare/v0.1.3...v0.1.4) (2026-03-03)
+
+
+### Bug Fixes
+
+* use node 24 for publish (npm trusted publishing requires &gt;=11.5.1) ([a570fcf](https://github.com/atriumn/cryyer/commit/a570fcf5436c2ccd496faafb51f65d9d49683a26))
+
 ## [0.1.3](https://github.com/atriumn/cryyer/compare/v0.1.2...v0.1.3) (2026-03-03)
 
 
