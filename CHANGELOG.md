@@ -4,6 +4,13 @@ All notable changes to Cryyer are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.6](https://github.com/atriumn/cryyer/compare/v0.1.5...v0.1.6) (2026-03-03)
+
+
+### Features
+
+* redesign `cryyer init` for a great first-run experience ([5963c72](https://github.com/atriumn/cryyer/commit/5963c72cdf8c725febbed71c5d3dd004cd97fed9))
+
 ## [0.1.5](https://github.com/atriumn/cryyer/compare/v0.1.4...v0.1.5) (2026-03-03)
 
 
