@@ -1,9 +1,9 @@
 import { readFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
-import { Resend } from 'resend';
 import type { Product } from './types.js';
 import type { Subscriber } from './subscriber-store.js';
+import type { EmailProvider, BatchResult } from './email-provider.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -12,13 +12,7 @@ export interface EmailContent {
   body: string; // markdown
 }
 
-export interface DeliveryStats {
-  sent: number;
-  failed: number;
-  failures: Array<{ email: string; error: string }>;
-}
-
-const RESEND_BATCH_LIMIT = 100;
+export type DeliveryStats = BatchResult;
 
 export function markdownToHtml(markdown: string): string {
   let html = markdown
@@ -74,7 +68,7 @@ function makeUnsubscribeUrl(fromEmail: string, productId: string): string {
 }
 
 export async function sendWeeklyEmails(
-  client: Resend,
+  provider: EmailProvider,
   product: Product,
   subscribers: Subscriber[],
   content: EmailContent,
@@ -82,9 +76,9 @@ export async function sendWeeklyEmails(
   fromEmail: string,
   replyTo?: string
 ): Promise<DeliveryStats> {
-  const stats: DeliveryStats = { sent: 0, failed: 0, failures: [] };
-
-  if (subscribers.length === 0) return stats;
+  if (subscribers.length === 0) {
+    return { sent: 0, failed: 0, failures: [] };
+  }
 
   const bodyHtml = markdownToHtml(content.body);
   const unsubscribeUrl = makeUnsubscribeUrl(fromEmail, product.id);
@@ -103,25 +97,5 @@ export async function sendWeeklyEmails(
     },
   }));
 
-  for (let i = 0; i < emails.length; i += RESEND_BATCH_LIMIT) {
-    const chunk = emails.slice(i, i + RESEND_BATCH_LIMIT);
-    try {
-      const { error } = await client.batch.send(chunk);
-      if (error) {
-        for (const email of chunk) {
-          stats.failed++;
-          stats.failures.push({ email: email.to, error: error.message });
-        }
-      } else {
-        stats.sent += chunk.length;
-      }
-    } catch (err) {
-      for (const email of chunk) {
-        stats.failed++;
-        stats.failures.push({ email: email.to, error: String(err) });
-      }
-    }
-  }
-
-  return stats;
+  return provider.sendBatch(emails);
 }

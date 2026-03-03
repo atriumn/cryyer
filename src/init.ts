@@ -38,9 +38,15 @@ const LLM_KEY_NAMES: Record<string, string> = {
   gemini: 'GEMINI_API_KEY',
 };
 const LLM_KEY_PROMPTS: Record<string, string> = {
-  anthropic: 'Anthropic API key',
-  openai: 'OpenAI API key',
-  gemini: 'Gemini API key',
+  anthropic: 'Anthropic API key (console.anthropic.com/api-keys)',
+  openai: 'OpenAI API key (platform.openai.com/api-keys)',
+  gemini: 'Gemini API key (aistudio.google.com/apikey)',
+};
+
+const EMAIL_PROVIDERS = ['resend', 'gmail'] as const;
+const EMAIL_PROVIDER_LABELS: Record<string, string> = {
+  resend: 'Resend',
+  gmail: 'Gmail',
 };
 
 const SUBSCRIBER_STORES = ['json', 'supabase', 'google-sheets'] as const;
@@ -57,8 +63,9 @@ export interface InitAnswers {
   llmProvider: string;
   llmApiKey: string;
   subscriberStore: string;
+  emailProvider: string;
   githubToken: string;
-  resendApiKey: string;
+  resendApiKey?: string;
   fromEmail: string;
   supabaseUrl?: string;
   supabaseServiceKey?: string;
@@ -75,8 +82,16 @@ export function buildEnvContent(answers: InitAnswers): string {
     '# GitHub personal access token (repo scope required)',
     `GITHUB_TOKEN=${answers.githubToken}`,
     '',
-    '# Resend API key for email delivery',
-    `RESEND_API_KEY=${answers.resendApiKey}`,
+    `# Email provider: ${EMAIL_PROVIDERS.join(', ')}`,
+    `EMAIL_PROVIDER=${answers.emailProvider}`,
+  ];
+
+  if (answers.emailProvider === 'resend') {
+    lines.push('', '# Resend API key for email delivery');
+    lines.push(`RESEND_API_KEY=${answers.resendApiKey ?? ''}`);
+  }
+
+  lines.push(
     '',
     '# Default sender email address',
     `FROM_EMAIL=${answers.fromEmail}`,
@@ -89,7 +104,7 @@ export function buildEnvContent(answers: InitAnswers): string {
     '',
     `# Subscriber store: ${SUBSCRIBER_STORES.join(', ')}`,
     `SUBSCRIBER_STORE=${answers.subscriberStore}`,
-  ];
+  );
 
   if (answers.subscriberStore === 'supabase') {
     lines.push('', '# Supabase configuration');
@@ -246,14 +261,24 @@ export async function main(): Promise<void> {
 
     console.log('');
 
-    // --- Phase 4: Common credentials ---
-    const rawGithubToken = await rl.question('? GitHub token (for repo activity): ');
+    // --- Phase 4: Email provider ---
+    const emailPrompt = `? Email provider (${EMAIL_PROVIDERS.map((p, i) => `${i + 1}=${EMAIL_PROVIDER_LABELS[p]}`).join(', ')}) [1]: `;
+    const rawEmail = await rl.question(emailPrompt);
+    const emailProvider = parseSelection(rawEmail, EMAIL_PROVIDERS, 0);
+
+    console.log('');
+
+    // --- Phase 5: Common credentials ---
+    const rawGithubToken = await rl.question('? GitHub token (github.com/settings/tokens, "repo" scope): ');
     const githubToken = rawGithubToken.trim();
     if (!githubToken) throw new Error('GitHub token is required');
 
-    const rawResendKey = await rl.question('? Resend API key (for sending emails): ');
-    const resendApiKey = rawResendKey.trim();
-    if (!resendApiKey) throw new Error('Resend API key is required');
+    let resendApiKey: string | undefined;
+    if (emailProvider === 'resend') {
+      const rawResendKey = await rl.question('? Resend API key (resend.com/api-keys): ');
+      resendApiKey = rawResendKey.trim();
+      if (!resendApiKey) throw new Error('Resend API key is required');
+    }
 
     const rawFromEmail = await rl.question('? Sender email address: ');
     const fromEmail = rawFromEmail.trim();
@@ -296,7 +321,7 @@ export async function main(): Promise<void> {
     if (writeEnv) {
       const answers: InitAnswers = {
         productName, repo, voice, llmProvider, llmApiKey,
-        subscriberStore, githubToken, resendApiKey, fromEmail,
+        subscriberStore, emailProvider, githubToken, resendApiKey, fromEmail,
         supabaseUrl, supabaseServiceKey,
         googleSheetsSpreadsheetId, googleServiceAccountEmail, googlePrivateKey,
       };
@@ -337,15 +362,22 @@ export async function main(): Promise<void> {
 
     console.log('');
     console.log('  Next steps:');
-    if (subscriberStore === 'json') {
-      console.log('    1. Add subscribers     Edit subscribers.json');
-    } else if (subscriberStore === 'supabase') {
-      console.log('    1. Add subscribers     Set up your Supabase beta_testers table');
-    } else {
-      console.log('    1. Add subscribers     Add rows to your Google Sheet');
+    let step = 1;
+    if (emailProvider === 'gmail') {
+      console.log(`    ${step}. Authorize Gmail     npx cryyer auth gmail`);
+      step++;
     }
-    console.log('    2. Validate setup      npx cryyer check');
-    console.log('    3. Preview a draft     npx cryyer run --dry-run');
+    if (subscriberStore === 'json') {
+      console.log(`    ${step}. Add subscribers     Edit subscribers.json`);
+    } else if (subscriberStore === 'supabase') {
+      console.log(`    ${step}. Add subscribers     Set up your Supabase beta_testers table`);
+    } else {
+      console.log(`    ${step}. Add subscribers     Add rows to your Google Sheet`);
+    }
+    step++;
+    console.log(`    ${step}. Validate setup      npx cryyer check`);
+    step++;
+    console.log(`    ${step}. Preview a draft     npx cryyer run --dry-run`);
     console.log('');
     console.log('  Docs: https://cryyer.dev');
     console.log('');

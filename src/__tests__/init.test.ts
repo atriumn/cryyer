@@ -55,14 +55,16 @@ describe('buildEnvContent', () => {
     llmProvider: 'anthropic',
     llmApiKey: 'sk-ant-test',
     subscriberStore: 'json',
+    emailProvider: 'resend',
     githubToken: 'ghp_test',
     resendApiKey: 're_test',
     fromEmail: 'updates@acme.dev',
   };
 
-  it('generates env content for anthropic + json store', () => {
+  it('generates env content for anthropic + json store + resend', () => {
     const content = buildEnvContent(baseAnswers);
     expect(content).toContain('GITHUB_TOKEN=ghp_test');
+    expect(content).toContain('EMAIL_PROVIDER=resend');
     expect(content).toContain('RESEND_API_KEY=re_test');
     expect(content).toContain('FROM_EMAIL=updates@acme.dev');
     expect(content).toContain('LLM_PROVIDER=anthropic');
@@ -70,6 +72,13 @@ describe('buildEnvContent', () => {
     expect(content).toContain('SUBSCRIBER_STORE=json');
     expect(content).not.toContain('SUPABASE_URL');
     expect(content).not.toContain('GOOGLE_SHEETS');
+  });
+
+  it('omits RESEND_API_KEY when email provider is gmail', () => {
+    const content = buildEnvContent({ ...baseAnswers, emailProvider: 'gmail', resendApiKey: undefined });
+    expect(content).toContain('EMAIL_PROVIDER=gmail');
+    expect(content).not.toContain('RESEND_API_KEY');
+    expect(content).toContain('FROM_EMAIL=updates@acme.dev');
   });
 
   it('includes supabase vars when store is supabase', () => {
@@ -168,7 +177,7 @@ describe('main (init)', () => {
     return rl;
   }
 
-  // Standard answer set for a fresh init: Anthropic + JSON store
+  // Standard answer set for a fresh init: Anthropic + JSON store + Resend
   const freshAnswers = [
     // Product
     'Acme CLI',           // product name
@@ -179,6 +188,8 @@ describe('main (init)', () => {
     'sk-ant-test',        // anthropic key
     // Subscriber store
     '1',                  // json
+    // Email provider
+    '1',                  // resend
     // Common credentials
     'ghp_test',           // github token
     're_test',            // resend key
@@ -272,6 +283,7 @@ describe('main (init)', () => {
       '2',            // OpenAI
       'sk-openai-test',
       '1',            // JSON store
+      '1',            // Resend
       'ghp_test', 're_test', 'updates@acme.dev',
     ]);
 
@@ -297,6 +309,7 @@ describe('main (init)', () => {
       '2',                            // Supabase
       'https://test.supabase.co',     // supabase url
       'supa_key',                     // supabase key
+      '1',                            // Resend
       'ghp_test', 're_test', 'updates@acme.dev',
     ]);
 
@@ -395,9 +408,36 @@ describe('main (init)', () => {
 
   it('throws when GitHub token is empty', async () => {
     setupFreshDir();
-    makeRl(['My App', 'acme/my-app', 'Casual', '1', 'sk-ant-test', '1', '']);
+    makeRl(['My App', 'acme/my-app', 'Casual', '1', 'sk-ant-test', '1', '1', '']);
 
     await expect(main()).rejects.toThrow('GitHub token is required');
+  });
+
+  it('handles Gmail email provider selection (skips Resend key)', async () => {
+    setupFreshDir();
+    makeRl([
+      'Acme CLI', 'acme/acme-cli', 'Casual',
+      '1', 'sk-ant-test',        // anthropic
+      '1',                        // JSON store
+      '2',                        // Gmail
+      'ghp_test',                 // github token (no resend key prompt)
+      'updates@acme.dev',         // from email
+    ]);
+
+    await main();
+
+    expect(writeFileSync).toHaveBeenCalledWith(
+      expect.stringContaining('.env'),
+      expect.stringContaining('EMAIL_PROVIDER=gmail'),
+      'utf-8'
+    );
+    // Should not contain RESEND_API_KEY
+    const envCalls = (writeFileSync as Mock).mock.calls.filter(
+      (call) => typeof call[0] === 'string' && call[0].endsWith('.env')
+    );
+    expect(envCalls.length).toBeGreaterThan(0);
+    const envContent = envCalls[0][1] as string;
+    expect(envContent).not.toContain('RESEND_API_KEY');
   });
 
   it('appends cryyer entries to existing .gitignore', async () => {

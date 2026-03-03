@@ -21,7 +21,7 @@ pnpm run mcp         # Run MCP server (node dist/mcp.js)
 Cryyer sends automated weekly email updates to beta testers, with per-product voice powered by LLM-drafted content. It supports multiple LLM providers (Anthropic Claude, OpenAI, Google Gemini) via a configurable adapter pattern. It follows a two-stage pipeline:
 
 1. **Weekly Draft** (cron, Mondays): For each product, gathers GitHub activity (merged PRs, releases, notable commits), generates an email draft via Claude, and creates a GitHub issue for human review.
-2. **Send on Close**: When a draft issue is closed (approved), emails are sent to subscribers via Resend.
+2. **Send on Close**: When a draft issue is closed (approved), emails are sent to subscribers via the configured email provider (Resend or Gmail).
 
 ## Architecture
 
@@ -42,7 +42,10 @@ Key modules:
 | `summarize.ts` | Builds prompt with product voice, calls LLM provider, parses JSON `{subject, body}` response |
 | `subscriber-store.ts` | SubscriberStore interface and factory; adapters for Supabase, JSON file, Google Sheets. Supports `getSubscribers`, `recordEmailSent`, `addSubscriber`, `removeSubscriber`. |
 | `mcp.ts` | MCP server entry point; 9 tools + 1 prompt for draft review and subscriber management |
-| `send.ts` | Sends batch emails via Resend with HTML template wrapping |
+| `email-provider.ts` | EmailProvider interface and factory; adapters for Resend, Gmail |
+| `auth.ts` | `cryyer auth gmail` — OAuth 2.0 flow for Gmail authorization |
+| `gmail-oauth.ts` | Google OAuth client ID/secret constants |
+| `send.ts` | Builds email messages, delegates sending to EmailProvider |
 
 ## Product Configuration
 
@@ -65,12 +68,22 @@ The `voice` field is injected directly into the Claude prompt and controls the t
 Required across entry points (not all needed for every entry point):
 
 ```
-GITHUB_TOKEN, RESEND_API_KEY
+GITHUB_TOKEN
 FROM_EMAIL, FROM_NAME
 CRYYER_REPO          # "owner/repo" for draft issue creation
 CRYYER_ROOT          # Project root path (MCP server only; defaults to cwd)
 ISSUE_NUMBER         # Set by GitHub Actions for send-on-close
 GITHUB_REPOSITORY    # Set by GitHub Actions
+```
+
+### Email Provider Configuration
+
+```
+EMAIL_PROVIDER       # "resend" (default) or "gmail"
+# Resend (default):
+RESEND_API_KEY       # Required when EMAIL_PROVIDER=resend (or unset)
+# Gmail:
+GMAIL_REFRESH_TOKEN  # Required when EMAIL_PROVIDER=gmail; set via "cryyer auth gmail"
 ```
 
 ### Subscriber Store Configuration
@@ -115,6 +128,7 @@ Default models per provider: Anthropic → `claude-sonnet-4-5-20250514`, OpenAI 
 - Bot activity (dependabot, renovate, github-actions) is filtered out in `gather.ts`
 - LLM provider is configurable via `LLM_PROVIDER` env var; defaults to Anthropic Claude
 - Default model per provider can be overridden via `LLM_MODEL` env var
+- Email provider is configurable via `EMAIL_PROVIDER` env var; defaults to Resend
 - Subscriber store is configurable via `SUBSCRIBER_STORE` env var; defaults to Supabase
 - `dist/` is gitignored and never committed; run `pnpm run build` to generate it
 - pnpm is the canonical package manager; `package-lock.json` is gitignored

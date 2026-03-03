@@ -1,13 +1,13 @@
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { Octokit } from 'octokit';
-import { Resend } from 'resend';
 import { loadProducts } from './config.js';
 import { gatherWeeklyActivity } from './gather.js';
 import { generateEmailDraft } from './summarize.js';
 import { sendWeeklyEmails } from './send.js';
 import { createLLMProvider } from './llm-provider.js';
 import { createSubscriberStore } from './subscriber-store.js';
+import { createEmailProvider } from './email-provider.js';
 
 export function isDryRun(): boolean {
   return process.env['DRY_RUN'] === 'true' || process.argv.includes('--dry-run');
@@ -23,8 +23,6 @@ async function main(): Promise<void> {
   const dryRun = isDryRun();
 
   const githubToken = requireEnv('GITHUB_TOKEN');
-  // Resend credentials are only needed when actually sending emails
-  const resendApiKey = dryRun ? (process.env['RESEND_API_KEY'] ?? '') : requireEnv('RESEND_API_KEY');
   const fromEmail = dryRun ? (process.env['FROM_EMAIL'] ?? '') : requireEnv('FROM_EMAIL');
 
   const productsDir = join(process.cwd(), 'products');
@@ -32,7 +30,7 @@ async function main(): Promise<void> {
 
   const octokit = new Octokit({ auth: githubToken });
   const llm = createLLMProvider();
-  const resend = dryRun ? null : new Resend(resendApiKey);
+  const emailProvider = dryRun ? null : createEmailProvider();
   const store = createSubscriberStore();
 
   const weekOf = getWeekOf();
@@ -71,7 +69,7 @@ async function main(): Promise<void> {
       const replyTo = product.reply_to;
 
       const stats = await sendWeeklyEmails(
-        resend!,
+        emailProvider!,
         product,
         subscribers,
         { subject: draft.subject, body: draft.body },

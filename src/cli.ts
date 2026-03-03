@@ -19,6 +19,7 @@ Usage:
 
 Commands:
   init          Interactive product setup
+  auth gmail    Authorize Gmail via OAuth 2.0
   check         Validate config and connections
   run           Full pipeline: gather → draft → send
   draft         Generate drafts → create GitHub issues
@@ -48,6 +49,7 @@ async function run(): Promise<void> {
 
   const commands: Record<string, string> = {
     init: './init.js',
+    auth: './auth.js',
     check: './check.js',
     run: './index.js',
     draft: './draft.js',

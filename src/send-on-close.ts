@@ -1,10 +1,10 @@
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { Octokit } from 'octokit';
-import { Resend } from 'resend';
 import { loadProducts } from './config.js';
 import { createSubscriberStore } from './subscriber-store.js';
 import { sendWeeklyEmails } from './send.js';
+import { createEmailProvider } from './email-provider.js';
 
 function requireEnv(key: string): string {
   const value = process.env[key];
@@ -52,15 +52,13 @@ async function ensureLabel(
 async function main(): Promise<void> {
   const dryRun = isDryRun();
   const githubToken = requireEnv('GITHUB_TOKEN');
-  // Resend credentials only needed when actually sending
-  const resendApiKey = dryRun ? (process.env['RESEND_API_KEY'] ?? '') : requireEnv('RESEND_API_KEY');
   const fromEmail = dryRun ? (process.env['FROM_EMAIL'] ?? '') : requireEnv('FROM_EMAIL');
   const fromName = process.env['FROM_NAME'] ?? 'Cryyer Updates';
   const issueNumber = parseInt(requireEnv('ISSUE_NUMBER'), 10);
   const [repoOwner, repoName] = requireEnv('GITHUB_REPOSITORY').split('/');
 
   const octokit = new Octokit({ auth: githubToken });
-  const resend = dryRun ? null : new Resend(resendApiKey);
+  const emailProvider = dryRun ? null : createEmailProvider();
   const store = createSubscriberStore();
 
   // Fetch issue
@@ -143,7 +141,7 @@ async function main(): Promise<void> {
   // Send emails
   let stats;
   try {
-    stats = await sendWeeklyEmails(resend!, product, subscribers, emailContent, fromName, fromEmail);
+    stats = await sendWeeklyEmails(emailProvider!, product, subscribers, emailContent, fromName, fromEmail);
   } catch (err) {
     // Re-open issue and add error comment on unexpected send failure
     await octokit.rest.issues.update({

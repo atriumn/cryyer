@@ -11,11 +11,11 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { Octokit } from 'octokit';
-import { Resend } from 'resend';
 import { loadProducts } from './config.js';
 import { parseIssueBody } from './send-on-close.js';
 import { sendWeeklyEmails } from './send.js';
 import { createSubscriberStore } from './subscriber-store.js';
+import { createEmailProvider } from './email-provider.js';
 import { gatherWeeklyActivity } from './gather.js';
 import { generateEmailDraft } from './summarize.js';
 import { createLLMProvider } from './llm-provider.js';
@@ -218,7 +218,6 @@ server.tool(
   async ({ issue_number }) => {
     const { owner, repo } = getCryyerRepo();
     const githubToken = requireEnv('GITHUB_TOKEN');
-    const resendApiKey = requireEnv('RESEND_API_KEY');
     const fromEmail = requireEnv('FROM_EMAIL');
     const fromName = process.env['FROM_NAME'] ?? 'Cryyer Updates';
 
@@ -283,9 +282,9 @@ server.tool(
     }));
 
     // Send
-    const resend = new Resend(resendApiKey);
+    const emailProvider = createEmailProvider();
     const stats = await sendWeeklyEmails(
-      resend,
+      emailProvider,
       product,
       betaTesters,
       emailContent,
