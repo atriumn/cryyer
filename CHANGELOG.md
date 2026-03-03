@@ -4,6 +4,13 @@ All notable changes to Cryyer are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.3](https://github.com/atriumn/cryyer/compare/v0.1.2...v0.1.3) (2026-03-03)
+
+
+### Bug Fixes
+
+* remove registry-url to allow npm trusted publishing via OIDC ([796b186](https://github.com/atriumn/cryyer/commit/796b186009a54b78efc8e9ebdef9912ace796e27))
+
 ## [0.1.2](https://github.com/atriumn/cryyer/compare/v0.1.1...v0.1.2) (2026-03-03)
 
 
