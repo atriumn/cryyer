@@ -4,6 +4,18 @@ All notable changes to Cryyer are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.10](https://github.com/atriumn/cryyer/compare/v0.1.9...v0.1.10) (2026-03-03)
+
+
+### Features
+
+* add total count summary to preview output ([a1b32a1](https://github.com/atriumn/cryyer/commit/a1b32a19df9739c28b848a8bbc6e9fd9f4e584b4))
+
+
+### Bug Fixes
+
+* increase LLM max tokens and switch to Gemini 3 Flash ([6edde8a](https://github.com/atriumn/cryyer/commit/6edde8adbd4faadd028e10528d85bf449b392201))
+
 ## [0.1.9](https://github.com/atriumn/cryyer/compare/v0.1.8...v0.1.9) (2026-03-03)
 
 
