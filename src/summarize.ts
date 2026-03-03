@@ -52,7 +52,7 @@ Respond with ONLY a JSON object — no explanation, no markdown fences, just the
   "body": "<email body in markdown>"
 }`;
 
-  const text = await provider.generate(prompt, 1024);
+  const text = await provider.generate(prompt, 2048);
   return parseResponse(text);
 }
 

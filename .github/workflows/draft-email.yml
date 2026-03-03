@@ -31,7 +31,7 @@ jobs:
           version: ${{ steps.version.outputs.value }}
           llm-api-key: ${{ secrets.GEMINI_API_KEY }}
           llm-provider: gemini
-          llm-model: gemini-2.5-flash
+          llm-model: gemini-3-flash-preview
 
       - name: Commit draft
         run: |
