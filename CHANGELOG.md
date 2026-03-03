@@ -4,6 +4,54 @@ All notable changes to Cryyer are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.1](https://github.com/atriumn/cryyer/compare/v0.1.0...v0.1.1) (2026-03-03)
+
+
+### Features
+
+* **#30:** complete package.json metadata for npm publishing ([7aee9b6](https://github.com/atriumn/cryyer/commit/7aee9b6c9a86017d1bc7cf0b77e99d0b0dc0a49e))
+* **#32:** standardize on pnpm, remove npm package-lock.json ([3c5f63c](https://github.com/atriumn/cryyer/commit/3c5f63c5b820e8be9f02975274953119382b3115))
+* **#33:** add CONTRIBUTING.md with development guidelines ([a08c151](https://github.com/atriumn/cryyer/commit/a08c15189f7694181e7141d4f3c3b8309e025d50))
+* **#39:** remove deprecated modules db.ts, subscribers.ts ([24d2296](https://github.com/atriumn/cryyer/commit/24d2296c06b3065fa553b6cddad0ce2045e8a44e)), closes [#39](https://github.com/atriumn/cryyer/issues/39)
+* **#56,#57,#58,#59:** add dry-run mode, health check, init command, and GitHub templates ([75c3a65](https://github.com/atriumn/cryyer/commit/75c3a65f28298d2c9f03f0a70f0bd1120b161d25))
+* **#61,#62,#63:** add SECURITY.md, CHANGELOG.md, and README badges ([7bd2f4f](https://github.com/atriumn/cryyer/commit/7bd2f4f62d18f19d975df63b0661a141f8a1cc2c))
+* **#64,#65:** deploy docs site and validate npm publish readiness ([39223af](https://github.com/atriumn/cryyer/commit/39223af3b4cd765ccabd6840eff6ccffbcfb30d2))
+* add Celiumn product configuration with voice definition ([b3fed37](https://github.com/atriumn/cryyer/commit/b3fed37a53f19c4f45462911c7d69b9df0be87da))
+* add CI workflow, unit tests, and improved CLAUDE.md ([8ef3a26](https://github.com/atriumn/cryyer/commit/8ef3a2643d138407fd40eb4e662683aaeda41266))
+* add CLI subcommands for open source users ([1ad9c41](https://github.com/atriumn/cryyer/commit/1ad9c4178966b30d4c6cc30cfdf8f7f75c43c7a7))
+* add Idynic product configuration with extended schema ([e254817](https://github.com/atriumn/cryyer/commit/e2548171665dccd61010512b30f2cfcb702c7cc5))
+* add landing page and docs site ([160f822](https://github.com/atriumn/cryyer/commit/160f822f09ea429042106a91e538702358d5df22))
+* add MCP server for draft review and subscriber management ([9af5853](https://github.com/atriumn/cryyer/commit/9af585354ebbe4532fdf0e7e72a754b48d349734))
+* add release-please for automated versioning and changelog ([#73](https://github.com/atriumn/cryyer/issues/73)) ([bb8a363](https://github.com/atriumn/cryyer/commit/bb8a36370dfeb488ad118587f7bd948bb4433dab))
+* add release-please for automated versioning and changelog (+1 more) ([d5d7eb9](https://github.com/atriumn/cryyer/commit/d5d7eb9bc800a9da3b6b30152f4d4f3b34ce9312))
+* add send-on-close workflow ([#10](https://github.com/atriumn/cryyer/issues/10)) ([18a27df](https://github.com/atriumn/cryyer/commit/18a27dfe7824e09b5ba0cf54674eff9e5f09dba3))
+* add weekly draft cron workflow ([#9](https://github.com/atriumn/cryyer/issues/9)) ([34ab5c5](https://github.com/atriumn/cryyer/commit/34ab5c5d07b2947fec6f84186828f1de40396c8b))
+* implement GitHub activity gatherer (src/gather.ts) ([6eb447c](https://github.com/atriumn/cryyer/commit/6eb447c99e574225c769163e37f7a33ef731eca3))
+* implement LLM draft generator (src/summarize.ts) ([27d32be](https://github.com/atriumn/cryyer/commit/27d32bec42d67ac0605306f3de2f2b2136e8a0da))
+* implement Resend email sender (src/send.ts) ([121770b](https://github.com/atriumn/cryyer/commit/121770bb90bbe28ca08fed1027e46c7adb268003))
+* implement Supabase subscriber module (src/subscribers.ts) ([6b48a87](https://github.com/atriumn/cryyer/commit/6b48a87afe1d44d4e14e523edf48b973f8ef4763)), closes [#7](https://github.com/atriumn/cryyer/issues/7)
+* make LLM provider configurable (Anthropic, OpenAI, Gemini) ([38b3a87](https://github.com/atriumn/cryyer/commit/38b3a87defba0228069e04f359d1b03c6f3fcd6a))
+* make subscriber store configurable (Supabase, JSON, Google Sheets) ([c3ccff6](https://github.com/atriumn/cryyer/commit/c3ccff644d56d73bb00e249f86a6243fe4bd2382))
+* resolve issues [#31](https://github.com/atriumn/cryyer/issues/31), [#40](https://github.com/atriumn/cryyer/issues/40), [#42](https://github.com/atriumn/cryyer/issues/42), [#43](https://github.com/atriumn/cryyer/issues/43), [#44](https://github.com/atriumn/cryyer/issues/44), [#45](https://github.com/atriumn/cryyer/issues/45), [#46](https://github.com/atriumn/cryyer/issues/46) ([b89f7a6](https://github.com/atriumn/cryyer/commit/b89f7a6a45a5ce4bf0fcf6e1a4cab3d40080db93))
+* scaffold initial project structure for beacon ([5d4396b](https://github.com/atriumn/cryyer/commit/5d4396bce031229d296554f6a1b84eb2b712b028))
+* seed initial beta testers for Celiumn product ([8c69723](https://github.com/atriumn/cryyer/commit/8c6972357774aefbde8b70228d576b9fc385df7b))
+* use SUPABASE_SERVICE_KEY for Supabase authentication ([cd3cfaa](https://github.com/atriumn/cryyer/commit/cd3cfaabd9665fb48d1f17e8b3aada2d5e1a481e))
+
+
+### Bug Fixes
+
+* **#41:** update example.yaml to use 'repo' instead of deprecated 'githubRepo' ([45aa51a](https://github.com/atriumn/cryyer/commit/45aa51a6d58beb800c9077927f7ebffd6ce6a887))
+* **#50,#51,#52,#53,#54,#55:** fix flaky test, add .env.example, remove deprecated refs, unify on pnpm, remove private configs ([13a5ee1](https://github.com/atriumn/cryyer/commit/13a5ee1f62c54afdc32cf36aed86179e202a78d0))
+* **#75,#76,#77:** fix beacon refs, add MCP client docs, add .npmignore ([7f45a95](https://github.com/atriumn/cryyer/commit/7f45a95397dede87b634743fc5773a54e666d4ca))
+* add tagline to Product, PR body to GatheredPR, update prompt ([ef3dac6](https://github.com/atriumn/cryyer/commit/ef3dac6e9b9abbd104dc6bf26cedcc98718ce789))
+* **ci:** install pnpm before setup-node ([dae5dae](https://github.com/atriumn/cryyer/commit/dae5dae05f8cb04163b8d6e0740921a36db2b027))
+* remove ts-node dev script dependency ([fc4e2bb](https://github.com/atriumn/cryyer/commit/fc4e2bbf0146e1f54e45c679c606d87c27fc33f3))
+* **security:** resolve minimatch ReDoS vulnerabilities ([a288817](https://github.com/atriumn/cryyer/commit/a28881760cb39b0edfe2462949622e8cb52e3c92))
+* update email template variables to use correct naming convention ([9c36fdf](https://github.com/atriumn/cryyer/commit/9c36fdfbeb402a30168539f540d7654e000947ee))
+* use claude-3-5-haiku-latest as default model in summarize.ts ([fc96f9b](https://github.com/atriumn/cryyer/commit/fc96f9b503a295d470bad9cda01e0a6976d14c73))
+* use claude-3-5-sonnet-latest as Anthropic model ID ([9320dab](https://github.com/atriumn/cryyer/commit/9320dabb94907856ee93b68366c52cb0930d19ff))
+* use valid Anthropic model ID in llm.ts ([731e2eb](https://github.com/atriumn/cryyer/commit/731e2eb49651ef51c1160aaec85faa79de1fd69a))
+
 ## [Unreleased]
 
 ### Added
