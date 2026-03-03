@@ -26,6 +26,7 @@ Commands:
   send          Send emails for a closed draft issue
   draft-file    Generate a draft → write to markdown file
   send-file     Send emails from a draft markdown file
+  preview       Show gathered activity without drafting
 
 Options:
   --help, -h    Show this help message
@@ -58,6 +59,7 @@ async function run(): Promise<void> {
     send: './send-on-close.js',
     'draft-file': './draft-file.js',
     'send-file': './send-file.js',
+    preview: './preview.js',
   };
 
   const modulePath = commands[command];
