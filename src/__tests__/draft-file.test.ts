@@ -121,6 +121,22 @@ describe('parseArgv', () => {
     const result = parseArgv(['--product', 'my-app', '--output', 'out.md']);
     expect(result.audienceId).toBe('beta');
   });
+
+  it('parses --version flag', () => {
+    const result = parseArgv(['--product', 'my-app', '--output', 'out.md', '--version', '0.1.12']);
+    expect(result.version).toBe('0.1.12');
+  });
+
+  it('returns undefined version when not specified', () => {
+    const result = parseArgv(['--product', 'my-app', '--output', 'out.md']);
+    expect(result.version).toBeUndefined();
+  });
+
+  it('falls back to DRAFT_VERSION env var', () => {
+    process.env['DRAFT_VERSION'] = '2.0.0';
+    const result = parseArgv(['--product', 'my-app', '--output', 'out.md']);
+    expect(result.version).toBe('2.0.0');
+  });
 });
 
 describe('main', () => {
@@ -176,7 +192,8 @@ describe('main', () => {
       mockActivity,
       '2024-01-15',
       undefined,
-      expect.objectContaining({ voice: 'friendly' })
+      expect.objectContaining({ voice: 'friendly' }),
+      undefined,
     );
     expect(mkdirSync).toHaveBeenCalledWith('drafts', { recursive: true });
     expect(writeFileSync).toHaveBeenCalledWith(
@@ -302,6 +319,40 @@ describe('main', () => {
     await expect(main()).rejects.toThrow('Audience not found: nonexistent');
   });
 
+  it('passes --version to generateEmailDraft', async () => {
+    process.argv = [
+      'node', 'draft-file.js',
+      '--product', 'test-app',
+      '--output', 'out.md',
+      '--version', '0.1.12',
+    ];
+
+    (loadProducts as Mock).mockReturnValue([{
+      id: 'test-app',
+      name: 'Test App',
+      voice: 'friendly',
+      repo: 'o/r',
+      emailSubjectTemplate: 'Update',
+    }]);
+    (gatherActivity as Mock).mockResolvedValue({ prs: [], releases: [], commits: [] });
+    (generateEmailDraft as Mock).mockResolvedValue({ subject: 'S', body: 'B' });
+    (getWeekOf as Mock).mockReturnValue('2024-01-15');
+    (createLLMProvider as Mock).mockReturnValue({});
+    (Octokit as unknown as Mock).mockImplementation(function () { return {}; });
+
+    await main();
+
+    expect(generateEmailDraft).toHaveBeenCalledWith(
+      {},
+      expect.anything(),
+      expect.anything(),
+      '2024-01-15',
+      undefined,
+      expect.anything(),
+      '0.1.12',
+    );
+  });
+
   it('uses correct audience when --audience is specified', async () => {
     process.argv = [
       'node', 'draft-file.js',
@@ -333,7 +384,8 @@ describe('main', () => {
       expect.anything(),
       '2024-01-15',
       undefined,
-      expect.objectContaining({ id: 'beta', voice: 'casual' })
+      expect.objectContaining({ id: 'beta', voice: 'casual' }),
+      undefined,
     );
   });
 });

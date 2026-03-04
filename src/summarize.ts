@@ -14,6 +14,7 @@ export async function generateEmailDraft(
   weekOf: string,
   previousUpdate?: string,
   audience?: ResolvedAudience,
+  version?: string,
 ): Promise<DraftResult> {
   const hasActivity =
     activity.prs.length > 0 || activity.releases.length > 0 || activity.commits.length > 0;
@@ -33,8 +34,9 @@ export async function generateEmailDraft(
   const taglineLine = product.tagline ? `\n**Tagline:** ${product.tagline}` : '';
 
   const voice = audience?.voice ?? product.voice ?? '';
+  const versionLine = version ? `\n**Version:** ${version}` : '';
 
-  const prompt = `You are writing an update email for ${product.name}.${taglineLine}
+  const prompt = `You are writing an update email for ${product.name}.${taglineLine}${versionLine}
 
 ## Voice & Tone Instructions
 ${voice}
@@ -46,7 +48,7 @@ ${activitySection}${previousUpdateSection}
 ## Instructions
 - Write a concise, engaging email (under 300 words) matching the voice instructions above
 - Highlight the most impactful changes for beta testers
-- Be friendly and informative${noActivityGuidance}
+- Be friendly and informative${version ? `\n- This email is for version ${version} — reference it as the release being announced` : ''}${noActivityGuidance}
 
 ## Output Format
 Respond with ONLY a JSON object — no explanation, no markdown fences, just the raw JSON:

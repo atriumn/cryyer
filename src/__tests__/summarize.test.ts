@@ -127,6 +127,35 @@ describe('generateEmailDraft audience voice', () => {
     expect(capturedPrompt).toContain('product-level voice');
   });
 
+  it('includes version in prompt when provided', async () => {
+    let capturedPrompt = '';
+    const mockProvider: LLMProvider = {
+      generate: vi.fn(async (prompt: string) => {
+        capturedPrompt = prompt;
+        return '{"subject": "S", "body": "B"}';
+      }),
+    };
+
+    await generateEmailDraft(mockProvider, mockProduct, emptyActivity, '2024-01-15', undefined, undefined, '0.1.12');
+
+    expect(capturedPrompt).toContain('**Version:** 0.1.12');
+    expect(capturedPrompt).toContain('This email is for version 0.1.12');
+  });
+
+  it('omits version from prompt when not provided', async () => {
+    let capturedPrompt = '';
+    const mockProvider: LLMProvider = {
+      generate: vi.fn(async (prompt: string) => {
+        capturedPrompt = prompt;
+        return '{"subject": "S", "body": "B"}';
+      }),
+    };
+
+    await generateEmailDraft(mockProvider, mockProduct, emptyActivity, '2024-01-15');
+
+    expect(capturedPrompt).not.toContain('**Version:**');
+  });
+
   it('falls back to product voice when audience has no voice override', async () => {
     const productNoVoice: Product = {
       id: 'test-app',

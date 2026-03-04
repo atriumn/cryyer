@@ -87,10 +87,15 @@ runs:
         if [ -n "${{ inputs.audience }}" ]; then
           AUDIENCE_FLAG="--audience ${{ inputs.audience }}"
         fi
+        VERSION_FLAG=""
+        if [ -n "${{ inputs.version }}" ]; then
+          VERSION_FLAG="--version ${{ inputs.version }}"
+        fi
         npx cryyer@${{ inputs.cryyer-version }} draft-file \
           --product ${{ inputs.product }} \
           --output "$OUTPUT" \
           --since "$SINCE" \
           $REPO_FLAG \
-          $AUDIENCE_FLAG
+          $AUDIENCE_FLAG \
+          $VERSION_FLAG
         echo "draft-path=$OUTPUT" >> "$GITHUB_OUTPUT"

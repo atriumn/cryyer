@@ -21,6 +21,7 @@ export function parseArgv(argv: string[]): {
   since?: string;
   repo?: string;
   audienceId?: string;
+  version?: string;
 } {
   // Skip the 'draft-file' command word if present
   const args = argv[0] === 'draft-file' ? argv.slice(1) : argv;
@@ -30,6 +31,7 @@ export function parseArgv(argv: string[]): {
   let since: string | undefined = process.env['DRAFT_SINCE'];
   let repo: string | undefined = process.env['DRAFT_REPO'];
   let audienceId: string | undefined = process.env['AUDIENCE_ID'];
+  let version: string | undefined = process.env['DRAFT_VERSION'];
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--product' && args[i + 1]) {
@@ -47,17 +49,20 @@ export function parseArgv(argv: string[]): {
     } else if (args[i] === '--audience' && args[i + 1]) {
       audienceId = args[i + 1];
       i++;
+    } else if (args[i] === '--version' && args[i + 1]) {
+      version = args[i + 1];
+      i++;
     }
   }
 
   if (!productId) throw new Error('Missing --product <id>. Usage: cryyer draft-file --product <id> --output <path>');
   if (!output) throw new Error('Missing --output <path>. Usage: cryyer draft-file --product <id> --output <path>');
 
-  return { productId, output, since: since || undefined, repo: repo || undefined, audienceId: audienceId || undefined };
+  return { productId, output, since: since || undefined, repo: repo || undefined, audienceId: audienceId || undefined, version: version || undefined };
 }
 
 export async function main(): Promise<void> {
-  const { productId, output, since, repo, audienceId } = parseArgv(process.argv.slice(2));
+  const { productId, output, since, repo, audienceId, version } = parseArgv(process.argv.slice(2));
 
   const githubToken = requireEnv('GITHUB_TOKEN');
 
@@ -96,7 +101,7 @@ export async function main(): Promise<void> {
   console.log(`Gathering activity for ${product.name} since ${sinceDate}`);
 
   const activity = await gatherActivity(octokit, product, sinceDate);
-  const draft = await generateEmailDraft(llm, product, activity, weekOf, undefined, audience);
+  const draft = await generateEmailDraft(llm, product, activity, weekOf, undefined, audience, version);
 
   const fileContent = formatDraftFile(draft.subject, draft.body);
 
