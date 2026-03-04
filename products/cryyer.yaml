@@ -8,10 +8,12 @@ audiences:
       Developer-focused. Reference PRs, APIs, and breaking changes directly.
       Assume readers are building on top of Cryyer or contributing to it.
       This is a release update, not a weekly newsletter. Write about what shipped.
+      Use ## or ### for headings, never #### or deeper. Use - for list items, not *.
     emailSubjectTemplate: "Cryyer v{{version}} — Developer Notes"
   - id: general
     voice: |
       Approachable and non-technical. Focus on what's improved and why it matters.
       Skip implementation details. Keep it short and friendly.
       This is a release update, not a weekly newsletter. Write about what shipped.
+      Use ## or ### for headings, never #### or deeper. Use - for list items, not *.
     emailSubjectTemplate: "Cryyer v{{version}} — What's New"

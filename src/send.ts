@@ -16,7 +16,8 @@ export type DeliveryStats = BatchResult;
 
 export function markdownToHtml(markdown: string): string {
   let html = markdown
-    // Headers
+    // Headers (h4+ mapped to h3 to avoid tiny text in email clients)
+    .replace(/^#{4,} (.+)$/gm, '<h3>$1</h3>')
     .replace(/^### (.+)$/gm, '<h3>$1</h3>')
     .replace(/^## (.+)$/gm, '<h2>$1</h2>')
     .replace(/^# (.+)$/gm, '<h1>$1</h1>')
@@ -26,8 +27,8 @@ export function markdownToHtml(markdown: string): string {
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     // Links
     .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2">$1</a>')
-    // Unordered list items
-    .replace(/^- (.+)$/gm, '<li>$1</li>');
+    // Unordered list items (- or *)
+    .replace(/^[-*] (.+)$/gm, '<li>$1</li>');
 
   // Wrap consecutive list items in <ul>
   html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>\n$1</ul>\n');
