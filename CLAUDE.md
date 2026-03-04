@@ -18,10 +18,21 @@ pnpm run mcp         # Run MCP server (node dist/mcp.js)
 
 ## What Cryyer Does
 
-Cryyer sends automated email updates to beta testers, with per-product voice powered by LLM-drafted content. It supports multiple audiences per product (e.g. beta testers vs enterprise customers), multiple LLM providers (Anthropic Claude, OpenAI, Google Gemini) via a configurable adapter pattern. It follows a two-stage pipeline:
+Cryyer sends automated email updates to subscribers, with per-product voice powered by LLM-drafted content. It supports multiple audiences per product (e.g. beta testers vs enterprise customers), multiple LLM providers (Anthropic Claude, OpenAI, Google Gemini) via a configurable adapter pattern.
 
-1. **Weekly Draft** (cron, Mondays): For each product, gathers GitHub activity (merged PRs, releases, notable commits), generates an email draft via Claude, and creates a GitHub issue for human review.
-2. **Send on Close**: When a draft issue is closed (approved), emails are sent to subscribers via the configured email provider (Resend or Gmail).
+### Two pipelines
+
+**Release pipeline** (fully automated, no manual review):
+1. Push to `main` → release-please opens/updates a version-bump PR
+2. `draft-email.yml` generates an email draft file (`drafts/vX.Y.Z.md`) and commits it to the PR branch
+3. Merge the release-please PR → tag pushed → `release.yml` publishes to npm → GitHub Release created
+4. `send-email.yml` fires on release publish, reads the draft file, sends emails to subscribers
+
+**Weekly pipeline** (manual review via GitHub issues):
+1. `weekly-draft.yml` runs on cron (Monday 1pm UTC) or manual trigger — gathers GitHub activity, generates LLM drafts, creates GitHub issues with `draft` label for human review
+2. `send-update.yml` fires when a draft issue is closed — parses the issue body, sends emails to subscribers, posts delivery stats as a comment
+
+The release pipeline uses `draft-file.ts` / `send-file.ts` (file-based). The weekly pipeline uses `draft.ts` / `send-on-close.ts` (issue-based). Both share the same core modules (gather, summarize, send, subscriber-store, email-provider).
 
 ## Architecture
 
@@ -163,9 +174,19 @@ Default models per provider: Anthropic → `claude-sonnet-4-5-20250514`, OpenAI 
 
 ## GitHub Workflows
 
+### CI & deployment
 - **`ci.yml`**: Runs on push/PR to main. Lints, typechecks, and runs tests.
-- **`weekly-draft.yml`**: Cron Monday 1pm UTC. Runs `node dist/draft.js`. Needs `GITHUB_TOKEN`, `CRYYER_REPO`, and the API key for the configured `LLM_PROVIDER`.
-- **`send-update.yml`**: Fires on issue close (filtered to `draft` label). Runs `node dist/send-on-close.js`. Needs all Resend/Supabase secrets.
+- **`deploy-site.yml`**: Deploys docs site to Vercel when `site/**` changes on main.
+
+### Release pipeline (automated, file-based)
+- **`release-please.yml`**: Runs on push to main. Opens/updates a version-bump PR with changelog.
+- **`draft-email.yml`**: Runs when a `release-please--*` PR is opened/synced. Generates `drafts/vX.Y.Z.md` via LLM and commits it to the PR branch. Uses Gemini.
+- **`release.yml`**: Runs on `v*` tag push (created when the release-please PR is merged). Typechecks, tests, publishes to npm, updates major version tag.
+- **`send-email.yml`**: Runs when a GitHub Release is published. Reads the draft file and sends emails to subscribers via Resend.
+
+### Weekly pipeline (manual review, issue-based)
+- **`weekly-draft.yml`**: Cron Monday 1pm UTC (or manual trigger). Runs `node dist/draft.js` — gathers activity, generates LLM drafts, creates GitHub issues with `draft` + product-id labels. Needs `GITHUB_TOKEN`, `CRYYER_REPO`, and LLM API key.
+- **`send-update.yml`**: Fires on issue close (filtered to `draft` label). Runs `node dist/send-on-close.js` — parses issue body, sends emails, posts delivery stats. Needs email provider and subscriber store secrets.
 
 ## Composite GitHub Actions
 
