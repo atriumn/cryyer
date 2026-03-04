@@ -1,6 +1,6 @@
 {
   "name": "cryyer",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "description": "Centralized beta tester update system — automated weekly emails with per-product voice powered by LLM drafts",
   "license": "MIT",
   "author": "Atriumn",
