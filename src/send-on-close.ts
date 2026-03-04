@@ -3,8 +3,9 @@ import { fileURLToPath } from 'url';
 import { Octokit } from 'octokit';
 import { loadProducts } from './config.js';
 import { createSubscriberStore } from './subscriber-store.js';
-import { sendWeeklyEmails } from './send.js';
+import { sendEmails } from './send.js';
 import { createEmailProvider } from './email-provider.js';
+import { subscriberKey } from './types.js';
 
 function requireEnv(key: string): string {
   const value = process.env[key];
@@ -93,6 +94,11 @@ async function main(): Promise<void> {
     return;
   }
 
+  // Detect audience from labels
+  const audienceLabel = labelNames.find((l) => l.startsWith('audience:'));
+  const audienceId = audienceLabel?.slice('audience:'.length);
+  const subKey = subscriberKey(productId, audienceId);
+
   // Parse email content from issue body
   const parsed = parseIssueBody(issue.body ?? '');
   if (!parsed) {
@@ -108,7 +114,7 @@ async function main(): Promise<void> {
   const emailContent = { subject: parsed.subject, body: parsed.emailBody };
 
   // Fetch subscribers
-  const subscribers = await store.getSubscribers(productId);
+  const subscribers = await store.getSubscribers(subKey);
 
   if (subscribers.length === 0) {
     console.warn(`No active subscribers found for product: ${productId}`);
@@ -141,7 +147,7 @@ async function main(): Promise<void> {
   // Send emails
   let stats;
   try {
-    stats = await sendWeeklyEmails(emailProvider!, product, subscribers, emailContent, fromName, fromEmail);
+    stats = await sendEmails(emailProvider!, product, subscribers, emailContent, fromName, fromEmail);
   } catch (err) {
     // Re-open issue and add error comment on unexpected send failure
     await octokit.rest.issues.update({

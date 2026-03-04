@@ -4,7 +4,7 @@ import type { Mock } from 'vitest';
 // Mock external modules before importing
 vi.mock('../config.js', () => ({ loadProducts: vi.fn() }));
 vi.mock('../subscriber-store.js', () => ({ createSubscriberStore: vi.fn() }));
-vi.mock('../send.js', () => ({ sendWeeklyEmails: vi.fn() }));
+vi.mock('../send.js', () => ({ sendEmails: vi.fn() }));
 vi.mock('../email-provider.js', () => ({ createEmailProvider: vi.fn() }));
 vi.mock('fs', async () => {
   const actual = await vi.importActual<typeof import('fs')>('fs');
@@ -14,7 +14,7 @@ vi.mock('fs', async () => {
 import { parseDraftFile, parseArgv, main } from '../send-file.js';
 import { loadProducts } from '../config.js';
 import { createSubscriberStore } from '../subscriber-store.js';
-import { sendWeeklyEmails } from '../send.js';
+import { sendEmails } from '../send.js';
 import { createEmailProvider } from '../email-provider.js';
 import { readFileSync } from 'fs';
 
@@ -97,6 +97,16 @@ describe('parseArgv', () => {
     delete process.env['PRODUCT_ID'];
     expect(() => parseArgv(['drafts/v1.0.md'])).toThrow('Missing --product');
   });
+
+  it('parses --audience flag', () => {
+    const result = parseArgv(['drafts/v1.0.md', '--product', 'my-app', '--audience', 'beta']);
+    expect(result.audienceId).toBe('beta');
+  });
+
+  it('returns undefined audienceId when not specified', () => {
+    const result = parseArgv(['drafts/v1.0.md', '--product', 'my-app']);
+    expect(result.audienceId).toBeUndefined();
+  });
 });
 
 describe('main', () => {
@@ -135,11 +145,11 @@ describe('main', () => {
     const mockProvider = {};
     (createEmailProvider as Mock).mockReturnValue(mockProvider);
 
-    (sendWeeklyEmails as Mock).mockResolvedValue({ sent: 1, failed: 0, failures: [] });
+    (sendEmails as Mock).mockResolvedValue({ sent: 1, failed: 0, failures: [] });
 
     await main();
 
-    expect(sendWeeklyEmails).toHaveBeenCalledWith(
+    expect(sendEmails).toHaveBeenCalledWith(
       mockProvider,
       mockProduct,
       [{ email: 'user@example.com' }],
@@ -165,7 +175,7 @@ describe('main', () => {
 
     await main();
 
-    expect(sendWeeklyEmails).not.toHaveBeenCalled();
+    expect(sendEmails).not.toHaveBeenCalled();
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('No active subscribers'));
     warnSpy.mockRestore();
   });
@@ -188,7 +198,7 @@ describe('main', () => {
 
     await main();
 
-    expect(sendWeeklyEmails).not.toHaveBeenCalled();
+    expect(sendEmails).not.toHaveBeenCalled();
     const output = consoleSpy.mock.calls.map((c) => String(c[0])).join('\n');
     expect(output).toContain('[DRY RUN]');
     expect(output).toContain('Test Subject');

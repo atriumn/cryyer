@@ -67,7 +67,7 @@ function makeUnsubscribeUrl(fromEmail: string, productId: string): string {
   return `mailto:${fromEmail}?subject=${subject}`;
 }
 
-export async function sendWeeklyEmails(
+export async function sendEmails(
   provider: EmailProvider,
   product: Product,
   subscribers: Subscriber[],

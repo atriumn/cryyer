@@ -3,7 +3,7 @@ import type { Mock } from 'vitest';
 
 // Mock external modules before importing
 vi.mock('../config.js', () => ({ loadProducts: vi.fn() }));
-vi.mock('../gather.js', () => ({ gatherWeeklyActivity: vi.fn() }));
+vi.mock('../gather.js', () => ({ gatherActivity: vi.fn() }));
 vi.mock('../summarize.js', () => ({ generateEmailDraft: vi.fn() }));
 vi.mock('../llm-provider.js', () => ({ createLLMProvider: vi.fn() }));
 vi.mock('../draft.js', () => ({ getWeekOf: vi.fn() }));
@@ -15,7 +15,7 @@ vi.mock('fs', async () => {
 
 import { formatDraftFile, parseArgv, main } from '../draft-file.js';
 import { loadProducts } from '../config.js';
-import { gatherWeeklyActivity } from '../gather.js';
+import { gatherActivity } from '../gather.js';
 import { generateEmailDraft } from '../summarize.js';
 import { createLLMProvider } from '../llm-provider.js';
 import { getWeekOf } from '../draft.js';
@@ -101,6 +101,20 @@ describe('parseArgv', () => {
     delete process.env['DRAFT_OUTPUT'];
     expect(() => parseArgv(['--product', 'my-app'])).toThrow('Missing --output');
   });
+
+  it('parses --audience flag', () => {
+    const result = parseArgv([
+      '--product', 'my-app',
+      '--output', 'out.md',
+      '--audience', 'beta',
+    ]);
+    expect(result.audienceId).toBe('beta');
+  });
+
+  it('returns undefined audienceId when not specified', () => {
+    const result = parseArgv(['--product', 'my-app', '--output', 'out.md']);
+    expect(result.audienceId).toBeUndefined();
+  });
 });
 
 describe('main', () => {
@@ -135,7 +149,7 @@ describe('main', () => {
     const mockDraft = { subject: 'Test Subject', body: 'Test body' };
 
     (loadProducts as Mock).mockReturnValue([mockProduct]);
-    (gatherWeeklyActivity as Mock).mockResolvedValue(mockActivity);
+    (gatherActivity as Mock).mockResolvedValue(mockActivity);
     (generateEmailDraft as Mock).mockResolvedValue(mockDraft);
     (getWeekOf as Mock).mockReturnValue('2024-01-15');
     (createLLMProvider as Mock).mockReturnValue({});
@@ -145,7 +159,7 @@ describe('main', () => {
 
     await main();
 
-    expect(gatherWeeklyActivity).toHaveBeenCalledWith(
+    expect(gatherActivity).toHaveBeenCalledWith(
       expect.anything(),
       mockProduct,
       expect.any(String)
@@ -154,7 +168,9 @@ describe('main', () => {
       {},
       mockProduct,
       mockActivity,
-      '2024-01-15'
+      '2024-01-15',
+      undefined,
+      expect.objectContaining({ voice: 'friendly' })
     );
     expect(mkdirSync).toHaveBeenCalledWith('drafts', { recursive: true });
     expect(writeFileSync).toHaveBeenCalledWith(
@@ -175,7 +191,7 @@ describe('main', () => {
     (loadProducts as Mock).mockReturnValue([
       { id: 'test-app', name: 'Test App', voice: '', repo: 'o/r', emailSubjectTemplate: '' },
     ]);
-    (gatherWeeklyActivity as Mock).mockResolvedValue({ prs: [], releases: [], commits: [] });
+    (gatherActivity as Mock).mockResolvedValue({ prs: [], releases: [], commits: [] });
     (generateEmailDraft as Mock).mockResolvedValue({ subject: 'S', body: 'B' });
     (getWeekOf as Mock).mockReturnValue('2024-01-15');
     (createLLMProvider as Mock).mockReturnValue({});
@@ -185,7 +201,7 @@ describe('main', () => {
 
     await main();
 
-    expect(gatherWeeklyActivity).toHaveBeenCalledWith(
+    expect(gatherActivity).toHaveBeenCalledWith(
       expect.anything(),
       expect.anything(),
       '2024-01-01T00:00:00Z'
@@ -208,7 +224,7 @@ describe('main', () => {
       emailSubjectTemplate: '',
     };
     (loadProducts as Mock).mockReturnValue([mockProduct]);
-    (gatherWeeklyActivity as Mock).mockResolvedValue({ prs: [], releases: [], commits: [] });
+    (gatherActivity as Mock).mockResolvedValue({ prs: [], releases: [], commits: [] });
     (generateEmailDraft as Mock).mockResolvedValue({ subject: 'S', body: 'B' });
     (getWeekOf as Mock).mockReturnValue('2024-01-15');
     (createLLMProvider as Mock).mockReturnValue({});
@@ -218,7 +234,7 @@ describe('main', () => {
 
     await main();
 
-    expect(gatherWeeklyActivity).toHaveBeenCalledWith(
+    expect(gatherActivity).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ repo: 'other/repo' }),
       expect.any(String)

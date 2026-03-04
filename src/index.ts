@@ -2,12 +2,13 @@ import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { Octokit } from 'octokit';
 import { loadProducts } from './config.js';
-import { gatherWeeklyActivity } from './gather.js';
+import { gatherActivity } from './gather.js';
 import { generateEmailDraft } from './summarize.js';
-import { sendWeeklyEmails } from './send.js';
+import { sendEmails } from './send.js';
 import { createLLMProvider } from './llm-provider.js';
 import { createSubscriberStore } from './subscriber-store.js';
 import { createEmailProvider } from './email-provider.js';
+import { resolveAudiences, subscriberKey } from './types.js';
 
 export function isDryRun(): boolean {
   return process.env['DRY_RUN'] === 'true' || process.argv.includes('--dry-run');
@@ -46,42 +47,48 @@ async function main(): Promise<void> {
     console.log(`Processing product: ${product.name}`);
 
     try {
-      const activity = await gatherWeeklyActivity(octokit, product, since);
-      const draft = await generateEmailDraft(llm, product, activity, weekOf);
-      const subscribers = await store.getSubscribers(product.id);
+      const activity = await gatherActivity(octokit, product, since);
+      const audiences = resolveAudiences(product);
 
-      if (dryRun) {
-        console.log(`\n[DRY RUN] ${product.name}:`);
-        console.log(`  Subscribers: ${subscribers.length}`);
-        console.log(`  Subject: ${draft.subject}`);
-        console.log(`\n${draft.body}`);
-        console.log('---');
-        continue;
-      }
+      for (const audience of audiences) {
+        const draft = await generateEmailDraft(llm, product, activity, weekOf, undefined, audience);
+        const subKey = subscriberKey(product.id, audience.id);
+        const subscribers = await store.getSubscribers(subKey);
+        const audienceSuffix = audience.id ? ` [${audience.id}]` : '';
 
-      if (subscribers.length === 0) {
-        console.log(`  No subscribers for ${product.name}, skipping`);
-        continue;
-      }
+        if (dryRun) {
+          console.log(`\n[DRY RUN] ${product.name}${audienceSuffix}:`);
+          console.log(`  Subscribers: ${subscribers.length}`);
+          console.log(`  Subject: ${draft.subject}`);
+          console.log(`\n${draft.body}`);
+          console.log('---');
+          continue;
+        }
 
-      const productFromName = product.from_name ?? process.env['FROM_NAME'] ?? 'Cryyer Updates';
-      const productFromEmail = product.from_email ?? fromEmail;
-      const replyTo = product.reply_to;
+        if (subscribers.length === 0) {
+          console.log(`  No subscribers for ${product.name}${audienceSuffix}, skipping`);
+          continue;
+        }
 
-      const stats = await sendWeeklyEmails(
-        emailProvider!,
-        product,
-        subscribers,
-        { subject: draft.subject, body: draft.body },
-        productFromName,
-        productFromEmail,
-        replyTo
-      );
+        const audienceFromName = audience.from_name ?? process.env['FROM_NAME'] ?? 'Cryyer Updates';
+        const audienceFromEmail = audience.from_email ?? fromEmail;
+        const replyTo = audience.reply_to;
 
-      console.log(`  ${product.name}: ${stats.sent} sent, ${stats.failed} failed`);
+        const stats = await sendEmails(
+          emailProvider!,
+          product,
+          subscribers,
+          { subject: draft.subject, body: draft.body },
+          audienceFromName,
+          audienceFromEmail,
+          replyTo
+        );
 
-      for (const subscriber of subscribers) {
-        await store.recordEmailSent(subscriber.email, product.id, weekOf);
+        console.log(`  ${product.name}${audienceSuffix}: ${stats.sent} sent, ${stats.failed} failed`);
+
+        for (const subscriber of subscribers) {
+          await store.recordEmailSent(subscriber.email, subKey, weekOf);
+        }
       }
     } catch (err) {
       console.error(`  Error processing ${product.name}:`, err);

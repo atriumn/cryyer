@@ -2,9 +2,10 @@ import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { Octokit } from 'octokit';
 import { loadProducts } from './config.js';
-import { gatherWeeklyActivity } from './gather.js';
+import { gatherActivity } from './gather.js';
 import { generateEmailDraft } from './summarize.js';
 import { createLLMProvider } from './llm-provider.js';
+import { resolveAudiences } from './types.js';
 
 export function isDryRun(): boolean {
   return process.env['DRY_RUN'] === 'true' || process.argv.includes('--dry-run');
@@ -41,30 +42,42 @@ async function main(): Promise<void> {
     console.log(`Processing product: ${product.name}`);
 
     try {
-      const activity = await gatherWeeklyActivity(octokit, product, since);
-      const draft = await generateEmailDraft(llm, product, activity, weekOf);
+      const activity = await gatherActivity(octokit, product, since);
+      const audiences = resolveAudiences(product);
 
-      const issueTitle = `[${product.name}] Weekly Update — ${weekOf}`;
-      const issueBody = `**Subject:** ${draft.subject}\n\n---\n\n${draft.body}`;
+      for (const audience of audiences) {
+        const draft = await generateEmailDraft(llm, product, activity, weekOf, undefined, audience);
+        const audienceSuffix = audience.id ? ` [${audience.id}]` : '';
 
-      if (dryRun) {
-        console.log(`\n[DRY RUN] ${product.name} — draft preview:`);
-        console.log(`Title: ${issueTitle}`);
-        console.log(`\n${issueBody}`);
-        console.log('---');
-      } else {
-        await ensureLabel(octokit, cryyerOwner, cryyerRepoName, 'draft', '0075ca');
-        await ensureLabel(octokit, cryyerOwner, cryyerRepoName, product.id, 'e4e669');
+        const issueTitle = `[${product.name}]${audienceSuffix} Weekly Update — ${weekOf}`;
+        const issueBody = `**Subject:** ${draft.subject}\n\n---\n\n${draft.body}`;
 
-        const { data: issue } = await octokit.rest.issues.create({
-          owner: cryyerOwner,
-          repo: cryyerRepoName,
-          title: issueTitle,
-          body: issueBody,
-          labels: ['draft', product.id],
-        });
+        if (dryRun) {
+          console.log(`\n[DRY RUN] ${product.name}${audienceSuffix} — draft preview:`);
+          console.log(`Title: ${issueTitle}`);
+          console.log(`\n${issueBody}`);
+          console.log('---');
+        } else {
+          await ensureLabel(octokit, cryyerOwner, cryyerRepoName, 'draft', '0075ca');
+          await ensureLabel(octokit, cryyerOwner, cryyerRepoName, product.id, 'e4e669');
 
-        console.log(`  Created issue: ${issue.html_url}`);
+          const labels = ['draft', product.id];
+          if (audience.id) {
+            const audienceLabel = `audience:${audience.id}`;
+            await ensureLabel(octokit, cryyerOwner, cryyerRepoName, audienceLabel, 'c5def5');
+            labels.push(audienceLabel);
+          }
+
+          const { data: issue } = await octokit.rest.issues.create({
+            owner: cryyerOwner,
+            repo: cryyerRepoName,
+            title: issueTitle,
+            body: issueBody,
+            labels,
+          });
+
+          console.log(`  Created issue: ${issue.html_url}`);
+        }
       }
     } catch (err) {
       console.error(`  Error processing ${product.name}:`, err);

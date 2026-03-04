@@ -6,13 +6,13 @@ vi.mock('../config.js', () => ({
   loadProducts: vi.fn(),
 }));
 vi.mock('../gather.js', () => ({
-  gatherWeeklyActivity: vi.fn(),
+  gatherActivity: vi.fn(),
 }));
 vi.mock('../summarize.js', () => ({
   generateEmailDraft: vi.fn(),
 }));
 vi.mock('../send.js', () => ({
-  sendWeeklyEmails: vi.fn(),
+  sendEmails: vi.fn(),
 }));
 vi.mock('../llm-provider.js', () => ({
   createLLMProvider: vi.fn(),
@@ -31,9 +31,9 @@ vi.mock('resend', () => ({
 
 import { getWeekOf, isDryRun, main } from '../index.js';
 import { loadProducts } from '../config.js';
-import { gatherWeeklyActivity } from '../gather.js';
+import { gatherActivity } from '../gather.js';
 import { generateEmailDraft } from '../summarize.js';
-import { sendWeeklyEmails } from '../send.js';
+import { sendEmails } from '../send.js';
 import { createLLMProvider } from '../llm-provider.js';
 import { createSubscriberStore } from '../subscriber-store.js';
 
@@ -99,7 +99,7 @@ describe('main orchestration', () => {
     const mockDraft = { subject: 'Test Subject', body: 'Test body' };
 
     (loadProducts as Mock).mockReturnValue([mockProduct]);
-    (gatherWeeklyActivity as Mock).mockResolvedValue(mockActivity);
+    (gatherActivity as Mock).mockResolvedValue(mockActivity);
     (generateEmailDraft as Mock).mockResolvedValue(mockDraft);
 
     const mockStore = {
@@ -108,11 +108,11 @@ describe('main orchestration', () => {
     };
     (createSubscriberStore as Mock).mockReturnValue(mockStore);
     (createLLMProvider as Mock).mockReturnValue({});
-    (sendWeeklyEmails as Mock).mockResolvedValue({ sent: 1, failed: 0, failures: [] });
+    (sendEmails as Mock).mockResolvedValue({ sent: 1, failed: 0, failures: [] });
 
     await main();
 
-    expect(gatherWeeklyActivity).toHaveBeenCalledWith(
+    expect(gatherActivity).toHaveBeenCalledWith(
       expect.anything(),
       mockProduct,
       expect.any(String)
@@ -121,9 +121,11 @@ describe('main orchestration', () => {
       {},
       mockProduct,
       mockActivity,
-      expect.any(String)
+      expect.any(String),
+      undefined,
+      expect.objectContaining({ voice: 'friendly' })
     );
-    expect(sendWeeklyEmails).toHaveBeenCalledWith(
+    expect(sendEmails).toHaveBeenCalledWith(
       expect.anything(),
       mockProduct,
       mockSubscribers,
@@ -149,7 +151,7 @@ describe('main orchestration', () => {
     };
 
     (loadProducts as Mock).mockReturnValue([mockProduct]);
-    (gatherWeeklyActivity as Mock).mockResolvedValue({ prs: [], releases: [], commits: [] });
+    (gatherActivity as Mock).mockResolvedValue({ prs: [], releases: [], commits: [] });
     (generateEmailDraft as Mock).mockResolvedValue({ subject: 'S', body: 'B' });
 
     const mockStore = {
@@ -161,7 +163,7 @@ describe('main orchestration', () => {
 
     await main();
 
-    expect(sendWeeklyEmails).not.toHaveBeenCalled();
+    expect(sendEmails).not.toHaveBeenCalled();
     expect(mockStore.recordEmailSent).not.toHaveBeenCalled();
   });
 
@@ -182,7 +184,7 @@ describe('main orchestration', () => {
     };
 
     (loadProducts as Mock).mockReturnValue([product1, product2]);
-    (gatherWeeklyActivity as Mock)
+    (gatherActivity as Mock)
       .mockRejectedValueOnce(new Error('API error'))
       .mockResolvedValueOnce({ prs: [], releases: [], commits: [] });
     (generateEmailDraft as Mock).mockResolvedValue({ subject: 'S', body: 'B' });
@@ -193,13 +195,13 @@ describe('main orchestration', () => {
     };
     (createSubscriberStore as Mock).mockReturnValue(mockStore);
     (createLLMProvider as Mock).mockReturnValue({});
-    (sendWeeklyEmails as Mock).mockResolvedValue({ sent: 1, failed: 0, failures: [] });
+    (sendEmails as Mock).mockResolvedValue({ sent: 1, failed: 0, failures: [] });
 
     // Should not throw
     await expect(main()).resolves.toBeUndefined();
 
     // Both products should have been attempted
-    expect(gatherWeeklyActivity).toHaveBeenCalledTimes(2);
+    expect(gatherActivity).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -259,7 +261,7 @@ describe('dry-run mode', () => {
     const mockDraft = { subject: 'Dry Run Subject', body: 'Dry run body content' };
 
     (loadProducts as Mock).mockReturnValue([mockProduct]);
-    (gatherWeeklyActivity as Mock).mockResolvedValue({ prs: [], releases: [], commits: [] });
+    (gatherActivity as Mock).mockResolvedValue({ prs: [], releases: [], commits: [] });
     (generateEmailDraft as Mock).mockResolvedValue(mockDraft);
 
     const mockStore = {
@@ -274,7 +276,7 @@ describe('dry-run mode', () => {
     await main();
 
     // Emails should NOT have been sent
-    expect(sendWeeklyEmails).not.toHaveBeenCalled();
+    expect(sendEmails).not.toHaveBeenCalled();
     expect(mockStore.recordEmailSent).not.toHaveBeenCalled();
 
     // Output should contain preview

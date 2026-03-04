@@ -4,9 +4,10 @@ import { fileURLToPath } from 'url';
 import { parse as yamlParse } from 'yaml';
 import { loadProducts } from './config.js';
 import { createSubscriberStore } from './subscriber-store.js';
-import { sendWeeklyEmails } from './send.js';
+import { sendEmails } from './send.js';
 import type { EmailContent } from './send.js';
 import { createEmailProvider } from './email-provider.js';
+import { subscriberKey } from './types.js';
 
 export function parseDraftFile(content: string): EmailContent {
   const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
@@ -24,13 +25,14 @@ export function parseDraftFile(content: string): EmailContent {
   return { subject: frontMatter.subject, body };
 }
 
-export function parseArgv(argv: string[]): { filePath: string; productId: string; dryRun: boolean } {
+export function parseArgv(argv: string[]): { filePath: string; productId: string; dryRun: boolean; audienceId?: string } {
   // Skip the 'send-file' command word if present
   const args = argv[0] === 'send-file' ? argv.slice(1) : argv;
 
   let filePath = process.env['DRAFT_FILE'] ?? '';
   let productId = process.env['PRODUCT_ID'] ?? '';
   let dryRun = process.env['DRY_RUN'] === 'true';
+  let audienceId: string | undefined = process.env['AUDIENCE_ID'];
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--product' && args[i + 1]) {
@@ -38,6 +40,9 @@ export function parseArgv(argv: string[]): { filePath: string; productId: string
       i++;
     } else if (args[i] === '--dry-run') {
       dryRun = true;
+    } else if (args[i] === '--audience' && args[i + 1]) {
+      audienceId = args[i + 1];
+      i++;
     } else if (!args[i].startsWith('-')) {
       filePath = args[i];
     }
@@ -46,11 +51,11 @@ export function parseArgv(argv: string[]): { filePath: string; productId: string
   if (!filePath) throw new Error('Missing draft file path. Usage: cryyer send-file <path> --product <id>');
   if (!productId) throw new Error('Missing --product <id>. Usage: cryyer send-file <path> --product <id>');
 
-  return { filePath, productId, dryRun };
+  return { filePath, productId, dryRun, audienceId: audienceId || undefined };
 }
 
 export async function main(): Promise<void> {
-  const { filePath, productId, dryRun } = parseArgv(process.argv.slice(2));
+  const { filePath, productId, dryRun, audienceId } = parseArgv(process.argv.slice(2));
 
   const content = readFileSync(filePath, 'utf-8');
   const emailContent = parseDraftFile(content);
@@ -66,7 +71,8 @@ export async function main(): Promise<void> {
   const fromName = process.env['FROM_NAME'] ?? 'Cryyer Updates';
 
   const store = createSubscriberStore();
-  const subscribers = await store.getSubscribers(productId);
+  const subKey = subscriberKey(productId, audienceId);
+  const subscribers = await store.getSubscribers(subKey);
 
   if (subscribers.length === 0) {
     console.warn(`No active subscribers found for product: ${productId}`);
@@ -84,7 +90,7 @@ export async function main(): Promise<void> {
 
   const emailProvider = createEmailProvider();
   const replyTo = product.reply_to;
-  const stats = await sendWeeklyEmails(emailProvider, product, subscribers, emailContent, fromName, fromEmail, replyTo);
+  const stats = await sendEmails(emailProvider, product, subscribers, emailContent, fromName, fromEmail, replyTo);
 
   console.log(`Email delivery complete for ${product.name}.`);
   console.log(`  Sent: ${stats.sent}`);

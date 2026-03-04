@@ -2,7 +2,7 @@ import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { Octokit } from 'octokit';
 import { loadProducts } from './config.js';
-import { gatherWeeklyActivity } from './gather.js';
+import { gatherActivity } from './gather.js';
 import type { GatheredActivity } from './gather.js';
 
 export function parseArgv(argv: string[]): {
@@ -106,7 +106,7 @@ export async function main(): Promise<void> {
   console.log(`Repo: ${product.repo ?? product.githubRepo}`);
   console.log('');
 
-  const activity = await gatherWeeklyActivity(octokit, product, sinceDate);
+  const activity = await gatherActivity(octokit, product, sinceDate);
   console.log(formatActivity(activity));
 
   const total = activity.prs.length + activity.releases.length + activity.commits.length;

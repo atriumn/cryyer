@@ -11,3 +11,14 @@ emailSubjectTemplate: "{{weekOf}} Weekly Update — Example Product"
 #   labels: ["example-product"]   # Filter PRs by GitHub label
 #   paths: ["apps/example/"]      # Filter commits by path prefix
 #   tag_prefix: "example/"        # Filter releases by tag prefix
+
+# Optional: define multiple audiences with different voices
+# When audiences are defined, voice and emailSubjectTemplate move into each audience.
+# audiences:
+#   - id: beta
+#     voice: "Casual and enthusiastic, aimed at early adopters"
+#     emailSubjectTemplate: "{{weekOf}} Beta Update — Example Product"
+#   - id: enterprise
+#     voice: "Professional and concise, focused on stability and compliance"
+#     emailSubjectTemplate: "{{weekOf}} Release Notes — Example Product"
+#     from_name: "Example Product Team"

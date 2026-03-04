@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { isBot, resolveFilter, fetchMergedPRsByLabel, gatherWeeklyActivity } from '../gather.js';
+import { isBot, resolveFilter, fetchMergedPRsByLabel, gatherActivity } from '../gather.js';
 import type { Product } from '../types.js';
 
 describe('isBot', () => {
@@ -198,7 +198,7 @@ describe('fetchMergedPRsByLabel', () => {
   });
 });
 
-describe('gatherWeeklyActivity with filters', () => {
+describe('gatherActivity with filters', () => {
   it('uses label search when filter.labels is set', async () => {
     const mockOctokit = {
       rest: {
@@ -236,7 +236,7 @@ describe('gatherWeeklyActivity with filters', () => {
       filter: { labels: ['admin-portal'] },
     };
 
-    const result = await gatherWeeklyActivity(mockOctokit as never, product, '2026-02-23');
+    const result = await gatherActivity(mockOctokit as never, product, '2026-02-23');
 
     // Should use search API, not pulls.list
     expect(mockOctokit.rest.search.issuesAndPullRequests).toHaveBeenCalled();
@@ -269,7 +269,7 @@ describe('gatherWeeklyActivity with filters', () => {
       emailSubjectTemplate: '',
     };
 
-    await gatherWeeklyActivity(mockOctokit as never, product, '2026-02-23');
+    await gatherActivity(mockOctokit as never, product, '2026-02-23');
 
     expect(mockOctokit.rest.pulls.list).toHaveBeenCalled();
     expect(mockOctokit.rest.search.issuesAndPullRequests).not.toHaveBeenCalled();
@@ -332,7 +332,7 @@ describe('gatherWeeklyActivity with filters', () => {
       filter: { paths: ['apps/admin/'] },
     };
 
-    const result = await gatherWeeklyActivity(mockOctokit as never, product, '2026-02-23');
+    const result = await gatherActivity(mockOctokit as never, product, '2026-02-23');
 
     // Should use pulls.list + listFiles, not search API
     expect(mockOctokit.rest.pulls.list).toHaveBeenCalled();
@@ -381,7 +381,7 @@ describe('gatherWeeklyActivity with filters', () => {
       filter: { paths: ['apps/admin/'] },
     };
 
-    const result = await gatherWeeklyActivity(mockOctokit as never, product, '2026-02-23');
+    const result = await gatherActivity(mockOctokit as never, product, '2026-02-23');
 
     // PR should be excluded since we can't verify its files
     expect(result.prs).toHaveLength(0);
@@ -433,7 +433,7 @@ describe('gatherWeeklyActivity with filters', () => {
       filter: { labels: ['admin'], tag_prefix: 'admin/' },
     };
 
-    const result = await gatherWeeklyActivity(mockOctokit as never, product, '2026-02-23');
+    const result = await gatherActivity(mockOctokit as never, product, '2026-02-23');
 
     // Only the admin release within the date range should be included
     expect(result.releases).toHaveLength(1);
@@ -474,7 +474,7 @@ describe('gatherWeeklyActivity with filters', () => {
       filter: { labels: ['admin'], paths: ['apps/admin/'] },
     };
 
-    const result = await gatherWeeklyActivity(mockOctokit as never, product, '2026-02-23');
+    const result = await gatherActivity(mockOctokit as never, product, '2026-02-23');
 
     expect(mockOctokit.rest.repos.listCommits).toHaveBeenCalledWith(
       expect.objectContaining({ path: 'apps/admin/' })
@@ -518,7 +518,7 @@ describe('gatherWeeklyActivity with filters', () => {
       filter: { labels: ['admin'], paths: ['apps/admin/', 'libs/shared/'] },
     };
 
-    const result = await gatherWeeklyActivity(mockOctokit as never, product, '2026-02-23');
+    const result = await gatherActivity(mockOctokit as never, product, '2026-02-23');
 
     expect(mockOctokit.rest.repos.listCommits).toHaveBeenCalledTimes(2);
     expect(result.commits).toHaveLength(1);
@@ -549,7 +549,7 @@ describe('gatherWeeklyActivity with filters', () => {
       product_filter: 'old-label',
     };
 
-    await gatherWeeklyActivity(mockOctokit as never, product, '2026-02-23');
+    await gatherActivity(mockOctokit as never, product, '2026-02-23');
 
     // Should use search API because product_filter is resolved to labels
     expect(mockOctokit.rest.search.issuesAndPullRequests).toHaveBeenCalledWith(

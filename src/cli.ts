@@ -12,7 +12,7 @@ function getVersion(): string {
 
 function printHelp(): void {
   console.log(`
-cryyer — automated weekly email updates for beta testers
+cryyer — automated email updates for beta testers
 
 Usage:
   cryyer <command> [options]

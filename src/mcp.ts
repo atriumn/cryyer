@@ -13,13 +13,14 @@ import { z } from 'zod';
 import { Octokit } from 'octokit';
 import { loadProducts } from './config.js';
 import { parseIssueBody } from './send-on-close.js';
-import { sendWeeklyEmails } from './send.js';
+import { sendEmails } from './send.js';
 import { createSubscriberStore } from './subscriber-store.js';
 import { createEmailProvider } from './email-provider.js';
-import { gatherWeeklyActivity } from './gather.js';
+import { gatherActivity } from './gather.js';
 import { generateEmailDraft } from './summarize.js';
 import { createLLMProvider } from './llm-provider.js';
 import type { Product, BetaTester } from './types.js';
+import { subscriberKey, resolveAudiences } from './types.js';
 
 // --- Helpers ---
 
@@ -156,11 +157,15 @@ server.tool(
     const products = getProducts();
     const productId = extractProductLabel(labels, products);
 
+    const audienceLabel = labels.find((l) => l.startsWith('audience:'));
+    const audienceId = audienceLabel?.slice('audience:'.length);
+
     let subscriberInfo = '';
     if (productId) {
       try {
+        const subKey = subscriberKey(productId, audienceId);
         const store = createSubscriberStore();
-        const subscribers = await store.getSubscribers(productId);
+        const subscribers = await store.getSubscribers(subKey);
         subscriberInfo = `\n\nSubscribers: ${subscribers.length}`;
       } catch {
         subscriberInfo = '\n\nSubscribers: (unable to fetch)';
@@ -263,9 +268,12 @@ server.tool(
 
     const emailContent = { subject: parsed.subject, body: parsed.emailBody };
 
-    // Get subscribers
+    // Get subscribers (audience-aware)
+    const audienceLabel = labels.find((l) => l.startsWith('audience:'));
+    const audienceId = audienceLabel?.slice('audience:'.length);
+    const subKey = subscriberKey(productId, audienceId);
     const store = createSubscriberStore();
-    const subscribers = await store.getSubscribers(productId);
+    const subscribers = await store.getSubscribers(subKey);
 
     if (subscribers.length === 0) {
       return {
@@ -283,7 +291,7 @@ server.tool(
 
     // Send
     const emailProvider = createEmailProvider();
-    const stats = await sendWeeklyEmails(
+    const stats = await sendEmails(
       emailProvider,
       product,
       betaTesters,
@@ -359,9 +367,15 @@ server.tool(
     const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     const weekOf = getWeekOf();
 
-    const activity = await gatherWeeklyActivity(octokit, product, since);
+    // Detect audience from labels
+    const audienceLabel = labels.find((l) => l.startsWith('audience:'));
+    const audienceId = audienceLabel?.slice('audience:'.length);
+    const audiences = resolveAudiences(product);
+    const audience = audienceId ? audiences.find((a) => a.id === audienceId) : audiences[0];
+
+    const activity = await gatherActivity(octokit, product, since);
     const llm = createLLMProvider();
-    const draft = await generateEmailDraft(llm, product, activity, weekOf);
+    const draft = await generateEmailDraft(llm, product, activity, weekOf, undefined, audience);
 
     // Update issue body
     const issueBody = formatIssueBody(draft.subject, draft.body);
@@ -380,22 +394,40 @@ server.tool(
 
 server.tool(
   'list_products',
-  'List configured products and their subscriber counts',
+  'List configured products, their audiences, and subscriber counts',
   {},
   async () => {
     const products = getProducts();
     const lines: string[] = [];
 
     for (const product of products) {
-      let count = '';
-      try {
-        const store = createSubscriberStore();
-        const subscribers = await store.getSubscribers(product.id);
-        count = ` (${subscribers.length} subscribers)`;
-      } catch {
-        count = '';
+      const audiences = resolveAudiences(product);
+
+      if (audiences.length === 1 && !audiences[0].id) {
+        let count = '';
+        try {
+          const store = createSubscriberStore();
+          const subscribers = await store.getSubscribers(product.id);
+          count = ` (${subscribers.length} subscribers)`;
+        } catch {
+          count = '';
+        }
+        lines.push(`${product.id}: ${product.name}${count}`);
+      } else {
+        lines.push(`${product.id}: ${product.name}`);
+        for (const audience of audiences) {
+          const subKey = subscriberKey(product.id, audience.id);
+          let count = '';
+          try {
+            const store = createSubscriberStore();
+            const subscribers = await store.getSubscribers(subKey);
+            count = ` (${subscribers.length} subscribers)`;
+          } catch {
+            count = '';
+          }
+          lines.push(`  audience: ${audience.id}${count}`);
+        }
       }
-      lines.push(`${product.id}: ${product.name}${count}`);
     }
 
     return {
@@ -406,15 +438,19 @@ server.tool(
 
 server.tool(
   'list_subscribers',
-  'List subscribers for a product',
-  { product_id: z.string().describe('The product ID') },
-  async ({ product_id }) => {
+  'List subscribers for a product (optionally filtered by audience)',
+  {
+    product_id: z.string().describe('The product ID'),
+    audience_id: z.string().optional().describe('Optional audience ID for multi-audience products'),
+  },
+  async ({ product_id, audience_id }) => {
+    const subKey = subscriberKey(product_id, audience_id);
     const store = createSubscriberStore();
-    const subscribers = await store.getSubscribers(product_id);
+    const subscribers = await store.getSubscribers(subKey);
 
     if (subscribers.length === 0) {
       return {
-        content: [{ type: 'text', text: `No subscribers found for product: ${product_id}` }],
+        content: [{ type: 'text', text: `No subscribers found for: ${subKey}` }],
       };
     }
 
@@ -423,42 +459,46 @@ server.tool(
     );
 
     return {
-      content: [{ type: 'text', text: `${subscribers.length} subscribers for ${product_id}:\n\n${lines.join('\n')}` }],
+      content: [{ type: 'text', text: `${subscribers.length} subscribers for ${subKey}:\n\n${lines.join('\n')}` }],
     };
   }
 );
 
 server.tool(
   'add_subscriber',
-  'Add a subscriber to a product',
+  'Add a subscriber to a product (optionally to a specific audience)',
   {
     product_id: z.string().describe('The product ID'),
     email: z.string().email().describe('Subscriber email address'),
     name: z.string().optional().describe('Subscriber name (optional)'),
+    audience_id: z.string().optional().describe('Optional audience ID for multi-audience products'),
   },
-  async ({ product_id, email, name }) => {
+  async ({ product_id, email, name, audience_id }) => {
+    const subKey = subscriberKey(product_id, audience_id);
     const store = createSubscriberStore();
-    await store.addSubscriber(product_id, email, name);
+    await store.addSubscriber(subKey, email, name);
 
     return {
-      content: [{ type: 'text', text: `Added ${email} to ${product_id}.` }],
+      content: [{ type: 'text', text: `Added ${email} to ${subKey}.` }],
     };
   }
 );
 
 server.tool(
   'remove_subscriber',
-  'Remove or unsubscribe someone from a product',
+  'Remove or unsubscribe someone from a product (optionally from a specific audience)',
   {
     product_id: z.string().describe('The product ID'),
     email: z.string().email().describe('Subscriber email address'),
+    audience_id: z.string().optional().describe('Optional audience ID for multi-audience products'),
   },
-  async ({ product_id, email }) => {
+  async ({ product_id, email, audience_id }) => {
+    const subKey = subscriberKey(product_id, audience_id);
     const store = createSubscriberStore();
-    await store.removeSubscriber(product_id, email);
+    await store.removeSubscriber(subKey, email);
 
     return {
-      content: [{ type: 'text', text: `Removed ${email} from ${product_id}.` }],
+      content: [{ type: 'text', text: `Removed ${email} from ${subKey}.` }],
     };
   }
 );
@@ -466,8 +506,8 @@ server.tool(
 // --- Prompts ---
 
 server.prompt(
-  'review_weekly_drafts',
-  'Monday morning ritual: review, edit, and send all pending weekly drafts',
+  'review_drafts',
+  'Review, edit, and send all pending drafts',
   () => ({
     messages: [
       {
@@ -475,7 +515,7 @@ server.prompt(
         content: {
           type: 'text',
           text: [
-            'Time to review the weekly drafts! Please:',
+            'Time to review the drafts! Please:',
             '',
             '1. List all pending drafts using list_drafts',
             '2. For each draft, use get_draft to show me the full content and subscriber count',

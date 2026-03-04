@@ -18,7 +18,7 @@ pnpm run mcp         # Run MCP server (node dist/mcp.js)
 
 ## What Cryyer Does
 
-Cryyer sends automated weekly email updates to beta testers, with per-product voice powered by LLM-drafted content. It supports multiple LLM providers (Anthropic Claude, OpenAI, Google Gemini) via a configurable adapter pattern. It follows a two-stage pipeline:
+Cryyer sends automated email updates to beta testers, with per-product voice powered by LLM-drafted content. It supports multiple audiences per product (e.g. beta testers vs enterprise customers), multiple LLM providers (Anthropic Claude, OpenAI, Google Gemini) via a configurable adapter pattern. It follows a two-stage pipeline:
 
 1. **Weekly Draft** (cron, Mondays): For each product, gathers GitHub activity (merged PRs, releases, notable commits), generates an email draft via Claude, and creates a GitHub issue for human review.
 2. **Send on Close**: When a draft issue is closed (approved), emails are sent to subscribers via the configured email provider (Resend or Gmail).
@@ -27,19 +27,19 @@ Cryyer sends automated weekly email updates to beta testers, with per-product vo
 
 Six distinct entry points, each compiled from `src/` to `dist/`:
 
-- **`index.ts`** — Direct orchestration: gather activity, draft, query subscribers, send emails in one run.
-- **`draft.ts`** — Used by `weekly-draft.yml` workflow. Gathers activity, generates drafts via LLM, creates GitHub issues with `draft` + product-id labels.
-- **`send-on-close.ts`** — Used by `send-update.yml` workflow. Triggered on issue close, parses the draft issue body (`**Subject:** ...\n\n---\n\n<body>`), queries Supabase for subscribers, sends via Resend, posts delivery stats as issue comment.
-- **`draft-file.ts`** — CLI command `cryyer draft-file`. Gathers activity, generates LLM draft, writes a YAML front matter markdown file. Designed for release-triggered pipelines where the draft is committed to a PR branch. Accepts `--product`, `--output`, `--since`, `--repo` flags.
-- **`send-file.ts`** — CLI command `cryyer send-file`. Reads a YAML front matter draft file (`---\nsubject: ...\n---\n\n<body>`), loads product config, fetches subscribers, sends emails. Accepts `<path>`, `--product`, `--dry-run` flags. Designed for post-release email delivery.
-- **`mcp.ts`** — MCP server for Claude Desktop. Exposes 9 tools (list/get/update/send/regenerate drafts, list products, list/add/remove subscribers) and 1 prompt (`review_weekly_drafts`). Uses stdio transport. Run via `node dist/mcp.js` or `npx cryyer-mcp`.
+- **`index.ts`** — Direct orchestration: gather activity, draft per audience, query subscribers, send emails in one run.
+- **`draft.ts`** — Used by `weekly-draft.yml` workflow. Gathers activity, generates drafts via LLM, creates GitHub issues with `draft` + product-id labels. For multi-audience products, creates one issue per audience with `audience:{id}` labels.
+- **`send-on-close.ts`** — Used by `send-update.yml` workflow. Triggered on issue close, parses the draft issue body (`**Subject:** ...\n\n---\n\n<body>`), queries subscriber store (audience-aware via `audience:*` label), sends via configured email provider, posts delivery stats as issue comment.
+- **`draft-file.ts`** — CLI command `cryyer draft-file`. Gathers activity, generates LLM draft, writes a YAML front matter markdown file. Designed for release-triggered pipelines where the draft is committed to a PR branch. Accepts `--product`, `--output`, `--since`, `--repo`, `--audience` flags.
+- **`send-file.ts`** — CLI command `cryyer send-file`. Reads a YAML front matter draft file (`---\nsubject: ...\n---\n\n<body>`), loads product config, fetches subscribers, sends emails. Accepts `<path>`, `--product`, `--dry-run`, `--audience` flags. Designed for post-release email delivery.
+- **`mcp.ts`** — MCP server for Claude Desktop. Exposes 9 tools (list/get/update/send/regenerate drafts, list products, list/add/remove subscribers) and 1 prompt (`review_drafts`). Uses stdio transport. Run via `node dist/mcp.js` or `npx cryyer-mcp`.
 
 Key modules:
 
 | Module | Role |
 |---|---|
-| `config.ts` | Loads env vars, discovers and parses `products/*.yaml` |
-| `gather.ts` | Fetches merged PRs, releases, fallback commits via Octokit; filters bots |
+| `config.ts` | Loads env vars, discovers and parses `products/*.yaml`, validates product config |
+| `gather.ts` | Fetches merged PRs, releases, fallback commits via Octokit (`gatherActivity`); filters bots |
 | `llm-provider.ts` | LLMProvider interface and factory; adapters for Anthropic, OpenAI, Gemini |
 | `summarize.ts` | Builds prompt with product voice, calls LLM provider, parses JSON `{subject, body}` response |
 | `subscriber-store.ts` | SubscriberStore interface and factory; adapters for Supabase, JSON file, Google Sheets. Supports `getSubscribers`, `recordEmailSent`, `addSubscriber`, `removeSubscriber`. |
@@ -47,7 +47,7 @@ Key modules:
 | `email-provider.ts` | EmailProvider interface and factory; adapters for Resend, Gmail |
 | `auth.ts` | `cryyer auth gmail` — OAuth 2.0 flow for Gmail authorization |
 | `gmail-oauth.ts` | Google OAuth client ID/secret constants |
-| `send.ts` | Builds email messages, delegates sending to EmailProvider |
+| `send.ts` | Builds email messages (`sendEmails`), delegates sending to EmailProvider |
 | `draft-file.ts` | CLI: `cryyer draft-file` — gather activity → LLM draft → write YAML front matter file |
 | `send-file.ts` | CLI: `cryyer send-file` — read YAML front matter draft → send emails to subscribers |
 
@@ -58,18 +58,48 @@ Products are defined in `products/*.yaml`. Schema:
 ```yaml
 id: string                     # Unique identifier, also used as GitHub issue label
 name: string                   # Display name
-voice: string                  # Multi-line LLM voice/tone instructions
+voice: string                  # Multi-line LLM voice/tone instructions (required when no audiences)
 repo: string                   # "owner/repo" for activity gathering
-emailSubjectTemplate: string   # Template with {{weekOf}} placeholder
+emailSubjectTemplate: string   # Template with {{weekOf}} placeholder (required when no audiences)
 # Optional:
 tagline, supabase_table, product_filter, from_name, from_email, reply_to
 filter:                        # Optional monorepo filtering
   labels: ["admin-portal"]     # Filter PRs by GitHub label (uses Search API)
   paths: ["apps/admin/"]       # Filter commits by path prefix
   tag_prefix: "admin/"         # Filter releases by tag prefix
+audiences:                     # Optional: multiple audiences with different voices
+  - id: string                 # Audience identifier (used in labels & subscriber keys)
+    voice: string              # Voice/tone instructions for this audience
+    emailSubjectTemplate: string
+    from_name: string          # Optional: overrides product-level from_name
+    from_email: string         # Optional: overrides product-level from_email
+    reply_to: string           # Optional: overrides product-level reply_to
 ```
 
-The `voice` field is injected directly into the Claude prompt and controls the tone of generated emails.
+The `voice` field is injected directly into the LLM prompt and controls the tone of generated emails. Products must define either top-level `voice` + `emailSubjectTemplate` OR non-empty `audiences` with those fields per audience.
+
+### Multi-Audience Support
+
+Products can target different audiences (e.g. beta testers, enterprise customers) with different voice/tone from the same gathered activity. Define `audiences` in the product YAML:
+
+```yaml
+id: my-app
+name: My App
+repo: owner/my-app
+audiences:
+  - id: beta
+    voice: "Casual, developer-friendly"
+    emailSubjectTemplate: "{{weekOf}} Beta Update"
+  - id: enterprise
+    voice: "Professional, stability-focused"
+    emailSubjectTemplate: "{{weekOf}} Release Notes"
+```
+
+Key behaviors:
+- **Subscriber keys**: Uses compound key `productId:audienceId` (e.g. `my-app:beta`). No subscriber store interface changes needed.
+- **Draft issues**: One issue per audience, with `audience:{id}` label.
+- **CLI flags**: `--audience <id>` on `draft-file` and `send-file` commands.
+- **Inheritance**: Audiences inherit `from_name`, `from_email`, `reply_to` from product level when not set.
 
 ### Monorepo Filtering
 
@@ -155,6 +185,7 @@ Wraps `cryyer draft-file`. Computes `--since` from the previous git tag if not p
 | `output` | no | `drafts/v{version}.md` | Output file path |
 | `llm-provider` | no | `anthropic` | LLM provider (anthropic, openai, gemini) |
 | `llm-model` | no | — | Override default LLM model |
+| `audience` | no | — | Audience ID for multi-audience products |
 | `github-token` | no | `${{ github.token }}` | GitHub token for API access |
 | `cryyer-version` | no | `latest` | Cryyer package version |
 
@@ -179,6 +210,7 @@ Wraps `cryyer send-file`. Maps all credential inputs to env vars for email and s
 | `google-sheets-spreadsheet-id` | no | — | Google Sheets spreadsheet ID |
 | `google-service-account-email` | no | — | Google service account email |
 | `google-private-key` | no | — | Google service account private key |
+| `audience` | no | — | Audience ID for multi-audience products |
 | `dry-run` | no | `false` | Preview without sending |
 | `cryyer-version` | no | `latest` | Cryyer package version |
 
@@ -186,7 +218,7 @@ Wraps `cryyer send-file`. Maps all credential inputs to env vars for email and s
 
 - ESM modules (`"type": "module"` in package.json), imports use `.js` extensions
 - TypeScript strict mode, target ES2022, module Node16
-- Shared types in `src/types.ts`
+- Shared types in `src/types.ts` — includes `Audience`, `ResolvedAudience`, `resolveAudiences()`, `subscriberKey()`
 - `repo` is the preferred field in product YAML; `githubRepo` is deprecated
 - Bot activity (dependabot, renovate, github-actions) is filtered out in `gather.ts`
 - LLM provider is configurable via `LLM_PROVIDER` env var; defaults to Anthropic Claude
@@ -196,6 +228,15 @@ Wraps `cryyer send-file`. Maps all credential inputs to env vars for email and s
 - `dist/` is gitignored and never committed; run `pnpm run build` to generate it
 - pnpm is the canonical package manager; `package-lock.json` is gitignored
 - Product configs in `products/*.yaml` are gitignored except `products/example.yaml`
+
+## Renamed Symbols
+
+The following were renamed to remove "weekly" from generic pipeline code:
+
+- `gatherWeeklyActivity` → `gatherActivity` (in `gather.ts`)
+- `sendWeeklyEmails` → `sendEmails` (in `send.ts`)
+- `WeeklyUpdate` → `Update` (type in `types.ts`)
+- MCP prompt `review_weekly_drafts` → `review_drafts` (in `mcp.ts`)
 
 ## Removed Files
 

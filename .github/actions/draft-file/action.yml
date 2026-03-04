@@ -27,6 +27,9 @@ inputs:
   llm-model:
     description: Override default LLM model
     required: false
+  audience:
+    description: Audience ID for multi-audience products
+    required: false
   github-token:
     description: GitHub token for API access
     required: false
@@ -80,9 +83,14 @@ runs:
         if [ -n "${{ inputs.repo }}" ]; then
           REPO_FLAG="--repo ${{ inputs.repo }}"
         fi
+        AUDIENCE_FLAG=""
+        if [ -n "${{ inputs.audience }}" ]; then
+          AUDIENCE_FLAG="--audience ${{ inputs.audience }}"
+        fi
         npx cryyer@${{ inputs.cryyer-version }} draft-file \
           --product ${{ inputs.product }} \
           --output "$OUTPUT" \
           --since "$SINCE" \
-          $REPO_FLAG
+          $REPO_FLAG \
+          $AUDIENCE_FLAG
         echo "draft-path=$OUTPUT" >> "$GITHUB_OUTPUT"

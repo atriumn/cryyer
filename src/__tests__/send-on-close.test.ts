@@ -4,14 +4,14 @@ import type { Mock } from 'vitest';
 // Mock external modules before importing
 vi.mock('../config.js', () => ({ loadProducts: vi.fn() }));
 vi.mock('../subscriber-store.js', () => ({ createSubscriberStore: vi.fn() }));
-vi.mock('../send.js', () => ({ sendWeeklyEmails: vi.fn() }));
+vi.mock('../send.js', () => ({ sendEmails: vi.fn() }));
 vi.mock('octokit', () => ({ Octokit: vi.fn(function OctokitMock() {}) }));
 vi.mock('resend', () => ({ Resend: vi.fn(function ResendMock() {}) }));
 
 import { parseIssueBody, isDryRun, main } from '../send-on-close.js';
 import { loadProducts } from '../config.js';
 import { createSubscriberStore } from '../subscriber-store.js';
-import { sendWeeklyEmails } from '../send.js';
+import { sendEmails } from '../send.js';
 import { Octokit } from 'octokit';
 
 describe('parseIssueBody', () => {
@@ -130,7 +130,7 @@ describe('main dry-run mode', () => {
 
     await main();
 
-    expect(sendWeeklyEmails).not.toHaveBeenCalled();
+    expect(sendEmails).not.toHaveBeenCalled();
 
     const output = consoleSpy.mock.calls.map((c) => String(c[0])).join('\n');
     expect(output).toContain('[DRY RUN]');
@@ -166,6 +166,6 @@ describe('main dry-run mode', () => {
     });
 
     await expect(main()).resolves.toBeUndefined();
-    expect(sendWeeklyEmails).not.toHaveBeenCalled();
+    expect(sendEmails).not.toHaveBeenCalled();
   });
 });

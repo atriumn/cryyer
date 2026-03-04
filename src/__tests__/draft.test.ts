@@ -6,7 +6,7 @@ vi.mock('../config.js', () => ({
   loadProducts: vi.fn(),
 }));
 vi.mock('../gather.js', () => ({
-  gatherWeeklyActivity: vi.fn(),
+  gatherActivity: vi.fn(),
 }));
 vi.mock('../summarize.js', () => ({
   generateEmailDraft: vi.fn(),
@@ -21,7 +21,7 @@ vi.mock('octokit', () => ({
 
 import { getWeekOf, requireEnv, ensureLabel, isDryRun, main } from '../draft.js';
 import { loadProducts } from '../config.js';
-import { gatherWeeklyActivity } from '../gather.js';
+import { gatherActivity } from '../gather.js';
 import { generateEmailDraft } from '../summarize.js';
 import { createLLMProvider } from '../llm-provider.js';
 import { Octokit } from 'octokit';
@@ -149,7 +149,7 @@ describe('main orchestration', () => {
     const mockIssue = { html_url: 'https://github.com/owner/cryyer/issues/1' };
 
     (loadProducts as Mock).mockReturnValue([mockProduct]);
-    (gatherWeeklyActivity as Mock).mockResolvedValue(mockActivity);
+    (gatherActivity as Mock).mockResolvedValue(mockActivity);
     (generateEmailDraft as Mock).mockResolvedValue(mockDraft);
 
     const mockOctokitInstance = {
@@ -169,7 +169,7 @@ describe('main orchestration', () => {
 
     await main();
 
-    expect(gatherWeeklyActivity).toHaveBeenCalledWith(
+    expect(gatherActivity).toHaveBeenCalledWith(
       mockOctokitInstance,
       mockProduct,
       expect.any(String)
@@ -178,7 +178,9 @@ describe('main orchestration', () => {
       {},
       mockProduct,
       mockActivity,
-      expect.any(String)
+      expect.any(String),
+      undefined,
+      expect.objectContaining({ voice: 'friendly' })
     );
     expect(mockOctokitInstance.rest.issues.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -208,7 +210,7 @@ describe('main orchestration', () => {
     };
 
     (loadProducts as Mock).mockReturnValue([product1, product2]);
-    (gatherWeeklyActivity as Mock)
+    (gatherActivity as Mock)
       .mockRejectedValueOnce(new Error('GitHub API error'))
       .mockResolvedValueOnce({ prs: [], releases: [], commits: [] });
     (generateEmailDraft as Mock).mockResolvedValue({ subject: 'S', body: 'B' });
@@ -231,7 +233,7 @@ describe('main orchestration', () => {
     await expect(main()).resolves.toBeUndefined();
 
     // Second product should still be attempted
-    expect(gatherWeeklyActivity).toHaveBeenCalledTimes(2);
+    expect(gatherActivity).toHaveBeenCalledTimes(2);
   });
 
   it('throws when GITHUB_TOKEN is missing', async () => {
@@ -300,7 +302,7 @@ describe('dry-run mode', () => {
     const mockDraft = { subject: 'Test Subject', body: 'Test body content' };
 
     (loadProducts as Mock).mockReturnValue([mockProduct]);
-    (gatherWeeklyActivity as Mock).mockResolvedValue(mockActivity);
+    (gatherActivity as Mock).mockResolvedValue(mockActivity);
     (generateEmailDraft as Mock).mockResolvedValue(mockDraft);
 
     const mockOctokitInstance = {

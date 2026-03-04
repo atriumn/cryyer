@@ -44,6 +44,9 @@ inputs:
   google-private-key:
     description: Google service account private key (required when subscriber-store is google-sheets)
     required: false
+  audience:
+    description: Audience ID for multi-audience products
+    required: false
   dry-run:
     description: Preview emails without sending
     required: false
@@ -80,7 +83,12 @@ runs:
         if [ "${{ inputs.dry-run }}" = "true" ]; then
           DRY_RUN_FLAG="--dry-run"
         fi
+        AUDIENCE_FLAG=""
+        if [ -n "${{ inputs.audience }}" ]; then
+          AUDIENCE_FLAG="--audience ${{ inputs.audience }}"
+        fi
         npx cryyer@${{ inputs.cryyer-version }} send-file \
           ${{ inputs.draft-path }} \
           --product ${{ inputs.product }} \
-          $DRY_RUN_FLAG
+          $DRY_RUN_FLAG \
+          $AUDIENCE_FLAG

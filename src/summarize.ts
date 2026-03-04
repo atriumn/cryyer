@@ -1,5 +1,5 @@
 import type { LLMProvider } from './llm-provider.js';
-import type { Product } from './types.js';
+import type { Product, ResolvedAudience } from './types.js';
 import type { GatheredActivity, GatheredPR, GatheredRelease, GatheredCommit } from './gather.js';
 
 export interface DraftResult {
@@ -13,6 +13,7 @@ export async function generateEmailDraft(
   activity: GatheredActivity,
   weekOf: string,
   previousUpdate?: string,
+  audience?: ResolvedAudience,
 ): Promise<DraftResult> {
   const hasActivity =
     activity.prs.length > 0 || activity.releases.length > 0 || activity.commits.length > 0;
@@ -31,10 +32,12 @@ export async function generateEmailDraft(
 
   const taglineLine = product.tagline ? `\n**Tagline:** ${product.tagline}` : '';
 
-  const prompt = `You are writing a weekly beta tester update email for ${product.name}.${taglineLine}
+  const voice = audience?.voice ?? product.voice ?? '';
+
+  const prompt = `You are writing an update email for ${product.name}.${taglineLine}
 
 ## Voice & Tone Instructions
-${product.voice}
+${voice}
 
 ## Week of ${weekOf}
 

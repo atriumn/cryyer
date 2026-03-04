@@ -42,7 +42,7 @@ export function resolveFilter(product: Product): ProductFilter | undefined {
   return undefined;
 }
 
-export async function gatherWeeklyActivity(
+export async function gatherActivity(
   octokit: Octokit,
   product: Product,
   since: string
