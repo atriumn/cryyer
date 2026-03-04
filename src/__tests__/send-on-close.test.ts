@@ -169,3 +169,357 @@ describe('main dry-run mode', () => {
     expect(sendEmails).not.toHaveBeenCalled();
   });
 });
+
+describe('audience detection', () => {
+  const originalEnv = { ...process.env };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env['GITHUB_TOKEN'] = 'test-token';
+    process.env['ISSUE_NUMBER'] = '42';
+    process.env['GITHUB_REPOSITORY'] = 'owner/repo';
+    process.env['FROM_EMAIL'] = 'from@example.com';
+    process.env['RESEND_API_KEY'] = 'test-key';
+  });
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+  });
+
+  it('uses compound subscriber key when audience label is present', async () => {
+    const mockOctokitInstance = {
+      rest: {
+        issues: {
+          get: vi.fn().mockResolvedValue({
+            data: {
+              body: '**Subject:** Beta Update\n\n---\n\nBeta content',
+              labels: [{ name: 'draft' }, { name: 'my-app' }, { name: 'audience:beta' }],
+            },
+          }),
+          getLabel: vi.fn().mockResolvedValue({}),
+          addLabels: vi.fn().mockResolvedValue({}),
+          createComment: vi.fn().mockResolvedValue({}),
+          update: vi.fn().mockResolvedValue({}),
+        },
+      },
+    };
+    (Octokit as unknown as Mock).mockImplementation(function () {
+      return mockOctokitInstance;
+    });
+    (loadProducts as Mock).mockReturnValue([
+      { id: 'my-app', name: 'My App', repo: 'o/r', audiences: [
+        { id: 'beta', voice: 'casual', emailSubjectTemplate: 'Beta' },
+      ] },
+    ]);
+
+    const mockStore = {
+      getSubscribers: vi.fn().mockResolvedValue([{ email: 'beta@example.com' }]),
+    };
+    (createSubscriberStore as Mock).mockReturnValue(mockStore);
+    (sendEmails as Mock).mockResolvedValue({ sent: 1, failed: 0, failures: [] });
+
+    await main();
+
+    // Subscribers fetched with compound key
+    expect(mockStore.getSubscribers).toHaveBeenCalledWith('my-app:beta');
+    expect(sendEmails).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends emails and posts stats comment when issue has subscribers', async () => {
+    delete process.env['DRY_RUN'];
+    const mockOctokitInstance = {
+      rest: {
+        issues: {
+          get: vi.fn().mockResolvedValue({
+            data: {
+              body: '**Subject:** Weekly Update\n\n---\n\nHello testers!',
+              labels: [{ name: 'draft' }, { name: 'my-app' }],
+            },
+          }),
+          getLabel: vi.fn().mockResolvedValue({}),
+          addLabels: vi.fn().mockResolvedValue({}),
+          createComment: vi.fn().mockResolvedValue({}),
+          update: vi.fn().mockResolvedValue({}),
+        },
+      },
+    };
+    (Octokit as unknown as Mock).mockImplementation(function () {
+      return mockOctokitInstance;
+    });
+    (loadProducts as Mock).mockReturnValue([
+      { id: 'my-app', name: 'My App', voice: 'friendly', repo: 'o/r', emailSubjectTemplate: 'Update' },
+    ]);
+
+    const mockStore = {
+      getSubscribers: vi.fn().mockResolvedValue([{ email: 'user@example.com' }]),
+    };
+    (createSubscriberStore as Mock).mockReturnValue(mockStore);
+    (sendEmails as Mock).mockResolvedValue({ sent: 1, failed: 0, failures: [] });
+
+    await main();
+
+    // Emails sent
+    expect(sendEmails).toHaveBeenCalledTimes(1);
+    expect(sendEmails).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ id: 'my-app' }),
+      [{ email: 'user@example.com' }],
+      { subject: 'Weekly Update', body: 'Hello testers!' },
+      expect.any(String),
+      'from@example.com',
+    );
+
+    // Sent label added
+    expect(mockOctokitInstance.rest.issues.addLabels).toHaveBeenCalledWith(
+      expect.objectContaining({ labels: ['sent'] })
+    );
+
+    // Stats comment posted
+    expect(mockOctokitInstance.rest.issues.createComment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.stringContaining('1'),
+      })
+    );
+  });
+
+  it('reopens issue and posts error comment when send fails', async () => {
+    delete process.env['DRY_RUN'];
+    const mockOctokitInstance = {
+      rest: {
+        issues: {
+          get: vi.fn().mockResolvedValue({
+            data: {
+              body: '**Subject:** Update\n\n---\n\nContent',
+              labels: [{ name: 'draft' }, { name: 'my-app' }],
+            },
+          }),
+          getLabel: vi.fn().mockResolvedValue({}),
+          addLabels: vi.fn().mockResolvedValue({}),
+          createComment: vi.fn().mockResolvedValue({}),
+          update: vi.fn().mockResolvedValue({}),
+        },
+      },
+    };
+    (Octokit as unknown as Mock).mockImplementation(function () {
+      return mockOctokitInstance;
+    });
+    (loadProducts as Mock).mockReturnValue([
+      { id: 'my-app', name: 'My App', voice: '', repo: 'o/r', emailSubjectTemplate: '' },
+    ]);
+    (createSubscriberStore as Mock).mockReturnValue({
+      getSubscribers: vi.fn().mockResolvedValue([{ email: 'u@e.com' }]),
+    });
+    (sendEmails as Mock).mockRejectedValue(new Error('SMTP error'));
+
+    await main();
+
+    // Issue reopened
+    expect(mockOctokitInstance.rest.issues.update).toHaveBeenCalledWith(
+      expect.objectContaining({ state: 'open' })
+    );
+
+    // Error comment posted
+    expect(mockOctokitInstance.rest.issues.createComment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.stringContaining('SMTP error'),
+      })
+    );
+  });
+
+  it('uses plain product id when no audience label is present', async () => {
+    const mockOctokitInstance = {
+      rest: {
+        issues: {
+          get: vi.fn().mockResolvedValue({
+            data: {
+              body: '**Subject:** Update\n\n---\n\nContent',
+              labels: [{ name: 'draft' }, { name: 'my-app' }],
+            },
+          }),
+          getLabel: vi.fn().mockResolvedValue({}),
+          addLabels: vi.fn().mockResolvedValue({}),
+          createComment: vi.fn().mockResolvedValue({}),
+          update: vi.fn().mockResolvedValue({}),
+        },
+      },
+    };
+    (Octokit as unknown as Mock).mockImplementation(function () {
+      return mockOctokitInstance;
+    });
+    (loadProducts as Mock).mockReturnValue([
+      { id: 'my-app', name: 'My App', voice: 'friendly', repo: 'o/r', emailSubjectTemplate: 'Update' },
+    ]);
+
+    const mockStore = {
+      getSubscribers: vi.fn().mockResolvedValue([{ email: 'user@example.com' }]),
+    };
+    (createSubscriberStore as Mock).mockReturnValue(mockStore);
+    (sendEmails as Mock).mockResolvedValue({ sent: 1, failed: 0, failures: [] });
+
+    await main();
+
+    expect(mockStore.getSubscribers).toHaveBeenCalledWith('my-app');
+  });
+
+  it('skips when issue does not have draft label', async () => {
+    const mockOctokitInstance = {
+      rest: {
+        issues: {
+          get: vi.fn().mockResolvedValue({
+            data: {
+              body: '**Subject:** Update\n\n---\n\nContent',
+              labels: [{ name: 'bug' }],
+            },
+          }),
+        },
+      },
+    };
+    (Octokit as unknown as Mock).mockImplementation(function () {
+      return mockOctokitInstance;
+    });
+
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    await main();
+    expect(sendEmails).not.toHaveBeenCalled();
+    consoleSpy.mockRestore();
+  });
+
+  it('skips when no matching product label found', async () => {
+    const mockOctokitInstance = {
+      rest: {
+        issues: {
+          get: vi.fn().mockResolvedValue({
+            data: {
+              body: '**Subject:** Update\n\n---\n\nContent',
+              labels: [{ name: 'draft' }, { name: 'unknown-product' }],
+            },
+          }),
+        },
+      },
+    };
+    (Octokit as unknown as Mock).mockImplementation(function () {
+      return mockOctokitInstance;
+    });
+    (loadProducts as Mock).mockReturnValue([
+      { id: 'my-app', name: 'My App', voice: '', repo: 'o/r', emailSubjectTemplate: '' },
+    ]);
+
+    await main();
+    expect(sendEmails).not.toHaveBeenCalled();
+  });
+
+  it('posts comment when issue body cannot be parsed', async () => {
+    const mockCreateComment = vi.fn().mockResolvedValue({});
+    const mockOctokitInstance = {
+      rest: {
+        issues: {
+          get: vi.fn().mockResolvedValue({
+            data: {
+              body: 'Not a valid draft format',
+              labels: [{ name: 'draft' }, { name: 'my-app' }],
+            },
+          }),
+          createComment: mockCreateComment,
+        },
+      },
+    };
+    (Octokit as unknown as Mock).mockImplementation(function () {
+      return mockOctokitInstance;
+    });
+    (loadProducts as Mock).mockReturnValue([
+      { id: 'my-app', name: 'My App', voice: '', repo: 'o/r', emailSubjectTemplate: '' },
+    ]);
+
+    await main();
+    expect(sendEmails).not.toHaveBeenCalled();
+    expect(mockCreateComment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.stringContaining('Could not parse'),
+      })
+    );
+  });
+
+  it('posts comment and adds sent label when no subscribers found', async () => {
+    const mockCreateComment = vi.fn().mockResolvedValue({});
+    const mockAddLabels = vi.fn().mockResolvedValue({});
+    const mockOctokitInstance = {
+      rest: {
+        issues: {
+          get: vi.fn().mockResolvedValue({
+            data: {
+              body: '**Subject:** Update\n\n---\n\nContent',
+              labels: [{ name: 'draft' }, { name: 'my-app' }],
+            },
+          }),
+          createComment: mockCreateComment,
+          addLabels: mockAddLabels,
+          getLabel: vi.fn().mockResolvedValue({}),
+        },
+      },
+    };
+    (Octokit as unknown as Mock).mockImplementation(function () {
+      return mockOctokitInstance;
+    });
+    (loadProducts as Mock).mockReturnValue([
+      { id: 'my-app', name: 'My App', voice: '', repo: 'o/r', emailSubjectTemplate: '' },
+    ]);
+    (createSubscriberStore as Mock).mockReturnValue({
+      getSubscribers: vi.fn().mockResolvedValue([]),
+    });
+
+    await main();
+    expect(sendEmails).not.toHaveBeenCalled();
+    expect(mockCreateComment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.stringContaining('No active subscribers'),
+      })
+    );
+    expect(mockAddLabels).toHaveBeenCalledWith(
+      expect.objectContaining({ labels: ['sent'] })
+    );
+  });
+
+  it('reopens issue when send has partial failures', async () => {
+    delete process.env['DRY_RUN'];
+    const mockUpdate = vi.fn().mockResolvedValue({});
+    const mockOctokitInstance = {
+      rest: {
+        issues: {
+          get: vi.fn().mockResolvedValue({
+            data: {
+              body: '**Subject:** Update\n\n---\n\nContent',
+              labels: [{ name: 'draft' }, { name: 'my-app' }],
+            },
+          }),
+          getLabel: vi.fn().mockResolvedValue({}),
+          addLabels: vi.fn().mockResolvedValue({}),
+          createComment: vi.fn().mockResolvedValue({}),
+          update: mockUpdate,
+        },
+      },
+    };
+    (Octokit as unknown as Mock).mockImplementation(function () {
+      return mockOctokitInstance;
+    });
+    (loadProducts as Mock).mockReturnValue([
+      { id: 'my-app', name: 'My App', voice: '', repo: 'o/r', emailSubjectTemplate: '' },
+    ]);
+    (createSubscriberStore as Mock).mockReturnValue({
+      getSubscribers: vi.fn().mockResolvedValue([{ email: 'a@b.com' }, { email: 'c@d.com' }]),
+    });
+    (sendEmails as Mock).mockResolvedValue({
+      sent: 1,
+      failed: 1,
+      failures: [{ email: 'c@d.com', error: 'bounce' }],
+    });
+
+    const origExitCode = process.exitCode;
+    await main();
+
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ state: 'open' })
+    );
+    expect(process.exitCode).toBe(1);
+    process.exitCode = origExitCode;
+  });
+});

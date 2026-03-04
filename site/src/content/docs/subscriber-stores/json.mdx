@@ -44,6 +44,21 @@ Each subscriber has:
 | `name` | No | Display name |
 | `productIds` | Yes | Array of product IDs they're subscribed to |
 
+When using [audiences](/configuration/product-config#audiences), use compound keys in `productIds`:
+
+```json
+[
+  {
+    "email": "alice@example.com",
+    "productIds": ["my-app:beta"]
+  },
+  {
+    "email": "carol@example.com",
+    "productIds": ["my-app:enterprise", "other-app"]
+  }
+]
+```
+
 ## Email logging
 
 Sent emails are logged to `email-log.json` (or your configured path). This is a simple append-only JSON array.

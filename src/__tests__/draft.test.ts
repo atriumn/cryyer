@@ -347,3 +347,171 @@ describe('dry-run mode', () => {
     await expect(main()).resolves.toBeUndefined();
   });
 });
+
+describe('multi-audience support', () => {
+  const originalEnv = { ...process.env };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env['GITHUB_TOKEN'] = 'test-token';
+    process.env['CRYYER_REPO'] = 'owner/cryyer';
+    process.env['ANTHROPIC_API_KEY'] = 'test-key';
+  });
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+  });
+
+  it('creates separate issues per audience with audience labels', async () => {
+    const mockProduct = {
+      id: 'my-app',
+      name: 'My App',
+      repo: 'owner/my-app',
+      audiences: [
+        { id: 'beta', voice: 'casual', emailSubjectTemplate: 'Beta {{weekOf}}' },
+        { id: 'enterprise', voice: 'formal', emailSubjectTemplate: 'Enterprise {{weekOf}}' },
+      ],
+    };
+
+    (loadProducts as Mock).mockReturnValue([mockProduct]);
+    (gatherActivity as Mock).mockResolvedValue({ prs: [], releases: [], commits: [] });
+    (generateEmailDraft as Mock)
+      .mockResolvedValueOnce({ subject: 'Beta Subject', body: 'Beta body' })
+      .mockResolvedValueOnce({ subject: 'Enterprise Subject', body: 'Enterprise body' });
+
+    const mockOctokitInstance = {
+      rest: {
+        issues: {
+          getLabel: vi.fn().mockResolvedValue({}),
+          createLabel: vi.fn().mockResolvedValue({}),
+          create: vi.fn().mockResolvedValue({ data: { html_url: 'url' } }),
+        },
+      },
+    };
+    (Octokit as unknown as Mock).mockImplementation(function () {
+      return mockOctokitInstance;
+    });
+    (createLLMProvider as Mock).mockReturnValue({});
+
+    await main();
+
+    // Activity gathered once per product
+    expect(gatherActivity).toHaveBeenCalledTimes(1);
+
+    // Draft generated once per audience
+    expect(generateEmailDraft).toHaveBeenCalledTimes(2);
+    expect(generateEmailDraft).toHaveBeenCalledWith(
+      {},
+      mockProduct,
+      expect.anything(),
+      expect.any(String),
+      undefined,
+      expect.objectContaining({ id: 'beta', voice: 'casual' })
+    );
+    expect(generateEmailDraft).toHaveBeenCalledWith(
+      {},
+      mockProduct,
+      expect.anything(),
+      expect.any(String),
+      undefined,
+      expect.objectContaining({ id: 'enterprise', voice: 'formal' })
+    );
+
+    // Two issues created
+    expect(mockOctokitInstance.rest.issues.create).toHaveBeenCalledTimes(2);
+
+    // First issue has audience:beta label and [beta] suffix
+    expect(mockOctokitInstance.rest.issues.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: expect.stringContaining('[beta]'),
+        labels: ['draft', 'my-app', 'audience:beta'],
+      })
+    );
+
+    // Second issue has audience:enterprise label and [enterprise] suffix
+    expect(mockOctokitInstance.rest.issues.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: expect.stringContaining('[enterprise]'),
+        labels: ['draft', 'my-app', 'audience:enterprise'],
+      })
+    );
+  });
+
+  it('creates single issue without audience label for single-audience product', async () => {
+    const mockProduct = {
+      id: 'simple-app',
+      name: 'Simple App',
+      voice: 'friendly',
+      repo: 'owner/simple-app',
+      emailSubjectTemplate: 'Update {{weekOf}}',
+    };
+
+    (loadProducts as Mock).mockReturnValue([mockProduct]);
+    (gatherActivity as Mock).mockResolvedValue({ prs: [], releases: [], commits: [] });
+    (generateEmailDraft as Mock).mockResolvedValue({ subject: 'S', body: 'B' });
+
+    const mockOctokitInstance = {
+      rest: {
+        issues: {
+          getLabel: vi.fn().mockResolvedValue({}),
+          createLabel: vi.fn().mockResolvedValue({}),
+          create: vi.fn().mockResolvedValue({ data: { html_url: 'url' } }),
+        },
+      },
+    };
+    (Octokit as unknown as Mock).mockImplementation(function () {
+      return mockOctokitInstance;
+    });
+    (createLLMProvider as Mock).mockReturnValue({});
+
+    await main();
+
+    // Labels should NOT include an audience label
+    expect(mockOctokitInstance.rest.issues.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        labels: ['draft', 'simple-app'],
+      })
+    );
+
+    // Title should NOT have audience suffix
+    const title = mockOctokitInstance.rest.issues.create.mock.calls[0][0].title;
+    expect(title).not.toMatch(/\[.*\].*\[/); // no second bracket pair
+  });
+
+  it('shows audience suffix in dry-run output for multi-audience products', async () => {
+    process.env['DRY_RUN'] = 'true';
+    delete process.env['CRYYER_REPO'];
+
+    const mockProduct = {
+      id: 'my-app',
+      name: 'My App',
+      repo: 'owner/my-app',
+      audiences: [
+        { id: 'beta', voice: 'casual', emailSubjectTemplate: 'Beta' },
+        { id: 'enterprise', voice: 'formal', emailSubjectTemplate: 'Enterprise' },
+      ],
+    };
+
+    (loadProducts as Mock).mockReturnValue([mockProduct]);
+    (gatherActivity as Mock).mockResolvedValue({ prs: [], releases: [], commits: [] });
+    (generateEmailDraft as Mock)
+      .mockResolvedValueOnce({ subject: 'Beta Subject', body: 'Beta body' })
+      .mockResolvedValueOnce({ subject: 'Ent Subject', body: 'Ent body' });
+    (Octokit as unknown as Mock).mockImplementation(function () {
+      return { rest: { issues: { create: vi.fn() } } };
+    });
+    (createLLMProvider as Mock).mockReturnValue({});
+
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await main();
+
+    const output = consoleSpy.mock.calls.map((c) => String(c[0])).join('\n');
+    expect(output).toContain('[beta]');
+    expect(output).toContain('[enterprise]');
+    expect(output).toContain('Beta Subject');
+    expect(output).toContain('Ent Subject');
+
+    consoleSpy.mockRestore();
+  });
+});

@@ -204,8 +204,8 @@ export class GoogleSheetsStore implements SubscriberStore {
       const email = row.get('email');
       if (!email) continue;
 
-      const unsubscribed = row.get('unsubscribed');
-      if (unsubscribed && unsubscribed.toLowerCase() === 'true') continue;
+      const active = row.get('active');
+      if (active && active.toLowerCase() === 'false') continue;
 
       subscribers.push({ email, name: row.get('name') || undefined });
     }
@@ -228,7 +228,7 @@ export class GoogleSheetsStore implements SubscriberStore {
     if (!sheet) {
       throw new Error(`No sheet found for product: ${productId}`);
     }
-    await sheet.addRow({ email, name: name ?? '' });
+    await sheet.addRow({ email, name: name ?? '', active: 'true' });
   }
 
   async removeSubscriber(productId: string, email: string): Promise<void> {
@@ -241,7 +241,7 @@ export class GoogleSheetsStore implements SubscriberStore {
     const rows = await sheet.getRows();
     for (const row of rows) {
       if (row.get('email') === email) {
-        row.set('unsubscribed', 'true');
+        row.set('active', 'false');
         await row.save();
         return;
       }

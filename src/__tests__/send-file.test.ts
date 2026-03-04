@@ -212,4 +212,47 @@ describe('main', () => {
 
     await expect(main()).rejects.toThrow('Product not found: test-app');
   });
+
+  it('uses compound subscriber key when --audience is specified', async () => {
+    process.argv = ['node', 'send-file.js', 'drafts/v1.0.md', '--product', 'test-app', '--audience', 'beta'];
+
+    const draftContent = '---\nsubject: Test Subject\n---\n\nTest body';
+    (readFileSync as Mock).mockReturnValue(draftContent);
+
+    (loadProducts as Mock).mockReturnValue([
+      { id: 'test-app', name: 'Test App', voice: '', repo: 'o/r', emailSubjectTemplate: '' },
+    ]);
+
+    const mockStore = { getSubscribers: vi.fn().mockResolvedValue([{ email: 'u@e.com' }]) };
+    (createSubscriberStore as Mock).mockReturnValue(mockStore);
+
+    const mockProvider = {};
+    (createEmailProvider as Mock).mockReturnValue(mockProvider);
+    (sendEmails as Mock).mockResolvedValue({ sent: 1, failed: 0, failures: [] });
+
+    await main();
+
+    // Subscriber store queried with compound key
+    expect(mockStore.getSubscribers).toHaveBeenCalledWith('test-app:beta');
+  });
+
+  it('uses plain product id when no --audience flag', async () => {
+    const draftContent = '---\nsubject: Test Subject\n---\n\nTest body';
+    (readFileSync as Mock).mockReturnValue(draftContent);
+
+    (loadProducts as Mock).mockReturnValue([
+      { id: 'test-app', name: 'Test App', voice: '', repo: 'o/r', emailSubjectTemplate: '' },
+    ]);
+
+    const mockStore = { getSubscribers: vi.fn().mockResolvedValue([{ email: 'u@e.com' }]) };
+    (createSubscriberStore as Mock).mockReturnValue(mockStore);
+
+    const mockProvider = {};
+    (createEmailProvider as Mock).mockReturnValue(mockProvider);
+    (sendEmails as Mock).mockResolvedValue({ sent: 1, failed: 0, failures: [] });
+
+    await main();
+
+    expect(mockStore.getSubscribers).toHaveBeenCalledWith('test-app');
+  });
 });

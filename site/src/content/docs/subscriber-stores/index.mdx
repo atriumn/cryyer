@@ -20,6 +20,10 @@ All stores implement the same interface:
 - `addSubscriber(email, productId, name?)` — adds a new subscriber
 - `removeSubscriber(email, productId)` — unsubscribes someone
 
+### Audiences
+
+When using [audiences](/configuration/product-config#audiences), subscriber lookups use a compound key: `productId:audienceId`. For example, a subscriber to the `beta` audience of `my-app` would have `"my-app:beta"` in their product list. Products without audiences use the plain product ID as before.
+
 ## Quick comparison
 
 ```bash

@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { join } from 'path';
-import { loadProducts, validateProduct } from '../config.js';
+import { loadProducts, validateProduct, loadConfig } from '../config.js';
 import type { Product } from '../types.js';
 
 describe('loadProducts', () => {
@@ -114,5 +114,44 @@ describe('validateProduct', () => {
       ],
     };
     expect(() => validateProduct(product, 'test.yaml')).toThrow('missing "emailSubjectTemplate"');
+  });
+});
+
+describe('loadConfig', () => {
+  const originalEnv = { ...process.env };
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+  });
+
+  it('loads config from environment variables', () => {
+    process.env['GITHUB_TOKEN'] = 'ghp_test';
+    process.env['RESEND_API_KEY'] = 're_test';
+    process.env['FROM_EMAIL'] = 'from@test.com';
+    const config = loadConfig();
+    expect(config.githubToken).toBe('ghp_test');
+    expect(config.resendApiKey).toBe('re_test');
+    expect(config.fromEmail).toBe('from@test.com');
+  });
+
+  it('throws when GITHUB_TOKEN is missing', () => {
+    delete process.env['GITHUB_TOKEN'];
+    process.env['RESEND_API_KEY'] = 're_test';
+    process.env['FROM_EMAIL'] = 'from@test.com';
+    expect(() => loadConfig()).toThrow('GITHUB_TOKEN');
+  });
+
+  it('throws when RESEND_API_KEY is missing', () => {
+    process.env['GITHUB_TOKEN'] = 'ghp_test';
+    delete process.env['RESEND_API_KEY'];
+    process.env['FROM_EMAIL'] = 'from@test.com';
+    expect(() => loadConfig()).toThrow('RESEND_API_KEY');
+  });
+
+  it('throws when FROM_EMAIL is missing', () => {
+    process.env['GITHUB_TOKEN'] = 'ghp_test';
+    process.env['RESEND_API_KEY'] = 're_test';
+    delete process.env['FROM_EMAIL'];
+    expect(() => loadConfig()).toThrow('FROM_EMAIL');
   });
 });

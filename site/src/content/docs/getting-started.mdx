@@ -3,7 +3,7 @@ title: Getting Started
 description: Get Cryyer up and running in 5 minutes.
 ---
 
-Cryyer sends automated weekly email updates to your beta testers, with per-product voice powered by LLM-drafted content.
+Cryyer sends automated email updates to your users, with per-product voice powered by LLM-drafted content.
 
 ## Install
 
@@ -74,8 +74,8 @@ node dist/send-on-close.js # send emails when a draft issue is closed
 
 Cryyer follows a two-stage pipeline:
 
-1. **Weekly Draft** (cron, Mondays) — gathers GitHub activity (merged PRs, releases, notable commits), generates an email draft via LLM, and creates a GitHub issue for human review.
-2. **Send on Close** — when a draft issue is closed (approved), emails are sent to subscribers via [Resend](https://resend.com).
+1. **Draft** (cron or on-demand) — gathers GitHub activity (merged PRs, releases, notable commits), generates an email draft via LLM, and creates a GitHub issue for human review. If your product has multiple [audiences](/configuration/product-config#audiences), each audience gets its own draft with a tailored voice.
+2. **Send on Close** — when a draft issue is closed (approved), emails are sent to subscribers via [Resend](https://resend.com) or [Gmail](/configuration/environment#email-provider).
 
 ## Next steps
 

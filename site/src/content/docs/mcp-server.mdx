@@ -46,13 +46,13 @@ Only `GITHUB_TOKEN` and `CRYYER_REPO` are needed for read-only tools (`list_draf
 | `send_draft` | Send emails, close issue, post stats |
 | `regenerate_draft` | Re-gather activity + re-draft via LLM |
 | `list_products` | Show configured products |
-| `list_subscribers` | Show subscribers for a product |
-| `add_subscriber` | Add a subscriber to a product |
-| `remove_subscriber` | Unsubscribe someone from a product |
+| `list_subscribers` | Show subscribers for a product (optional `audience_id`) |
+| `add_subscriber` | Add a subscriber to a product (optional `audience_id`) |
+| `remove_subscriber` | Unsubscribe someone from a product (optional `audience_id`) |
 
 ## Prompt
 
-Use the `review_weekly_drafts` prompt for the Monday morning review workflow — it walks through each pending draft and asks whether to send, edit, regenerate, or skip.
+Use the `review_drafts` prompt for the review workflow — it walks through each pending draft and asks whether to send, edit, regenerate, or skip.
 
 ## Alternative: npx
 

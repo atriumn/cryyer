@@ -298,3 +298,147 @@ describe('dry-run mode', () => {
     await expect(main()).resolves.toBeUndefined();
   });
 });
+
+describe('multi-audience support', () => {
+  const originalEnv = { ...process.env };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env['GITHUB_TOKEN'] = 'test-token';
+    process.env['RESEND_API_KEY'] = 'resend-key';
+    process.env['FROM_EMAIL'] = 'from@example.com';
+    process.env['ANTHROPIC_API_KEY'] = 'test-key';
+    delete process.env['DRY_RUN'];
+  });
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+  });
+
+  it('sends separate emails per audience using compound subscriber keys', async () => {
+    const mockProduct = {
+      id: 'my-app',
+      name: 'My App',
+      repo: 'owner/my-app',
+      audiences: [
+        { id: 'beta', voice: 'casual', emailSubjectTemplate: 'Beta {{weekOf}}' },
+        { id: 'enterprise', voice: 'formal', emailSubjectTemplate: 'Enterprise {{weekOf}}', from_name: 'Ent Team', from_email: 'ent@example.com', reply_to: 'reply@example.com' },
+      ],
+    };
+    const betaSubs = [{ email: 'beta@example.com' }];
+    const entSubs = [{ email: 'ent@example.com' }];
+
+    (loadProducts as Mock).mockReturnValue([mockProduct]);
+    (gatherActivity as Mock).mockResolvedValue({ prs: [], releases: [], commits: [] });
+    (generateEmailDraft as Mock)
+      .mockResolvedValueOnce({ subject: 'Beta Subject', body: 'Beta body' })
+      .mockResolvedValueOnce({ subject: 'Ent Subject', body: 'Ent body' });
+
+    const mockStore = {
+      getSubscribers: vi.fn()
+        .mockResolvedValueOnce(betaSubs)   // my-app:beta
+        .mockResolvedValueOnce(entSubs),   // my-app:enterprise
+      recordEmailSent: vi.fn().mockResolvedValue(undefined),
+    };
+    (createSubscriberStore as Mock).mockReturnValue(mockStore);
+    (createLLMProvider as Mock).mockReturnValue({});
+    (sendEmails as Mock).mockResolvedValue({ sent: 1, failed: 0, failures: [] });
+
+    await main();
+
+    // Activity gathered once
+    expect(gatherActivity).toHaveBeenCalledTimes(1);
+
+    // Subscribers fetched with compound keys
+    expect(mockStore.getSubscribers).toHaveBeenCalledWith('my-app:beta');
+    expect(mockStore.getSubscribers).toHaveBeenCalledWith('my-app:enterprise');
+
+    // Emails sent twice with correct audience overrides
+    expect(sendEmails).toHaveBeenCalledTimes(2);
+
+    // Beta audience uses default from_name/from_email
+    expect(sendEmails).toHaveBeenCalledWith(
+      expect.anything(),
+      mockProduct,
+      betaSubs,
+      { subject: 'Beta Subject', body: 'Beta body' },
+      'Cryyer Updates',
+      'from@example.com',
+      undefined
+    );
+
+    // Enterprise audience uses audience-level overrides
+    expect(sendEmails).toHaveBeenCalledWith(
+      expect.anything(),
+      mockProduct,
+      entSubs,
+      { subject: 'Ent Subject', body: 'Ent body' },
+      'Ent Team',
+      'ent@example.com',
+      'reply@example.com'
+    );
+
+    // recordEmailSent uses compound keys
+    expect(mockStore.recordEmailSent).toHaveBeenCalledWith('beta@example.com', 'my-app:beta', expect.any(String));
+    expect(mockStore.recordEmailSent).toHaveBeenCalledWith('ent@example.com', 'my-app:enterprise', expect.any(String));
+  });
+
+  it('skips audience with no subscribers', async () => {
+    const mockProduct = {
+      id: 'my-app',
+      name: 'My App',
+      repo: 'owner/my-app',
+      audiences: [
+        { id: 'beta', voice: 'casual', emailSubjectTemplate: 'Beta' },
+        { id: 'enterprise', voice: 'formal', emailSubjectTemplate: 'Enterprise' },
+      ],
+    };
+
+    (loadProducts as Mock).mockReturnValue([mockProduct]);
+    (gatherActivity as Mock).mockResolvedValue({ prs: [], releases: [], commits: [] });
+    (generateEmailDraft as Mock).mockResolvedValue({ subject: 'S', body: 'B' });
+
+    const mockStore = {
+      getSubscribers: vi.fn()
+        .mockResolvedValueOnce([])                            // beta: no subs
+        .mockResolvedValueOnce([{ email: 'ent@example.com' }]), // enterprise: has subs
+      recordEmailSent: vi.fn().mockResolvedValue(undefined),
+    };
+    (createSubscriberStore as Mock).mockReturnValue(mockStore);
+    (createLLMProvider as Mock).mockReturnValue({});
+    (sendEmails as Mock).mockResolvedValue({ sent: 1, failed: 0, failures: [] });
+
+    await main();
+
+    // Only one send — the audience with subscribers
+    expect(sendEmails).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses plain product id for single-audience product subscriber key', async () => {
+    const mockProduct = {
+      id: 'simple-app',
+      name: 'Simple App',
+      voice: 'friendly',
+      repo: 'o/r',
+      emailSubjectTemplate: 'Update',
+    };
+
+    (loadProducts as Mock).mockReturnValue([mockProduct]);
+    (gatherActivity as Mock).mockResolvedValue({ prs: [], releases: [], commits: [] });
+    (generateEmailDraft as Mock).mockResolvedValue({ subject: 'S', body: 'B' });
+
+    const mockStore = {
+      getSubscribers: vi.fn().mockResolvedValue([{ email: 'u@e.com' }]),
+      recordEmailSent: vi.fn().mockResolvedValue(undefined),
+    };
+    (createSubscriberStore as Mock).mockReturnValue(mockStore);
+    (createLLMProvider as Mock).mockReturnValue({});
+    (sendEmails as Mock).mockResolvedValue({ sent: 1, failed: 0, failures: [] });
+
+    await main();
+
+    // Plain product id, not compound key
+    expect(mockStore.getSubscribers).toHaveBeenCalledWith('simple-app');
+    expect(mockStore.recordEmailSent).toHaveBeenCalledWith('u@e.com', 'simple-app', expect.any(String));
+  });
+});

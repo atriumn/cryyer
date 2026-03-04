@@ -1,11 +1,5 @@
 #!/usr/bin/env node
 
-// Protect stdout — MCP uses JSON-RPC over stdio.
-// Imported modules (subscriber-store, gather) use console.log/console.warn
-// which would corrupt the transport stream.
-console.log = console.error;
-console.warn = console.error;
-
 import { join } from 'path';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
@@ -20,11 +14,12 @@ import { gatherActivity } from './gather.js';
 import { generateEmailDraft } from './summarize.js';
 import { createLLMProvider } from './llm-provider.js';
 import type { Product, BetaTester } from './types.js';
+import type { SubscriberStore } from './subscriber-store.js';
+import type { EmailProvider } from './email-provider.js';
+import type { LLMProvider } from './llm-provider.js';
 import { subscriberKey, resolveAudiences } from './types.js';
 
 // --- Helpers ---
-
-const projectRoot = process.env['CRYYER_ROOT'] ?? process.cwd();
 
 function requireEnv(key: string): string {
   const value = process.env[key];
@@ -43,11 +38,6 @@ export function getCryyerRepo(): { owner: string; repo: string } {
 
 export function formatIssueBody(subject: string, body: string): string {
   return `**Subject:** ${subject}\n\n---\n\n${body}`;
-}
-
-function getProducts(): Product[] {
-  const productsDir = join(projectRoot, 'products');
-  return loadProducts(productsDir);
 }
 
 export function extractProductLabel(
@@ -87,461 +77,503 @@ async function ensureLabel(
   }
 }
 
-// --- MCP Server ---
+// --- Dependency injection ---
 
-const server = new McpServer({
-  name: 'cryyer',
-  version: '0.1.0',
-});
+export interface McpDeps {
+  octokit: Octokit;
+  getProducts: () => Product[];
+  getCryyerRepo: () => { owner: string; repo: string };
+  createStore: () => SubscriberStore;
+  createEmailProvider: () => EmailProvider;
+  createLLMProvider: () => LLMProvider;
+  gatherActivity: typeof gatherActivity;
+  generateEmailDraft: typeof generateEmailDraft;
+  fromEmail: string;
+  fromName: string;
+}
 
-// --- Tools ---
+// --- MCP Server Factory ---
 
-server.tool(
-  'list_drafts',
-  'List open draft issues awaiting review',
-  {},
-  async () => {
-    const { owner, repo } = getCryyerRepo();
-    const octokit = new Octokit({ auth: requireEnv('GITHUB_TOKEN') });
+export function createServer(deps: McpDeps): McpServer {
+  const server = new McpServer({
+    name: 'cryyer',
+    version: '0.1.0',
+  });
 
-    const { data: issues } = await octokit.rest.issues.listForRepo({
-      owner,
-      repo,
-      state: 'open',
-      labels: 'draft',
-      per_page: 50,
-      sort: 'created',
-      direction: 'desc',
-    });
+  // --- Tools ---
 
-    if (issues.length === 0) {
-      return { content: [{ type: 'text', text: 'No open draft issues found.' }] };
-    }
+  server.tool(
+    'list_drafts',
+    'List open draft issues awaiting review',
+    {},
+    async () => {
+      const { owner, repo } = deps.getCryyerRepo();
 
-    const products = getProducts();
-    const lines = issues.map((issue) => {
-      const labels = getLabelNames(issue);
-      const productId = extractProductLabel(labels, products) ?? 'unknown';
-      return `#${issue.number} — ${issue.title} [product: ${productId}]`;
-    });
+      const { data: issues } = await deps.octokit.rest.issues.listForRepo({
+        owner,
+        repo,
+        state: 'open',
+        labels: 'draft',
+        per_page: 50,
+        sort: 'created',
+        direction: 'desc',
+      });
 
-    return {
-      content: [{ type: 'text', text: lines.join('\n') }],
-    };
-  }
-);
-
-server.tool(
-  'get_draft',
-  'Get the full content of a draft issue',
-  { issue_number: z.number().int().positive().describe('The GitHub issue number') },
-  async ({ issue_number }) => {
-    const { owner, repo } = getCryyerRepo();
-    const octokit = new Octokit({ auth: requireEnv('GITHUB_TOKEN') });
-
-    const { data: issue } = await octokit.rest.issues.get({
-      owner,
-      repo,
-      issue_number,
-    });
-
-    const parsed = parseIssueBody(issue.body ?? '');
-    if (!parsed) {
-      return {
-        content: [{ type: 'text', text: `Could not parse draft format from issue #${issue_number}. Expected: **Subject:** ...\n\n---\n\n<body>` }],
-        isError: true,
-      };
-    }
-
-    const labels = getLabelNames(issue);
-    const products = getProducts();
-    const productId = extractProductLabel(labels, products);
-
-    const audienceLabel = labels.find((l) => l.startsWith('audience:'));
-    const audienceId = audienceLabel?.slice('audience:'.length);
-
-    let subscriberInfo = '';
-    if (productId) {
-      try {
-        const subKey = subscriberKey(productId, audienceId);
-        const store = createSubscriberStore();
-        const subscribers = await store.getSubscribers(subKey);
-        subscriberInfo = `\n\nSubscribers: ${subscribers.length}`;
-      } catch {
-        subscriberInfo = '\n\nSubscribers: (unable to fetch)';
+      if (issues.length === 0) {
+        return { content: [{ type: 'text', text: 'No open draft issues found.' }] };
       }
-    }
 
-    const text = [
-      `Issue: #${issue_number} — ${issue.title}`,
-      `Product: ${productId ?? 'unknown'}`,
-      `Status: ${issue.state}`,
-      `Labels: ${labels.join(', ')}`,
-      subscriberInfo ? `Subscribers: ${subscriberInfo.trim().replace('Subscribers: ', '')}` : '',
-      '',
-      `Subject: ${parsed.subject}`,
-      '',
-      '---',
-      '',
-      parsed.emailBody,
-    ].filter((line) => line !== undefined).join('\n');
+      const products = deps.getProducts();
+      const lines = issues.map((issue) => {
+        const labels = getLabelNames(issue);
+        const productId = extractProductLabel(labels, products) ?? 'unknown';
+        return `#${issue.number} — ${issue.title} [product: ${productId}]`;
+      });
 
-    return { content: [{ type: 'text', text }] };
-  }
-);
-
-server.tool(
-  'update_draft',
-  'Update the subject and body of a draft issue',
-  {
-    issue_number: z.number().int().positive().describe('The GitHub issue number'),
-    subject: z.string().describe('The new email subject line'),
-    body: z.string().describe('The new email body (markdown)'),
-  },
-  async ({ issue_number, subject, body }) => {
-    const { owner, repo } = getCryyerRepo();
-    const octokit = new Octokit({ auth: requireEnv('GITHUB_TOKEN') });
-
-    const issueBody = formatIssueBody(subject, body);
-    await octokit.rest.issues.update({
-      owner,
-      repo,
-      issue_number,
-      body: issueBody,
-    });
-
-    return {
-      content: [{ type: 'text', text: `Updated issue #${issue_number} with new subject and body.` }],
-    };
-  }
-);
-
-server.tool(
-  'send_draft',
-  'Send the draft email to subscribers, close the issue, and add a sent label',
-  { issue_number: z.number().int().positive().describe('The GitHub issue number') },
-  async ({ issue_number }) => {
-    const { owner, repo } = getCryyerRepo();
-    const githubToken = requireEnv('GITHUB_TOKEN');
-    const fromEmail = requireEnv('FROM_EMAIL');
-    const fromName = process.env['FROM_NAME'] ?? 'Cryyer Updates';
-
-    const octokit = new Octokit({ auth: githubToken });
-
-    // Fetch issue
-    const { data: issue } = await octokit.rest.issues.get({
-      owner,
-      repo,
-      issue_number,
-    });
-
-    const labels = getLabelNames(issue);
-
-    // Check for already-sent
-    if (labels.includes('sent')) {
       return {
-        content: [{ type: 'text', text: `Issue #${issue_number} has already been sent. Aborting to prevent double-send.` }],
-        isError: true,
+        content: [{ type: 'text', text: lines.join('\n') }],
       };
     }
+  );
 
-    // Find product
-    const products = getProducts();
-    const productId = extractProductLabel(labels, products);
-    if (!productId) {
-      return {
-        content: [{ type: 'text', text: `No matching product label found on issue #${issue_number}.` }],
-        isError: true,
-      };
-    }
+  server.tool(
+    'get_draft',
+    'Get the full content of a draft issue',
+    { issue_number: z.number().int().positive().describe('The GitHub issue number') },
+    async ({ issue_number }) => {
+      const { owner, repo } = deps.getCryyerRepo();
 
-    const product = products.find((p) => p.id === productId)!;
+      const { data: issue } = await deps.octokit.rest.issues.get({
+        owner,
+        repo,
+        issue_number,
+      });
 
-    // Parse email content
-    const parsed = parseIssueBody(issue.body ?? '');
-    if (!parsed) {
-      return {
-        content: [{ type: 'text', text: `Could not parse email subject/body from issue #${issue_number}.` }],
-        isError: true,
-      };
-    }
+      const parsed = parseIssueBody(issue.body ?? '');
+      if (!parsed) {
+        return {
+          content: [{ type: 'text', text: `Could not parse draft format from issue #${issue_number}. Expected: **Subject:** ...\n\n---\n\n<body>` }],
+          isError: true,
+        };
+      }
 
-    const emailContent = { subject: parsed.subject, body: parsed.emailBody };
+      const labels = getLabelNames(issue);
+      const products = deps.getProducts();
+      const productId = extractProductLabel(labels, products);
 
-    // Get subscribers (audience-aware)
-    const audienceLabel = labels.find((l) => l.startsWith('audience:'));
-    const audienceId = audienceLabel?.slice('audience:'.length);
-    const subKey = subscriberKey(productId, audienceId);
-    const store = createSubscriberStore();
-    const subscribers = await store.getSubscribers(subKey);
+      const audienceLabel = labels.find((l) => l.startsWith('audience:'));
+      const audienceId = audienceLabel?.slice('audience:'.length);
 
-    if (subscribers.length === 0) {
-      return {
-        content: [{ type: 'text', text: `No active subscribers found for ${product.name}. No emails sent.` }],
-      };
-    }
-
-    // Adapt to BetaTester[]
-    const betaTesters: BetaTester[] = subscribers.map((s, i) => ({
-      id: String(i),
-      email: s.email,
-      name: s.name ?? '',
-      productIds: [productId],
-    }));
-
-    // Send
-    const emailProvider = createEmailProvider();
-    const stats = await sendEmails(
-      emailProvider,
-      product,
-      betaTesters,
-      emailContent,
-      product.from_name ?? fromName,
-      product.from_email ?? fromEmail,
-      product.reply_to
-    );
-
-    // Add sent label and close
-    await ensureLabel(octokit, owner, repo, 'sent', '0e8a16');
-    await octokit.rest.issues.addLabels({
-      owner,
-      repo,
-      issue_number,
-      labels: ['sent'],
-    });
-
-    await octokit.rest.issues.update({
-      owner,
-      repo,
-      issue_number,
-      state: 'closed',
-    });
-
-    // Post stats comment
-    const failureDetails =
-      stats.failures.length > 0
-        ? '\n\nFailures:\n' + stats.failures.map((f) => `- ${f.email}: ${f.error}`).join('\n')
-        : '';
-
-    const comment = `Email delivery complete for **${product.name}**.\n\n- Sent: ${stats.sent}\n- Failed: ${stats.failed}${failureDetails}`;
-
-    await octokit.rest.issues.createComment({
-      owner,
-      repo,
-      issue_number,
-      body: comment,
-    });
-
-    return {
-      content: [{ type: 'text', text: `Sent ${stats.sent} emails for ${product.name}. ${stats.failed} failed. Issue #${issue_number} closed.` }],
-    };
-  }
-);
-
-server.tool(
-  'regenerate_draft',
-  'Re-gather GitHub activity and regenerate the draft using the LLM with the product voice',
-  { issue_number: z.number().int().positive().describe('The GitHub issue number') },
-  async ({ issue_number }) => {
-    const { owner, repo } = getCryyerRepo();
-    const octokit = new Octokit({ auth: requireEnv('GITHUB_TOKEN') });
-
-    const { data: issue } = await octokit.rest.issues.get({
-      owner,
-      repo,
-      issue_number,
-    });
-
-    const labels = getLabelNames(issue);
-    const products = getProducts();
-    const productId = extractProductLabel(labels, products);
-
-    if (!productId) {
-      return {
-        content: [{ type: 'text', text: `No matching product label found on issue #${issue_number}.` }],
-        isError: true,
-      };
-    }
-
-    const product = products.find((p) => p.id === productId)!;
-    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    const weekOf = getWeekOf();
-
-    // Detect audience from labels
-    const audienceLabel = labels.find((l) => l.startsWith('audience:'));
-    const audienceId = audienceLabel?.slice('audience:'.length);
-    const audiences = resolveAudiences(product);
-    const audience = audienceId ? audiences.find((a) => a.id === audienceId) : audiences[0];
-
-    const activity = await gatherActivity(octokit, product, since);
-    const llm = createLLMProvider();
-    const draft = await generateEmailDraft(llm, product, activity, weekOf, undefined, audience);
-
-    // Update issue body
-    const issueBody = formatIssueBody(draft.subject, draft.body);
-    await octokit.rest.issues.update({
-      owner,
-      repo,
-      issue_number,
-      body: issueBody,
-    });
-
-    return {
-      content: [{ type: 'text', text: `Regenerated draft for issue #${issue_number} (${product.name}).\n\nSubject: ${draft.subject}\n\n---\n\n${draft.body}` }],
-    };
-  }
-);
-
-server.tool(
-  'list_products',
-  'List configured products, their audiences, and subscriber counts',
-  {},
-  async () => {
-    const products = getProducts();
-    const lines: string[] = [];
-
-    for (const product of products) {
-      const audiences = resolveAudiences(product);
-
-      if (audiences.length === 1 && !audiences[0].id) {
-        let count = '';
+      let subscriberInfo = '';
+      if (productId) {
         try {
-          const store = createSubscriberStore();
-          const subscribers = await store.getSubscribers(product.id);
-          count = ` (${subscribers.length} subscribers)`;
+          const subKey = subscriberKey(productId, audienceId);
+          const store = deps.createStore();
+          const subscribers = await store.getSubscribers(subKey);
+          subscriberInfo = `\n\nSubscribers: ${subscribers.length}`;
         } catch {
-          count = '';
+          subscriberInfo = '\n\nSubscribers: (unable to fetch)';
         }
-        lines.push(`${product.id}: ${product.name}${count}`);
-      } else {
-        lines.push(`${product.id}: ${product.name}`);
-        for (const audience of audiences) {
-          const subKey = subscriberKey(product.id, audience.id);
+      }
+
+      const text = [
+        `Issue: #${issue_number} — ${issue.title}`,
+        `Product: ${productId ?? 'unknown'}`,
+        `Status: ${issue.state}`,
+        `Labels: ${labels.join(', ')}`,
+        subscriberInfo ? `Subscribers: ${subscriberInfo.trim().replace('Subscribers: ', '')}` : '',
+        '',
+        `Subject: ${parsed.subject}`,
+        '',
+        '---',
+        '',
+        parsed.emailBody,
+      ].filter((line) => line !== undefined).join('\n');
+
+      return { content: [{ type: 'text', text }] };
+    }
+  );
+
+  server.tool(
+    'update_draft',
+    'Update the subject and body of a draft issue',
+    {
+      issue_number: z.number().int().positive().describe('The GitHub issue number'),
+      subject: z.string().describe('The new email subject line'),
+      body: z.string().describe('The new email body (markdown)'),
+    },
+    async ({ issue_number, subject, body }) => {
+      const { owner, repo } = deps.getCryyerRepo();
+
+      const issueBody = formatIssueBody(subject, body);
+      await deps.octokit.rest.issues.update({
+        owner,
+        repo,
+        issue_number,
+        body: issueBody,
+      });
+
+      return {
+        content: [{ type: 'text', text: `Updated issue #${issue_number} with new subject and body.` }],
+      };
+    }
+  );
+
+  server.tool(
+    'send_draft',
+    'Send the draft email to subscribers, close the issue, and add a sent label',
+    { issue_number: z.number().int().positive().describe('The GitHub issue number') },
+    async ({ issue_number }) => {
+      const { owner, repo } = deps.getCryyerRepo();
+
+      // Fetch issue
+      const { data: issue } = await deps.octokit.rest.issues.get({
+        owner,
+        repo,
+        issue_number,
+      });
+
+      const labels = getLabelNames(issue);
+
+      // Check for already-sent
+      if (labels.includes('sent')) {
+        return {
+          content: [{ type: 'text', text: `Issue #${issue_number} has already been sent. Aborting to prevent double-send.` }],
+          isError: true,
+        };
+      }
+
+      // Find product
+      const products = deps.getProducts();
+      const productId = extractProductLabel(labels, products);
+      if (!productId) {
+        return {
+          content: [{ type: 'text', text: `No matching product label found on issue #${issue_number}.` }],
+          isError: true,
+        };
+      }
+
+      const product = products.find((p) => p.id === productId)!;
+
+      // Parse email content
+      const parsed = parseIssueBody(issue.body ?? '');
+      if (!parsed) {
+        return {
+          content: [{ type: 'text', text: `Could not parse email subject/body from issue #${issue_number}.` }],
+          isError: true,
+        };
+      }
+
+      const emailContent = { subject: parsed.subject, body: parsed.emailBody };
+
+      // Get subscribers (audience-aware)
+      const audienceLabel = labels.find((l) => l.startsWith('audience:'));
+      const audienceId = audienceLabel?.slice('audience:'.length);
+      const subKey = subscriberKey(productId, audienceId);
+      const store = deps.createStore();
+      const subscribers = await store.getSubscribers(subKey);
+
+      if (subscribers.length === 0) {
+        return {
+          content: [{ type: 'text', text: `No active subscribers found for ${product.name}. No emails sent.` }],
+        };
+      }
+
+      // Adapt to BetaTester[]
+      const betaTesters: BetaTester[] = subscribers.map((s, i) => ({
+        id: String(i),
+        email: s.email,
+        name: s.name ?? '',
+        productIds: [productId],
+      }));
+
+      // Send
+      const emailProvider = deps.createEmailProvider();
+      const stats = await sendEmails(
+        emailProvider,
+        product,
+        betaTesters,
+        emailContent,
+        product.from_name ?? deps.fromName,
+        product.from_email ?? deps.fromEmail,
+        product.reply_to
+      );
+
+      // Add sent label and close
+      await ensureLabel(deps.octokit, owner, repo, 'sent', '0e8a16');
+      await deps.octokit.rest.issues.addLabels({
+        owner,
+        repo,
+        issue_number,
+        labels: ['sent'],
+      });
+
+      await deps.octokit.rest.issues.update({
+        owner,
+        repo,
+        issue_number,
+        state: 'closed',
+      });
+
+      // Post stats comment
+      const failureDetails =
+        stats.failures.length > 0
+          ? '\n\nFailures:\n' + stats.failures.map((f) => `- ${f.email}: ${f.error}`).join('\n')
+          : '';
+
+      const comment = `Email delivery complete for **${product.name}**.\n\n- Sent: ${stats.sent}\n- Failed: ${stats.failed}${failureDetails}`;
+
+      await deps.octokit.rest.issues.createComment({
+        owner,
+        repo,
+        issue_number,
+        body: comment,
+      });
+
+      return {
+        content: [{ type: 'text', text: `Sent ${stats.sent} emails for ${product.name}. ${stats.failed} failed. Issue #${issue_number} closed.` }],
+      };
+    }
+  );
+
+  server.tool(
+    'regenerate_draft',
+    'Re-gather GitHub activity and regenerate the draft using the LLM with the product voice',
+    { issue_number: z.number().int().positive().describe('The GitHub issue number') },
+    async ({ issue_number }) => {
+      const { owner, repo } = deps.getCryyerRepo();
+
+      const { data: issue } = await deps.octokit.rest.issues.get({
+        owner,
+        repo,
+        issue_number,
+      });
+
+      const labels = getLabelNames(issue);
+      const products = deps.getProducts();
+      const productId = extractProductLabel(labels, products);
+
+      if (!productId) {
+        return {
+          content: [{ type: 'text', text: `No matching product label found on issue #${issue_number}.` }],
+          isError: true,
+        };
+      }
+
+      const product = products.find((p) => p.id === productId)!;
+      const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const weekOf = getWeekOf();
+
+      // Detect audience from labels
+      const audienceLabel = labels.find((l) => l.startsWith('audience:'));
+      const audienceId = audienceLabel?.slice('audience:'.length);
+      const audiences = resolveAudiences(product);
+      const audience = audienceId ? audiences.find((a) => a.id === audienceId) : audiences[0];
+
+      const activity = await deps.gatherActivity(deps.octokit, product, since);
+      const llm = deps.createLLMProvider();
+      const draft = await deps.generateEmailDraft(llm, product, activity, weekOf, undefined, audience);
+
+      // Update issue body
+      const issueBody = formatIssueBody(draft.subject, draft.body);
+      await deps.octokit.rest.issues.update({
+        owner,
+        repo,
+        issue_number,
+        body: issueBody,
+      });
+
+      return {
+        content: [{ type: 'text', text: `Regenerated draft for issue #${issue_number} (${product.name}).\n\nSubject: ${draft.subject}\n\n---\n\n${draft.body}` }],
+      };
+    }
+  );
+
+  server.tool(
+    'list_products',
+    'List configured products, their audiences, and subscriber counts',
+    {},
+    async () => {
+      const products = deps.getProducts();
+      const lines: string[] = [];
+
+      for (const product of products) {
+        const audiences = resolveAudiences(product);
+
+        if (audiences.length === 1 && !audiences[0].id) {
           let count = '';
           try {
-            const store = createSubscriberStore();
-            const subscribers = await store.getSubscribers(subKey);
+            const store = deps.createStore();
+            const subscribers = await store.getSubscribers(product.id);
             count = ` (${subscribers.length} subscribers)`;
           } catch {
             count = '';
           }
-          lines.push(`  audience: ${audience.id}${count}`);
+          lines.push(`${product.id}: ${product.name}${count}`);
+        } else {
+          lines.push(`${product.id}: ${product.name}`);
+          for (const audience of audiences) {
+            const subKey = subscriberKey(product.id, audience.id);
+            let count = '';
+            try {
+              const store = deps.createStore();
+              const subscribers = await store.getSubscribers(subKey);
+              count = ` (${subscribers.length} subscribers)`;
+            } catch {
+              count = '';
+            }
+            lines.push(`  audience: ${audience.id}${count}`);
+          }
         }
       }
-    }
 
-    return {
-      content: [{ type: 'text', text: lines.length > 0 ? lines.join('\n') : 'No products configured.' }],
-    };
-  }
-);
-
-server.tool(
-  'list_subscribers',
-  'List subscribers for a product (optionally filtered by audience)',
-  {
-    product_id: z.string().describe('The product ID'),
-    audience_id: z.string().optional().describe('Optional audience ID for multi-audience products'),
-  },
-  async ({ product_id, audience_id }) => {
-    const subKey = subscriberKey(product_id, audience_id);
-    const store = createSubscriberStore();
-    const subscribers = await store.getSubscribers(subKey);
-
-    if (subscribers.length === 0) {
       return {
-        content: [{ type: 'text', text: `No subscribers found for: ${subKey}` }],
+        content: [{ type: 'text', text: lines.length > 0 ? lines.join('\n') : 'No products configured.' }],
       };
     }
+  );
 
-    const lines = subscribers.map((s) =>
-      s.name ? `${s.email} (${s.name})` : s.email
-    );
+  server.tool(
+    'list_subscribers',
+    'List subscribers for a product (optionally filtered by audience)',
+    {
+      product_id: z.string().describe('The product ID'),
+      audience_id: z.string().optional().describe('Optional audience ID for multi-audience products'),
+    },
+    async ({ product_id, audience_id }) => {
+      const subKey = subscriberKey(product_id, audience_id);
+      const store = deps.createStore();
+      const subscribers = await store.getSubscribers(subKey);
 
-    return {
-      content: [{ type: 'text', text: `${subscribers.length} subscribers for ${subKey}:\n\n${lines.join('\n')}` }],
-    };
-  }
-);
+      if (subscribers.length === 0) {
+        return {
+          content: [{ type: 'text', text: `No subscribers found for: ${subKey}` }],
+        };
+      }
 
-server.tool(
-  'add_subscriber',
-  'Add a subscriber to a product (optionally to a specific audience)',
-  {
-    product_id: z.string().describe('The product ID'),
-    email: z.string().email().describe('Subscriber email address'),
-    name: z.string().optional().describe('Subscriber name (optional)'),
-    audience_id: z.string().optional().describe('Optional audience ID for multi-audience products'),
-  },
-  async ({ product_id, email, name, audience_id }) => {
-    const subKey = subscriberKey(product_id, audience_id);
-    const store = createSubscriberStore();
-    await store.addSubscriber(subKey, email, name);
+      const lines = subscribers.map((s) =>
+        s.name ? `${s.email} (${s.name})` : s.email
+      );
 
-    return {
-      content: [{ type: 'text', text: `Added ${email} to ${subKey}.` }],
-    };
-  }
-);
+      return {
+        content: [{ type: 'text', text: `${subscribers.length} subscribers for ${subKey}:\n\n${lines.join('\n')}` }],
+      };
+    }
+  );
 
-server.tool(
-  'remove_subscriber',
-  'Remove or unsubscribe someone from a product (optionally from a specific audience)',
-  {
-    product_id: z.string().describe('The product ID'),
-    email: z.string().email().describe('Subscriber email address'),
-    audience_id: z.string().optional().describe('Optional audience ID for multi-audience products'),
-  },
-  async ({ product_id, email, audience_id }) => {
-    const subKey = subscriberKey(product_id, audience_id);
-    const store = createSubscriberStore();
-    await store.removeSubscriber(subKey, email);
+  server.tool(
+    'add_subscriber',
+    'Add a subscriber to a product (optionally to a specific audience)',
+    {
+      product_id: z.string().describe('The product ID'),
+      email: z.string().email().describe('Subscriber email address'),
+      name: z.string().optional().describe('Subscriber name (optional)'),
+      audience_id: z.string().optional().describe('Optional audience ID for multi-audience products'),
+    },
+    async ({ product_id, email, name, audience_id }) => {
+      const subKey = subscriberKey(product_id, audience_id);
+      const store = deps.createStore();
+      await store.addSubscriber(subKey, email, name);
 
-    return {
-      content: [{ type: 'text', text: `Removed ${email} from ${subKey}.` }],
-    };
-  }
-);
+      return {
+        content: [{ type: 'text', text: `Added ${email} to ${subKey}.` }],
+      };
+    }
+  );
 
-// --- Prompts ---
+  server.tool(
+    'remove_subscriber',
+    'Remove or unsubscribe someone from a product (optionally from a specific audience)',
+    {
+      product_id: z.string().describe('The product ID'),
+      email: z.string().email().describe('Subscriber email address'),
+      audience_id: z.string().optional().describe('Optional audience ID for multi-audience products'),
+    },
+    async ({ product_id, email, audience_id }) => {
+      const subKey = subscriberKey(product_id, audience_id);
+      const store = deps.createStore();
+      await store.removeSubscriber(subKey, email);
 
-server.prompt(
-  'review_drafts',
-  'Review, edit, and send all pending drafts',
-  () => ({
-    messages: [
-      {
-        role: 'user',
-        content: {
-          type: 'text',
-          text: [
-            'Time to review the drafts! Please:',
-            '',
-            '1. List all pending drafts using list_drafts',
-            '2. For each draft, use get_draft to show me the full content and subscriber count',
-            '3. For each one, ask me whether I want to:',
-            '   - **Send** it as-is',
-            '   - **Edit** it (I\'ll tell you what to change, then you use update_draft)',
-            '   - **Regenerate** it from scratch with regenerate_draft',
-            '   - **Skip** it for now',
-            '',
-            'Walk me through them one at a time.',
-          ].join('\n'),
+      return {
+        content: [{ type: 'text', text: `Removed ${email} from ${subKey}.` }],
+      };
+    }
+  );
+
+  // --- Prompts ---
+
+  server.prompt(
+    'review_drafts',
+    'Review, edit, and send all pending drafts',
+    () => ({
+      messages: [
+        {
+          role: 'user',
+          content: {
+            type: 'text',
+            text: [
+              'Time to review the drafts! Please:',
+              '',
+              '1. List all pending drafts using list_drafts',
+              '2. For each draft, use get_draft to show me the full content and subscriber count',
+              '3. For each one, ask me whether I want to:',
+              '   - **Send** it as-is',
+              '   - **Edit** it (I\'ll tell you what to change, then you use update_draft)',
+              '   - **Regenerate** it from scratch with regenerate_draft',
+              '   - **Skip** it for now',
+              '',
+              'Walk me through them one at a time.',
+            ].join('\n'),
+          },
         },
-      },
-    ],
-  })
-);
+      ],
+    })
+  );
+
+  return server;
+}
+
+// --- Default deps from environment ---
+
+function defaultDeps(): McpDeps {
+  const projectRoot = process.env['CRYYER_ROOT'] ?? process.cwd();
+  const githubToken = requireEnv('GITHUB_TOKEN');
+  const fromEmail = requireEnv('FROM_EMAIL');
+  const fromName = process.env['FROM_NAME'] ?? 'Cryyer Updates';
+
+  return {
+    octokit: new Octokit({ auth: githubToken }),
+    getProducts: () => loadProducts(join(projectRoot, 'products')),
+    getCryyerRepo,
+    createStore: createSubscriberStore,
+    createEmailProvider,
+    createLLMProvider,
+    gatherActivity,
+    generateEmailDraft,
+    fromEmail,
+    fromName,
+  };
+}
 
 // --- Start ---
 
 async function main(): Promise<void> {
+  // Protect stdout — MCP uses JSON-RPC over stdio.
+  console.log = console.error;
+  console.warn = console.error;
+
+  const deps = defaultDeps();
+  const server = createServer(deps);
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error('Cryyer MCP server running on stdio');
 }
 
-main().catch((err) => {
-  console.error('Fatal error:', err);
-  process.exit(1);
-});
+// Only auto-run when executed directly (not when imported for testing)
+const isMainModule = process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/'));
+if (isMainModule) {
+  main().catch((err) => {
+    console.error('Fatal error:', err);
+    process.exit(1);
+  });
+}

@@ -115,6 +115,12 @@ describe('parseArgv', () => {
     const result = parseArgv(['--product', 'my-app', '--output', 'out.md']);
     expect(result.audienceId).toBeUndefined();
   });
+
+  it('falls back to AUDIENCE_ID env var', () => {
+    process.env['AUDIENCE_ID'] = 'beta';
+    const result = parseArgv(['--product', 'my-app', '--output', 'out.md']);
+    expect(result.audienceId).toBe('beta');
+  });
 });
 
 describe('main', () => {
@@ -250,5 +256,84 @@ describe('main', () => {
   it('throws when GITHUB_TOKEN is missing', async () => {
     delete process.env['GITHUB_TOKEN'];
     await expect(main()).rejects.toThrow('Missing required environment variable: GITHUB_TOKEN');
+  });
+
+  it('throws when product has multiple audiences but no --audience flag', async () => {
+    process.argv = [
+      'node', 'draft-file.js',
+      '--product', 'test-app',
+      '--output', 'out.md',
+    ];
+
+    (loadProducts as Mock).mockReturnValue([{
+      id: 'test-app',
+      name: 'Test App',
+      repo: 'o/r',
+      audiences: [
+        { id: 'beta', voice: 'casual', emailSubjectTemplate: 'Beta' },
+        { id: 'enterprise', voice: 'formal', emailSubjectTemplate: 'Enterprise' },
+      ],
+    }]);
+    (Octokit as unknown as Mock).mockImplementation(function () { return {}; });
+    (createLLMProvider as Mock).mockReturnValue({});
+
+    await expect(main()).rejects.toThrow('multiple audiences');
+  });
+
+  it('throws when --audience specifies non-existent audience', async () => {
+    process.argv = [
+      'node', 'draft-file.js',
+      '--product', 'test-app',
+      '--output', 'out.md',
+      '--audience', 'nonexistent',
+    ];
+
+    (loadProducts as Mock).mockReturnValue([{
+      id: 'test-app',
+      name: 'Test App',
+      repo: 'o/r',
+      audiences: [
+        { id: 'beta', voice: 'casual', emailSubjectTemplate: 'Beta' },
+      ],
+    }]);
+    (Octokit as unknown as Mock).mockImplementation(function () { return {}; });
+    (createLLMProvider as Mock).mockReturnValue({});
+
+    await expect(main()).rejects.toThrow('Audience not found: nonexistent');
+  });
+
+  it('uses correct audience when --audience is specified', async () => {
+    process.argv = [
+      'node', 'draft-file.js',
+      '--product', 'test-app',
+      '--output', 'out.md',
+      '--audience', 'beta',
+    ];
+
+    (loadProducts as Mock).mockReturnValue([{
+      id: 'test-app',
+      name: 'Test App',
+      repo: 'o/r',
+      audiences: [
+        { id: 'beta', voice: 'casual', emailSubjectTemplate: 'Beta' },
+        { id: 'enterprise', voice: 'formal', emailSubjectTemplate: 'Enterprise' },
+      ],
+    }]);
+    (gatherActivity as Mock).mockResolvedValue({ prs: [], releases: [], commits: [] });
+    (generateEmailDraft as Mock).mockResolvedValue({ subject: 'S', body: 'B' });
+    (getWeekOf as Mock).mockReturnValue('2024-01-15');
+    (createLLMProvider as Mock).mockReturnValue({});
+    (Octokit as unknown as Mock).mockImplementation(function () { return {}; });
+
+    await main();
+
+    expect(generateEmailDraft).toHaveBeenCalledWith(
+      {},
+      expect.anything(),
+      expect.anything(),
+      '2024-01-15',
+      undefined,
+      expect.objectContaining({ id: 'beta', voice: 'casual' })
+    );
   });
 });

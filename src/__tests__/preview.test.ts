@@ -1,5 +1,14 @@
-import { describe, it, expect } from 'vitest';
-import { parseArgv, formatActivity } from '../preview.js';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { Mock } from 'vitest';
+
+vi.mock('../config.js', () => ({ loadProducts: vi.fn() }));
+vi.mock('../gather.js', () => ({ gatherActivity: vi.fn() }));
+vi.mock('octokit', () => ({ Octokit: vi.fn(function OctokitMock() {}) }));
+
+import { parseArgv, formatActivity, main } from '../preview.js';
+import { loadProducts } from '../config.js';
+import { gatherActivity } from '../gather.js';
+import { Octokit } from 'octokit';
 import type { GatheredActivity } from '../gather.js';
 
 describe('parseArgv', () => {
@@ -69,5 +78,69 @@ describe('formatActivity', () => {
     const activity: GatheredActivity = { prs: [], releases: [], commits: [] };
     const output = formatActivity(activity);
     expect(output).toContain('No activity found');
+  });
+});
+
+describe('main', () => {
+  const originalEnv = { ...process.env };
+  const originalArgv = [...process.argv];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env['GITHUB_TOKEN'] = 'test-token';
+    process.argv = ['node', 'preview.js', '--product', 'test-app'];
+  });
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+    process.argv = [...originalArgv];
+  });
+
+  it('gathers and prints activity for a product', async () => {
+    const mockProduct = { id: 'test-app', name: 'Test App', voice: '', repo: 'owner/test-app', emailSubjectTemplate: '' };
+    (loadProducts as Mock).mockReturnValue([mockProduct]);
+    (gatherActivity as Mock).mockResolvedValue({
+      prs: [{ title: 'Add feature', body: '', url: 'https://pr/1', mergedAt: '2024-01-01', author: 'alice' }],
+      releases: [],
+      commits: [],
+    });
+    (Octokit as unknown as Mock).mockImplementation(function () { return {}; });
+
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await main();
+
+    const output = consoleSpy.mock.calls.map((c) => String(c[0])).join('\n');
+    expect(output).toContain('Test App');
+    expect(output).toContain('Total: 1 item');
+
+    consoleSpy.mockRestore();
+  });
+
+  it('throws when GITHUB_TOKEN is missing', async () => {
+    delete process.env['GITHUB_TOKEN'];
+    await expect(main()).rejects.toThrow('GITHUB_TOKEN');
+  });
+
+  it('throws when product is not found', async () => {
+    (loadProducts as Mock).mockReturnValue([]);
+    (Octokit as unknown as Mock).mockImplementation(function () { return {}; });
+    await expect(main()).rejects.toThrow('Product not found');
+  });
+
+  it('applies --repo override', async () => {
+    process.argv = ['node', 'preview.js', '--product', 'test-app', '--repo', 'org/other'];
+    const mockProduct = { id: 'test-app', name: 'Test App', voice: '', repo: 'owner/test-app', emailSubjectTemplate: '' };
+    (loadProducts as Mock).mockReturnValue([mockProduct]);
+    (gatherActivity as Mock).mockResolvedValue({ prs: [], releases: [], commits: [] });
+    (Octokit as unknown as Mock).mockImplementation(function () { return {}; });
+
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    await main();
+
+    // Product repo should have been overridden
+    expect(mockProduct.repo).toBe('org/other');
+
+    consoleSpy.mockRestore();
   });
 });

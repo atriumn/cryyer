@@ -1,4 +1,39 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+
+vi.mock('@anthropic-ai/sdk', () => ({
+  default: class MockAnthropic {
+    messages = {
+      create: vi.fn().mockResolvedValue({
+        content: [{ type: 'text', text: '{"subject":"S","body":"B"}' }],
+      }),
+    };
+  },
+}));
+
+vi.mock('openai', () => ({
+  default: class MockOpenAI {
+    chat = {
+      completions: {
+        create: vi.fn().mockResolvedValue({
+          choices: [{ message: { content: '{"subject":"S","body":"B"}' } }],
+        }),
+      },
+    };
+  },
+}));
+
+vi.mock('@google/generative-ai', () => ({
+  GoogleGenerativeAI: class MockGoogleAI {
+    getGenerativeModel() {
+      return {
+        generateContent: vi.fn().mockResolvedValue({
+          response: { text: () => '{"subject":"S","body":"B"}' },
+        }),
+      };
+    }
+  },
+}));
+
 import { createLLMProvider, AnthropicProvider, OpenAIProvider, GeminiProvider } from '../llm-provider.js';
 
 describe('createLLMProvider', () => {
@@ -69,5 +104,42 @@ describe('createLLMProvider', () => {
     process.env.ANTHROPIC_API_KEY = 'env-key';
     const provider = createLLMProvider({ provider: 'openai', apiKey: 'override-key' });
     expect(provider).toBeInstanceOf(OpenAIProvider);
+  });
+
+  it('accepts model override', () => {
+    process.env.ANTHROPIC_API_KEY = 'test-key';
+    const provider = createLLMProvider({ provider: 'anthropic', model: 'claude-haiku-3-5' });
+    expect(provider).toBeInstanceOf(AnthropicProvider);
+  });
+
+  it('uses LLM_MODEL env var when set', () => {
+    process.env.ANTHROPIC_API_KEY = 'test-key';
+    process.env.LLM_MODEL = 'claude-haiku-3-5';
+    const provider = createLLMProvider();
+    expect(provider).toBeInstanceOf(AnthropicProvider);
+  });
+});
+
+describe('AnthropicProvider.generate', () => {
+  it('calls Anthropic API and returns text', async () => {
+    const provider = new AnthropicProvider('test-key');
+    const result = await provider.generate('test prompt', 1024);
+    expect(result).toBe('{"subject":"S","body":"B"}');
+  });
+});
+
+describe('OpenAIProvider.generate', () => {
+  it('calls OpenAI API and returns text', async () => {
+    const provider = new OpenAIProvider('test-key');
+    const result = await provider.generate('test prompt', 1024);
+    expect(result).toBe('{"subject":"S","body":"B"}');
+  });
+});
+
+describe('GeminiProvider.generate', () => {
+  it('calls Gemini API and returns text', async () => {
+    const provider = new GeminiProvider('test-key');
+    const result = await provider.generate('test prompt', 1024);
+    expect(result).toBe('{"subject":"S","body":"B"}');
   });
 });

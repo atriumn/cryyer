@@ -23,13 +23,16 @@ voice: |
 |---|---|---|
 | `id` | Yes | Unique identifier, also used as GitHub issue label |
 | `name` | Yes | Display name |
-| `voice` | Yes | LLM voice/tone instructions (injected into the draft prompt) |
+| `voice` | Yes* | LLM voice/tone instructions (injected into the draft prompt) |
 | `repo` | Yes | `owner/repo` for GitHub activity gathering |
-| `emailSubjectTemplate` | Yes | Subject line template — use `{{weekOf}}` for the date |
+| `emailSubjectTemplate` | Yes* | Subject line template — use `{{weekOf}}` for the date |
+| `audiences` | No | List of audience-specific overrides (see [Audiences](#audiences)) |
 | `tagline` | No | Product tagline |
 | `from_name` | No | Override sender name for this product |
 | `from_email` | No | Override sender email for this product |
 | `reply_to` | No | Reply-to address |
+
+*\* Required when `audiences` is not set. When using `audiences`, `voice` and `emailSubjectTemplate` are set per-audience instead.*
 
 ## Voice field
 
@@ -42,6 +45,55 @@ voice: |
   Focus on user-facing changes. Skip internal refactors.
   Keep paragraphs short — these are busy developers.
 ```
+
+## Audiences
+
+If you need different email voices for different subscriber groups (e.g. beta testers vs enterprise customers), use the `audiences` field instead of top-level `voice` and `emailSubjectTemplate`:
+
+```yaml
+id: my-app
+name: My App
+repo: owner/repo
+audiences:
+  - id: beta
+    voice: |
+      You are writing a casual update for My App beta testers.
+      Be enthusiastic and highlight experimental features.
+    emailSubjectTemplate: "My App Beta — Week of {{weekOf}}"
+  - id: enterprise
+    voice: |
+      You are writing a professional update for My App enterprise customers.
+      Focus on stability, security, and compliance improvements.
+    emailSubjectTemplate: "My App Enterprise Update — {{weekOf}}"
+    from_name: My App Enterprise
+    from_email: enterprise@myapp.com
+```
+
+Each audience gets its own draft and email send. Subscribers are scoped per audience — a subscriber to `my-app:beta` won't receive `my-app:enterprise` emails.
+
+### Audience fields
+
+| Field | Required | Description |
+|---|---|---|
+| `id` | Yes | Unique identifier for this audience |
+| `voice` | Yes | LLM voice/tone instructions for this audience |
+| `emailSubjectTemplate` | Yes | Subject template for this audience |
+| `from_name` | No | Override sender name (inherits from product) |
+| `from_email` | No | Override sender email (inherits from product) |
+| `reply_to` | No | Override reply-to address (inherits from product) |
+
+### CLI usage with audiences
+
+When using `cryyer draft-file` or `cryyer send-file` with a multi-audience product, pass `--audience` to target a specific audience:
+
+```bash
+cryyer draft-file --product my-app --audience beta --output drafts/v1.0-beta.md
+cryyer send-file drafts/v1.0-beta.md --product my-app --audience beta
+```
+
+### MCP and GitHub Actions
+
+The MCP server subscriber tools (`list_subscribers`, `add_subscriber`, `remove_subscriber`) accept an optional `audience_id` parameter. The composite GitHub Actions (`draft-file`, `send-file`) accept an optional `audience` input.
 
 ## Monorepo filtering
 

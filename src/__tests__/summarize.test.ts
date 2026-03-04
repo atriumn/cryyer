@@ -1,6 +1,8 @@
-import { describe, it, expect } from 'vitest';
-import { formatActivity, parseResponse } from '../summarize.js';
+import { describe, it, expect, vi } from 'vitest';
+import { formatActivity, parseResponse, generateEmailDraft } from '../summarize.js';
 import type { GatheredActivity } from '../gather.js';
+import type { LLMProvider } from '../llm-provider.js';
+import type { Product, ResolvedAudience } from '../types.js';
 
 describe('formatActivity', () => {
   it('formats releases', () => {
@@ -77,5 +79,79 @@ describe('parseResponse', () => {
 
   it('throws on invalid structure (wrong types)', () => {
     expect(() => parseResponse('{"subject": 123, "body": "text"}')).toThrow('Invalid response structure');
+  });
+});
+
+describe('generateEmailDraft audience voice', () => {
+  const mockProduct: Product = {
+    id: 'test-app',
+    name: 'Test App',
+    voice: 'product-level voice',
+    repo: 'o/r',
+    emailSubjectTemplate: 'Update',
+  };
+  const emptyActivity: GatheredActivity = { releases: [], prs: [], commits: [] };
+
+  it('uses audience voice when provided', async () => {
+    let capturedPrompt = '';
+    const mockProvider: LLMProvider = {
+      generate: vi.fn(async (prompt: string) => {
+        capturedPrompt = prompt;
+        return '{"subject": "S", "body": "B"}';
+      }),
+    };
+
+    const audience: ResolvedAudience = {
+      id: 'beta',
+      voice: 'audience-level beta voice',
+      emailSubjectTemplate: 'Beta Update',
+    };
+
+    await generateEmailDraft(mockProvider, mockProduct, emptyActivity, '2024-01-15', undefined, audience);
+
+    expect(capturedPrompt).toContain('audience-level beta voice');
+    expect(capturedPrompt).not.toContain('product-level voice');
+  });
+
+  it('falls back to product voice when no audience is provided', async () => {
+    let capturedPrompt = '';
+    const mockProvider: LLMProvider = {
+      generate: vi.fn(async (prompt: string) => {
+        capturedPrompt = prompt;
+        return '{"subject": "S", "body": "B"}';
+      }),
+    };
+
+    await generateEmailDraft(mockProvider, mockProduct, emptyActivity, '2024-01-15');
+
+    expect(capturedPrompt).toContain('product-level voice');
+  });
+
+  it('falls back to product voice when audience has no voice override', async () => {
+    const productNoVoice: Product = {
+      id: 'test-app',
+      name: 'Test App',
+      voice: 'fallback voice',
+      repo: 'o/r',
+      emailSubjectTemplate: 'Update',
+    };
+
+    let capturedPrompt = '';
+    const mockProvider: LLMProvider = {
+      generate: vi.fn(async (prompt: string) => {
+        capturedPrompt = prompt;
+        return '{"subject": "S", "body": "B"}';
+      }),
+    };
+
+    const audience: ResolvedAudience = {
+      id: undefined,
+      voice: 'fallback voice',
+      emailSubjectTemplate: 'Update',
+    };
+
+    await generateEmailDraft(mockProvider, productNoVoice, emptyActivity, '2024-01-15', undefined, audience);
+
+    expect(capturedPrompt).toContain('fallback voice');
   });
 });

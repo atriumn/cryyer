@@ -51,3 +51,5 @@ create unique index idx_beta_testers_email_product on beta_testers (email, produ
 - `addSubscriber` inserts a new row.
 - `removeSubscriber` sets `unsubscribed_at` to the current timestamp (soft delete).
 - `recordEmailSent` logs the send event.
+
+When using [audiences](/configuration/product-config#audiences), the `product` column stores the compound key (e.g. `my-app:beta`).

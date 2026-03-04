@@ -21,7 +21,7 @@ export SUBSCRIBER_STORE=google-sheets
 
 ## How it works
 
-Cryyer looks for a sheet tab named after the product ID (e.g. `my-app`), falling back to the first sheet. Expected columns: `email`, `name` (optional), `unsubscribed` (optional, set to `true` to exclude).
+Cryyer looks for a sheet tab named after the product ID (e.g. `my-app`), falling back to the first sheet. Expected columns: `email`, `name` (optional), `active` (optional — defaults to active; set to `false` to exclude).
 
 Email send logging is a no-op with this backend (read-only).
 
@@ -76,10 +76,12 @@ Share the spreadsheet with your service account email (from step 4) as an **Edit
 
 Row 1 should have these headers:
 
-| email | name | unsubscribed |
+| email | name | active |
 |---|---|---|
-| alice@example.com | Alice | |
-| bob@example.com | Bob | |
-| charlie@example.com | | true |
+| alice@example.com | Alice | true |
+| bob@example.com | Bob | true |
+| charlie@example.com | | false |
 
 Name the sheet tab after your product ID (e.g. `my-app`), or just use the default first sheet if you have one product.
+
+When using [audiences](/configuration/product-config#audiences), name the sheet tab with the compound key (e.g. `my-app:beta`).
