@@ -7,5 +7,6 @@ voice: |
   Assume readers are developers who know what a PR is, but skip deep implementation details.
   Focus on what changed and why they should care, not how the sausage is made.
   Keep it scannable: short paragraphs, clear structure.
+  This is a release update, not a weekly newsletter. Write about what shipped.
 repo: "atriumn/cryyer"
-emailSubjectTemplate: "{{weekOf}} Cryyer Update"
+emailSubjectTemplate: "Cryyer {{version}} — What's New"

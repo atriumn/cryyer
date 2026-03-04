@@ -21,14 +21,14 @@ export async function generateEmailDraft(
 
   const activitySection = hasActivity
     ? formatActivity(activity)
-    : '(No notable activity this week)';
+    : '(No notable activity since the last update)';
 
   const previousUpdateSection = previousUpdate
     ? `\n## Previous Update (for context — avoid repeating the same content)\n${previousUpdate}\n`
     : '';
 
   const noActivityGuidance = !hasActivity
-    ? '\nSince there is no activity this week, write a brief "quiet week" acknowledgment or a forward-looking teaser about what is coming — keeping the product voice consistent.'
+    ? '\nSince there is no notable activity, write a brief acknowledgment or a forward-looking teaser about what is coming — keeping the product voice consistent.'
     : '';
 
   const taglineLine = product.tagline ? `\n**Tagline:** ${product.tagline}` : '';
@@ -41,19 +41,20 @@ export async function generateEmailDraft(
 ## Voice & Tone Instructions
 ${voice}
 
-## Week of ${weekOf}
+## Date: ${weekOf}
 
-## Activity This Week
+## Recent Activity
 ${activitySection}${previousUpdateSection}
 ## Instructions
 - Write a concise, engaging email (under 300 words) matching the voice instructions above
-- Highlight the most impactful changes for beta testers
-- Be friendly and informative${version ? `\n- This email is for version ${version} — reference it as the release being announced` : ''}${noActivityGuidance}
+- Highlight the most impactful changes for subscribers
+- Be friendly and informative
+- Do NOT use weekly language ("this week", "happy Monday", etc.) — this is a release update, not a weekly digest${version ? `\n- This email is for version ${version} — reference it as the release being announced` : ''}${noActivityGuidance}
 
 ## Output Format
 Respond with ONLY a JSON object — no explanation, no markdown fences, just the raw JSON:
 {
-  "subject": "<compelling email subject line specific to this week>",
+  "subject": "<compelling email subject line>",
   "body": "<email body in markdown>"
 }`;
 
