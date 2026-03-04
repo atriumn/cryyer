@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { markdownToHtml, sendEmails } from '../send.js';
-import type { EmailProvider, BatchResult, EmailMessage } from '../email-provider.js';
+import type { EmailProvider, EmailMessage } from '../email-provider.js';
 
 describe('markdownToHtml', () => {
   it('converts headers', () => {

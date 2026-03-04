@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, vi, beforeEach, afterAll } from 'vitest';
+import { describe, it, expect, afterEach, vi, afterAll } from 'vitest';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { formatIssueBody, getCryyerRepo, extractProductLabel, createServer } from '../mcp.js';
@@ -6,6 +6,14 @@ import type { McpDeps } from '../mcp.js';
 import { parseIssueBody } from '../send-on-close.js';
 import { subscriberKey } from '../types.js';
 import type { Product } from '../types.js';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type MockOctokit = any; // Octokit mock shape varies per test — strict typing adds no value here
+
+interface ToolResult {
+  content: Array<{ type: string; text?: string }>;
+  isError?: boolean;
+}
 
 // --- Helper: build mock deps ---
 
@@ -197,7 +205,7 @@ describe('MCP tools via InMemoryTransport', () => {
       ({ client } = await setupClientServer(deps));
 
       const result = await client.callTool({ name: 'list_drafts', arguments: {} });
-      expect(getText(result as any)).toBe('No open draft issues found.');
+      expect(getText(result as ToolResult)).toBe('No open draft issues found.');
     });
 
     it('lists open draft issues with product labels', async () => {
@@ -213,12 +221,12 @@ describe('MCP tools via InMemoryTransport', () => {
               }),
             },
           },
-        } as any,
+        } as MockOctokit,
       });
       ({ client } = await setupClientServer(deps));
 
       const result = await client.callTool({ name: 'list_drafts', arguments: {} });
-      const text = getText(result as any);
+      const text = getText(result as ToolResult);
       expect(text).toContain('#1 — Draft 1 [product: my-app]');
       expect(text).toContain('#2 — Draft 2 [product: unknown]');
     });
@@ -246,13 +254,13 @@ describe('MCP tools via InMemoryTransport', () => {
               }),
             },
           },
-        } as any,
+        } as MockOctokit,
         createStore: () => mockStore,
       });
       ({ client } = await setupClientServer(deps));
 
       const result = await client.callTool({ name: 'get_draft', arguments: { issue_number: 1 } });
-      const text = getText(result as any);
+      const text = getText(result as ToolResult);
       expect(text).toContain('Subject: Weekly Update');
       expect(text).toContain('Hello testers!');
       expect(text).toContain('2');
@@ -269,13 +277,13 @@ describe('MCP tools via InMemoryTransport', () => {
               }),
             },
           },
-        } as any,
+        } as MockOctokit,
       });
       ({ client } = await setupClientServer(deps));
 
       const result = await client.callTool({ name: 'get_draft', arguments: { issue_number: 1 } });
-      expect((result as any).isError).toBe(true);
-      expect(getText(result as any)).toContain('Could not parse');
+      expect((result as ToolResult).isError).toBe(true);
+      expect(getText(result as ToolResult)).toContain('Could not parse');
     });
 
     it('shows (unable to fetch) when store throws', async () => {
@@ -293,7 +301,7 @@ describe('MCP tools via InMemoryTransport', () => {
               }),
             },
           },
-        } as any,
+        } as MockOctokit,
         createStore: () => ({
           getSubscribers: vi.fn().mockRejectedValue(new Error('DB down')),
           recordEmailSent: vi.fn(),
@@ -304,7 +312,7 @@ describe('MCP tools via InMemoryTransport', () => {
       ({ client } = await setupClientServer(deps));
 
       const result = await client.callTool({ name: 'get_draft', arguments: { issue_number: 1 } });
-      expect(getText(result as any)).toContain('unable to fetch');
+      expect(getText(result as ToolResult)).toContain('unable to fetch');
     });
   });
 
@@ -316,7 +324,7 @@ describe('MCP tools via InMemoryTransport', () => {
           rest: {
             issues: { update: mockUpdate },
           },
-        } as any,
+        } as MockOctokit,
       });
       ({ client } = await setupClientServer(deps));
 
@@ -324,7 +332,7 @@ describe('MCP tools via InMemoryTransport', () => {
         name: 'update_draft',
         arguments: { issue_number: 5, subject: 'New Subject', body: 'New Body' },
       });
-      expect(getText(result as any)).toContain('Updated issue #5');
+      expect(getText(result as ToolResult)).toContain('Updated issue #5');
       expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({
         owner: 'acme',
         repo: 'cryyer',
@@ -368,14 +376,14 @@ describe('MCP tools via InMemoryTransport', () => {
               createLabel: vi.fn().mockResolvedValue({}),
             },
           },
-        } as any,
+        } as MockOctokit,
         createStore: () => mockStore,
         createEmailProvider: () => mockEmailProvider,
       });
       ({ client } = await setupClientServer(deps));
 
       const result = await client.callTool({ name: 'send_draft', arguments: { issue_number: 10 } });
-      const text = getText(result as any);
+      const text = getText(result as ToolResult);
       expect(text).toContain('Sent 1 emails');
       expect(text).toContain('0 failed');
       expect(text).toContain('Issue #10 closed');
@@ -407,13 +415,13 @@ describe('MCP tools via InMemoryTransport', () => {
               }),
             },
           },
-        } as any,
+        } as MockOctokit,
       });
       ({ client } = await setupClientServer(deps));
 
       const result = await client.callTool({ name: 'send_draft', arguments: { issue_number: 10 } });
-      expect((result as any).isError).toBe(true);
-      expect(getText(result as any)).toContain('already been sent');
+      expect((result as ToolResult).isError).toBe(true);
+      expect(getText(result as ToolResult)).toContain('already been sent');
     });
 
     it('returns error when no product label matches', async () => {
@@ -431,13 +439,13 @@ describe('MCP tools via InMemoryTransport', () => {
               }),
             },
           },
-        } as any,
+        } as MockOctokit,
       });
       ({ client } = await setupClientServer(deps));
 
       const result = await client.callTool({ name: 'send_draft', arguments: { issue_number: 10 } });
-      expect((result as any).isError).toBe(true);
-      expect(getText(result as any)).toContain('No matching product label');
+      expect((result as ToolResult).isError).toBe(true);
+      expect(getText(result as ToolResult)).toContain('No matching product label');
     });
 
     it('returns error when issue body cannot be parsed', async () => {
@@ -455,13 +463,13 @@ describe('MCP tools via InMemoryTransport', () => {
               }),
             },
           },
-        } as any,
+        } as MockOctokit,
       });
       ({ client } = await setupClientServer(deps));
 
       const result = await client.callTool({ name: 'send_draft', arguments: { issue_number: 10 } });
-      expect((result as any).isError).toBe(true);
-      expect(getText(result as any)).toContain('Could not parse');
+      expect((result as ToolResult).isError).toBe(true);
+      expect(getText(result as ToolResult)).toContain('Could not parse');
     });
 
     it('returns message when no subscribers found', async () => {
@@ -479,7 +487,7 @@ describe('MCP tools via InMemoryTransport', () => {
               }),
             },
           },
-        } as any,
+        } as MockOctokit,
         createStore: () => ({
           getSubscribers: vi.fn().mockResolvedValue([]),
           recordEmailSent: vi.fn(),
@@ -490,7 +498,7 @@ describe('MCP tools via InMemoryTransport', () => {
       ({ client } = await setupClientServer(deps));
 
       const result = await client.callTool({ name: 'send_draft', arguments: { issue_number: 10 } });
-      expect(getText(result as any)).toContain('No active subscribers');
+      expect(getText(result as ToolResult)).toContain('No active subscribers');
     });
 
     it('uses compound subscriber key when audience label present', async () => {
@@ -514,7 +522,7 @@ describe('MCP tools via InMemoryTransport', () => {
               createLabel: vi.fn().mockResolvedValue({}),
             },
           },
-        } as any,
+        } as MockOctokit,
         createStore: () => ({
           getSubscribers: mockGetSubscribers,
           recordEmailSent: vi.fn(),
@@ -550,12 +558,12 @@ describe('MCP tools via InMemoryTransport', () => {
               update: mockUpdate,
             },
           },
-        } as any,
+        } as MockOctokit,
       });
       ({ client } = await setupClientServer(deps));
 
       const result = await client.callTool({ name: 'regenerate_draft', arguments: { issue_number: 3 } });
-      const text = getText(result as any);
+      const text = getText(result as ToolResult);
       expect(text).toContain('Regenerated draft');
       expect(text).toContain('Generated Subject');
       expect(text).toContain('Generated Body');
@@ -580,13 +588,13 @@ describe('MCP tools via InMemoryTransport', () => {
               }),
             },
           },
-        } as any,
+        } as MockOctokit,
       });
       ({ client } = await setupClientServer(deps));
 
       const result = await client.callTool({ name: 'regenerate_draft', arguments: { issue_number: 3 } });
-      expect((result as any).isError).toBe(true);
-      expect(getText(result as any)).toContain('No matching product label');
+      expect((result as ToolResult).isError).toBe(true);
+      expect(getText(result as ToolResult)).toContain('No matching product label');
     });
 
     it('passes audience to generateEmailDraft when audience label present', async () => {
@@ -606,7 +614,7 @@ describe('MCP tools via InMemoryTransport', () => {
               update: vi.fn().mockResolvedValue({}),
             },
           },
-        } as any,
+        } as MockOctokit,
         getProducts: () => [mockProduct({
           audiences: [
             { id: 'beta', voice: 'casual', emailSubjectTemplate: 'Beta Update' },
@@ -642,7 +650,7 @@ describe('MCP tools via InMemoryTransport', () => {
       ({ client } = await setupClientServer(deps));
 
       const result = await client.callTool({ name: 'list_products', arguments: {} });
-      const text = getText(result as any);
+      const text = getText(result as ToolResult);
       expect(text).toContain('my-app: My App (1 subscribers)');
     });
 
@@ -666,7 +674,7 @@ describe('MCP tools via InMemoryTransport', () => {
       ({ client } = await setupClientServer(deps));
 
       const result = await client.callTool({ name: 'list_products', arguments: {} });
-      const text = getText(result as any);
+      const text = getText(result as ToolResult);
       expect(text).toContain('my-app: My App');
       expect(text).toContain('audience: beta');
       expect(text).toContain('audience: enterprise');
@@ -677,7 +685,7 @@ describe('MCP tools via InMemoryTransport', () => {
       ({ client } = await setupClientServer(deps));
 
       const result = await client.callTool({ name: 'list_products', arguments: {} });
-      expect(getText(result as any)).toBe('No products configured.');
+      expect(getText(result as ToolResult)).toBe('No products configured.');
     });
 
     it('hides subscriber count when store throws', async () => {
@@ -692,7 +700,7 @@ describe('MCP tools via InMemoryTransport', () => {
       ({ client } = await setupClientServer(deps));
 
       const result = await client.callTool({ name: 'list_products', arguments: {} });
-      const text = getText(result as any);
+      const text = getText(result as ToolResult);
       expect(text).toContain('my-app: My App');
       expect(text).not.toContain('subscribers');
     });
@@ -718,7 +726,7 @@ describe('MCP tools via InMemoryTransport', () => {
         name: 'list_subscribers',
         arguments: { product_id: 'my-app' },
       });
-      const text = getText(result as any);
+      const text = getText(result as ToolResult);
       expect(text).toContain('2 subscribers');
       expect(text).toContain('alice@test.com (Alice)');
       expect(text).toContain('bob@test.com');
@@ -733,7 +741,7 @@ describe('MCP tools via InMemoryTransport', () => {
         name: 'list_subscribers',
         arguments: { product_id: 'my-app' },
       });
-      expect(getText(result as any)).toContain('No subscribers found');
+      expect(getText(result as ToolResult)).toContain('No subscribers found');
     });
 
     it('uses compound key with audience_id', async () => {
@@ -773,7 +781,7 @@ describe('MCP tools via InMemoryTransport', () => {
         name: 'add_subscriber',
         arguments: { product_id: 'my-app', email: 'new@test.com', name: 'New User' },
       });
-      expect(getText(result as any)).toContain('Added new@test.com to my-app');
+      expect(getText(result as ToolResult)).toContain('Added new@test.com to my-app');
       expect(mockAdd).toHaveBeenCalledWith('my-app', 'new@test.com', 'New User');
     });
 
@@ -814,7 +822,7 @@ describe('MCP tools via InMemoryTransport', () => {
         name: 'remove_subscriber',
         arguments: { product_id: 'my-app', email: 'old@test.com' },
       });
-      expect(getText(result as any)).toContain('Removed old@test.com from my-app');
+      expect(getText(result as ToolResult)).toContain('Removed old@test.com from my-app');
       expect(mockRemove).toHaveBeenCalledWith('my-app', 'old@test.com');
     });
 
@@ -846,7 +854,7 @@ describe('MCP tools via InMemoryTransport', () => {
       const result = await client.getPrompt({ name: 'review_drafts' });
       expect(result.messages).toHaveLength(1);
       expect(result.messages[0].role).toBe('user');
-      const text = (result.messages[0].content as { type: string; text: string }).text;
+      const text = (result.messages[0].content as unknown as { type: string; text: string }).text;
       expect(text).toContain('list_drafts');
       expect(text).toContain('get_draft');
       expect(text).toContain('update_draft');
