@@ -4,6 +4,14 @@ All notable changes to Cryyer are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.14](https://github.com/atriumn/cryyer/compare/v0.1.13...v0.1.14) (2026-03-04)
+
+
+### Bug Fixes
+
+* handle deep headings and * list items in email markdown converter ([cc82d5b](https://github.com/atriumn/cryyer/commit/cc82d5ba7080351911df4b18cd81538eca2db02f))
+* handle deep headings and * list items in email rendering ([ea6c0e7](https://github.com/atriumn/cryyer/commit/ea6c0e720caa18cd44661e5f4226c55a8bcbe311))
+
 ## [0.1.13](https://github.com/atriumn/cryyer/compare/v0.1.12...v0.1.13) (2026-03-04)
 
 
