@@ -17,11 +17,20 @@ jobs:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
 
-      - name: Extract version from PR title
+      - name: Extract version and compute since
         id: version
         run: |
           VERSION=$(echo "${{ github.event.pull_request.title }}" | grep -oP '\d+\.\d+\.\d+' || echo "0.0.0")
           echo "value=$VERSION" >> "$GITHUB_OUTPUT"
+
+          # Find the latest published tag on main — this is the "since" boundary
+          LATEST_TAG=$(git tag --sort=-v:refname | head -1)
+          if [ -n "$LATEST_TAG" ]; then
+            SINCE=$(git log -1 --format=%aI "$LATEST_TAG")
+          else
+            SINCE=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)
+          fi
+          echo "since=$SINCE" >> "$GITHUB_OUTPUT"
 
       - name: Generate draft
         uses: atriumn/cryyer/.github/actions/draft-file@v0
@@ -29,6 +38,7 @@ jobs:
         with:
           product: cryyer
           version: ${{ steps.version.outputs.value }}
+          since: ${{ steps.version.outputs.since }}
           llm-api-key: ${{ secrets.GEMINI_API_KEY }}
           llm-provider: gemini
           llm-model: gemini-3-flash-preview
