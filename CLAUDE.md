@@ -22,11 +22,11 @@ Cryyer sends automated email updates to subscribers, with per-product voice powe
 
 ### Two pipelines
 
-**Release pipeline** (fully automated, no manual review):
+**Release pipeline** (manual approval before send):
 1. Push to `main` → release-please opens/updates a version-bump PR
 2. `draft-email.yml` generates an email draft file (`drafts/vX.Y.Z.md`) and commits it to the PR branch
 3. Merge the release-please PR → tag pushed → `release.yml` publishes to npm → GitHub Release created
-4. `send-email.yml` fires on release publish, reads the draft file, sends emails to subscribers
+4. `send-email.yml` fires on release publish but **pauses for approval** (requires `production` environment reviewer) — review the draft, then approve to send
 
 **Weekly pipeline** (manual review via GitHub issues):
 1. `weekly-draft.yml` runs on cron (Monday 1pm UTC) or manual trigger — gathers GitHub activity, generates LLM drafts, creates GitHub issues with `draft` label for human review
@@ -41,7 +41,7 @@ Six distinct entry points, each compiled from `src/` to `dist/`:
 - **`index.ts`** — Direct orchestration: gather activity, draft per audience, query subscribers, send emails in one run.
 - **`draft.ts`** — Used by `weekly-draft.yml` workflow. Gathers activity, generates drafts via LLM, creates GitHub issues with `draft` + product-id labels. For multi-audience products, creates one issue per audience with `audience:{id}` labels.
 - **`send-on-close.ts`** — Used by `send-update.yml` workflow. Triggered on issue close, parses the draft issue body (`**Subject:** ...\n\n---\n\n<body>`), queries subscriber store (audience-aware via `audience:*` label), sends via configured email provider, posts delivery stats as issue comment.
-- **`draft-file.ts`** — CLI command `cryyer draft-file`. Gathers activity, generates LLM draft, writes a YAML front matter markdown file. Designed for release-triggered pipelines where the draft is committed to a PR branch. Accepts `--product`, `--output`, `--since`, `--repo`, `--audience` flags.
+- **`draft-file.ts`** — CLI command `cryyer draft-file`. Gathers activity, generates LLM draft, writes a YAML front matter markdown file. Designed for release-triggered pipelines where the draft is committed to a PR branch. Accepts `--product`, `--output`, `--since`, `--repo`, `--audience`, `--version` flags.
 - **`send-file.ts`** — CLI command `cryyer send-file`. Reads a YAML front matter draft file (`---\nsubject: ...\n---\n\n<body>`), loads product config, fetches subscribers, sends emails. Accepts `<path>`, `--product`, `--dry-run`, `--audience` flags. Designed for post-release email delivery.
 - **`mcp.ts`** — MCP server for Claude Desktop. Exposes 9 tools (list/get/update/send/regenerate drafts, list products, list/add/remove subscribers) and 1 prompt (`review_drafts`). Uses stdio transport. Run via `node dist/mcp.js` or `npx cryyer-mcp`.
 

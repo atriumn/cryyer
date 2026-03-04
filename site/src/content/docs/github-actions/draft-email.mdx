@@ -1,0 +1,49 @@
+---
+title: Draft Email
+description: Generate email drafts on release-please PRs.
+---
+
+The `draft-email.yml` workflow generates an email draft file whenever a release-please PR is opened or updated. The draft is committed directly to the PR branch so you can review it before merging.
+
+## What it does
+
+1. Detects that the PR is from release-please (branch starts with `release-please--`)
+2. Extracts the target version from the PR title
+3. Computes the `--since` boundary from the latest published git tag
+4. Runs `cryyer draft-file` via the [draft-file composite action](/github-actions/composite-actions)
+5. Commits the generated `drafts/vX.Y.Z.md` file to the PR branch
+
+## Draft file format
+
+The generated file uses YAML front matter:
+
+```markdown
+---
+subject: "Your App v1.2.0 — What's New"
+---
+
+Hi everyone,
+
+Here's what's new in v1.2.0...
+```
+
+You can edit this file directly in the PR before merging.
+
+## Required secrets
+
+| Secret | Description |
+|---|---|
+| `GEMINI_API_KEY` (or other LLM key) | API key for your configured LLM provider |
+
+`GITHUB_TOKEN` is provided automatically by GitHub Actions.
+
+## Configuration
+
+The workflow references the `draft-file` composite action. Key inputs:
+
+- `product` — your product ID (must match a file in `products/`)
+- `version` — extracted from the release-please PR title
+- `since` — computed from the latest git tag
+- `llm-provider` / `llm-model` — which LLM to use for draft generation
+
+See [Composite Actions](/github-actions/composite-actions) for the full input reference.

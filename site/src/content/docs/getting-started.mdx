@@ -72,10 +72,15 @@ node dist/send-on-close.js # send emails when a draft issue is closed
 
 ## How it works
 
-Cryyer follows a two-stage pipeline:
+Cryyer supports two automation pipelines:
 
-1. **Draft** (cron or on-demand) — gathers GitHub activity (merged PRs, releases, notable commits), generates an email draft via LLM, and creates a GitHub issue for human review. If your product has multiple [audiences](/configuration/product-config#audiences), each audience gets its own draft with a tailored voice.
-2. **Send on Close** — when a draft issue is closed (approved), emails are sent to subscribers via [Resend](https://resend.com) or [Gmail](/configuration/environment#email-provider).
+**Release pipeline** — sends emails when you publish a release. A draft file is auto-generated on each release PR, you review it, merge to publish, then approve the send in GitHub Actions. Best for release notes.
+
+**Weekly pipeline** — sends digest emails on a schedule. Drafts are created as GitHub issues for review. Close the issue to approve and send. Best for recurring updates.
+
+Both pipelines gather GitHub activity (merged PRs, releases, notable commits), generate email drafts via your chosen LLM, and send through [Resend](https://resend.com) or [Gmail](/configuration/environment#email-provider). If your product has multiple [audiences](/configuration/product-config#audiences), each audience gets its own draft with a tailored voice.
+
+See [GitHub Actions](/github-actions) for setup details.
 
 ## Next steps
 

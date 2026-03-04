@@ -62,8 +62,11 @@ export default defineConfig({
           label: "GitHub Actions",
           items: [
             { label: "Overview", slug: "github-actions" },
+            { label: "Draft Email", slug: "github-actions/draft-email" },
+            { label: "Send Email", slug: "github-actions/send-email" },
             { label: "Weekly Draft", slug: "github-actions/weekly-draft" },
             { label: "Send Update", slug: "github-actions/send-update" },
+            { label: "Composite Actions", slug: "github-actions/composite-actions" },
             { label: "CI", slug: "github-actions/ci" },
           ],
         },

@@ -3,19 +3,45 @@ title: GitHub Actions
 description: Automate Cryyer with GitHub Actions workflows.
 ---
 
-Cryyer ships with three GitHub Actions workflows for full automation:
+Cryyer provides two automation pipelines, each suited to different workflows.
+
+## Release pipeline (file-based)
+
+Best for projects that send emails on each release. Uses draft files committed to the repo.
+
+| Workflow | Trigger | Purpose |
+|---|---|---|
+| [Draft Email](/github-actions/draft-email) | Release-please PR opened/updated | Generate a draft file and commit it to the PR |
+| [Send Email](/github-actions/send-email) | GitHub Release published | Send emails to subscribers (requires manual approval) |
+
+**Flow:**
+
+1. Push to `main` → release-please opens/updates a version-bump PR
+2. `draft-email.yml` generates `drafts/vX.Y.Z.md` and commits it to the PR branch
+3. You can review and edit the draft file directly in the PR
+4. Merge the PR → tag pushed → npm publish → GitHub Release created
+5. `send-email.yml` fires but **pauses for approval** — you review the draft in the Actions UI, then approve to send
+
+The release pipeline uses the [composite actions](/github-actions/composite-actions) (`draft-file` and `send-file`) under the hood.
+
+## Weekly pipeline (issue-based)
+
+Best for recurring digest emails on a schedule. Uses GitHub issues for review.
 
 | Workflow | Trigger | Purpose |
 |---|---|---|
 | [Weekly Draft](/github-actions/weekly-draft) | Cron (Monday 1pm UTC) | Gather activity, create draft issues |
 | [Send Update](/github-actions/send-update) | Issue closed with `draft` label | Send emails to subscribers |
+
+**Flow:**
+
+1. Monday: `weekly-draft.yml` gathers GitHub activity, generates LLM drafts, creates issues with the `draft` label
+2. You review and edit the draft issues in GitHub
+3. Close the issue to approve
+4. `send-update.yml` sends emails and posts delivery stats as a comment
+
+## Shared workflows
+
+| Workflow | Trigger | Purpose |
+|---|---|---|
 | [CI](/github-actions/ci) | Push/PR to main | Lint, typecheck, test |
-
-## The two-stage pipeline
-
-The weekly draft and send update workflows together form Cryyer's core automation:
-
-1. **Monday**: `weekly-draft.yml` runs, gathers GitHub activity, generates email drafts via LLM, and creates GitHub issues with the `draft` label.
-2. **Review**: You review the draft issues — edit the content directly in GitHub if needed.
-3. **Approve**: Close the issue to approve the draft.
-4. **Send**: `send-update.yml` fires on issue close, sends emails to all subscribers, and posts delivery stats as an issue comment.

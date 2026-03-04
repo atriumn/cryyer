@@ -1,0 +1,80 @@
+---
+title: Composite Actions
+description: Reusable actions for draft generation and email sending.
+---
+
+Cryyer provides two reusable composite actions that wrap the `draft-file` and `send-file` CLI commands. Consumer repos reference these directly in their workflows.
+
+## `atriumn/cryyer/.github/actions/draft-file@v0`
+
+Gathers GitHub activity and generates an LLM-drafted email as a YAML front matter markdown file.
+
+### Inputs
+
+| Input | Required | Default | Description |
+|---|---|---|---|
+| `product` | yes | — | Product ID (matches `products/*.yaml`) |
+| `version` | yes | — | Release version (used in output path and LLM prompt) |
+| `llm-api-key` | yes | — | API key for the LLM provider |
+| `since` | no | auto (previous tag) | ISO date for activity window start |
+| `repo` | no | — | Override repo from product config |
+| `output` | no | `drafts/v{version}.md` | Output file path |
+| `llm-provider` | no | `anthropic` | LLM provider (`anthropic`, `openai`, `gemini`) |
+| `llm-model` | no | — | Override default LLM model |
+| `audience` | no | — | Audience ID for multi-audience products |
+| `github-token` | no | `github.token` | GitHub token for API access |
+| `cryyer-version` | no | `latest` | Cryyer npm package version |
+
+### Outputs
+
+| Output | Description |
+|---|---|
+| `draft-path` | Path to the generated draft file |
+
+### Example
+
+```yaml
+- uses: atriumn/cryyer/.github/actions/draft-file@v0
+  with:
+    product: my-app
+    version: 1.2.0
+    llm-api-key: ${{ secrets.GEMINI_API_KEY }}
+    llm-provider: gemini
+```
+
+## `atriumn/cryyer/.github/actions/send-file@v0`
+
+Reads a YAML front matter draft file, loads product config, fetches subscribers, and sends emails.
+
+### Inputs
+
+| Input | Required | Default | Description |
+|---|---|---|---|
+| `product` | yes | — | Product ID |
+| `draft-path` | yes | — | Path to the draft markdown file |
+| `from-email` | yes | — | Sender email address |
+| `email-provider` | no | `resend` | Email provider (`resend`, `gmail`) |
+| `email-api-key` | no | — | Resend API key |
+| `gmail-refresh-token` | no | — | Gmail OAuth refresh token |
+| `from-name` | no | `Cryyer Updates` | Sender display name |
+| `subscriber-store` | no | `json` | Subscriber store (`json`, `supabase`, `google-sheets`) |
+| `supabase-url` | no | — | Supabase project URL |
+| `supabase-service-key` | no | — | Supabase service role key |
+| `google-sheets-spreadsheet-id` | no | — | Google Sheets spreadsheet ID |
+| `google-service-account-email` | no | — | Google service account email |
+| `google-private-key` | no | — | Google service account private key |
+| `audience` | no | — | Audience ID for multi-audience products |
+| `dry-run` | no | `false` | Preview without sending |
+| `cryyer-version` | no | `latest` | Cryyer npm package version |
+
+### Example
+
+```yaml
+- uses: atriumn/cryyer/.github/actions/send-file@v0
+  with:
+    product: my-app
+    draft-path: drafts/v1.2.0.md
+    from-email: updates@yourdomain.com
+    email-api-key: ${{ secrets.RESEND_API_KEY }}
+    subscriber-store: json
+```
