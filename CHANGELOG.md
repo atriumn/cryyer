@@ -4,6 +4,20 @@ All notable changes to Cryyer are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.13](https://github.com/atriumn/cryyer/compare/v0.1.12...v0.1.13) (2026-03-04)
+
+
+### Features
+
+* require manual approval before sending release emails ([f7d2104](https://github.com/atriumn/cryyer/commit/f7d210412da1411618d930f62390b0fb6158ce46))
+* wire multi-audience into release pipeline ([0c9ea11](https://github.com/atriumn/cryyer/commit/0c9ea113573f8b977d26452f17d955ffa87442f9))
+* wire multi-audience support into release pipeline ([2f56783](https://github.com/atriumn/cryyer/commit/2f567832f16c7c72515714e7f39c9eacaa2a1464))
+
+
+### Bug Fixes
+
+* remove weekly language from LLM prompt and product config ([d5277ca](https://github.com/atriumn/cryyer/commit/d5277ca23acea3caca4f33eceacc25068f1622df))
+
 ## [0.1.12](https://github.com/atriumn/cryyer/compare/v0.1.11...v0.1.12) (2026-03-04)
 
 
