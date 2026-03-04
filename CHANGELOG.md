@@ -4,6 +4,20 @@ All notable changes to Cryyer are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.12](https://github.com/atriumn/cryyer/compare/v0.1.11...v0.1.12) (2026-03-04)
+
+
+### Features
+
+* add multi-audience support and rename weekly functions ([961c081](https://github.com/atriumn/cryyer/commit/961c081d83d46a464697f4003920e37c25910696))
+* pass target version to LLM prompt in draft-file pipeline ([1b21cd7](https://github.com/atriumn/cryyer/commit/1b21cd71cfbd17cb2fea5bcc1bfe99a9b5e9adf7))
+
+
+### Bug Fixes
+
+* compute --since from latest tag in draft-email workflow ([036f92e](https://github.com/atriumn/cryyer/commit/036f92e41f957d022a84551a9813fe1dc9bc57a6))
+* resolve lint errors in mcp and send test files ([604faff](https://github.com/atriumn/cryyer/commit/604faff9bf1c13965b7a0d02a8d8aaeca0d49fa4))
+
 ## [0.1.11](https://github.com/atriumn/cryyer/compare/v0.1.10...v0.1.11) (2026-03-03)
 
 
