@@ -3,7 +3,8 @@
     "email": "jrojers@gmail.com",
     "name": "Jeff",
     "productIds": [
-      "cryyer"
+      "cryyer:technical",
+      "cryyer:general"
     ]
   }
 ]

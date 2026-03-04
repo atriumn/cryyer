@@ -32,21 +32,34 @@ jobs:
           fi
           echo "since=$SINCE" >> "$GITHUB_OUTPUT"
 
-      - name: Generate draft
-        uses: atriumn/cryyer/.github/actions/draft-file@v0
-        id: draft
-        with:
-          product: cryyer
-          version: ${{ steps.version.outputs.value }}
-          since: ${{ steps.version.outputs.since }}
-          llm-api-key: ${{ secrets.GEMINI_API_KEY }}
-          llm-provider: gemini
-          llm-model: gemini-3-flash-preview
+      - name: Parse audience IDs
+        id: audiences
+        run: |
+          AUDIENCES=$(grep -A1 '^\s*- id:' products/cryyer.yaml | grep 'id:' | awk '{print $3}' | tr '\n' ' ')
+          echo "list=$AUDIENCES" >> "$GITHUB_OUTPUT"
 
-      - name: Commit draft
+      - name: Generate drafts per audience
+        run: |
+          for AUDIENCE in ${{ steps.audiences.outputs.list }}; do
+            echo "::group::Drafting for audience: $AUDIENCE"
+            npx cryyer@latest draft-file \
+              --product cryyer \
+              --version "${{ steps.version.outputs.value }}" \
+              --since "${{ steps.version.outputs.since }}" \
+              --audience "$AUDIENCE" \
+              --output "drafts/v${{ steps.version.outputs.value }}-${AUDIENCE}.md"
+            echo "::endgroup::"
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LLM_PROVIDER: gemini
+          LLM_MODEL: gemini-3-flash-preview
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+      - name: Commit drafts
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add ${{ steps.draft.outputs.draft-path }}
-          git diff --cached --quiet || git commit -m "chore: draft email for v${{ steps.version.outputs.value }}"
+          git add drafts/
+          git diff --cached --quiet || git commit -m "chore: draft emails for v${{ steps.version.outputs.value }}"
           git push
