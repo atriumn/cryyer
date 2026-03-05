@@ -1,5 +1,5 @@
 {
-  "name": "cryyer",
+  "name": "@atriumn/cryyer",
   "version": "0.1.14",
   "description": "Automated product update emails with per-product voice powered by LLM drafts",
   "license": "MIT",

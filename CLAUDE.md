@@ -43,7 +43,7 @@ Six distinct entry points, each compiled from `src/` to `dist/`:
 - **`send-on-close.ts`** — Used by `send-update.yml` workflow. Triggered on issue close, parses the draft issue body (`**Subject:** ...\n\n---\n\n<body>`), queries subscriber store (audience-aware via `audience:*` label), sends via configured email provider, posts delivery stats as issue comment.
 - **`draft-file.ts`** — CLI command `cryyer draft-file`. Gathers activity, generates LLM draft, writes a YAML front matter markdown file. Designed for release-triggered pipelines where the draft is committed to a PR branch. Accepts `--product`, `--output`, `--since`, `--repo`, `--audience`, `--version` flags.
 - **`send-file.ts`** — CLI command `cryyer send-file`. Reads a YAML front matter draft file (`---\nsubject: ...\n---\n\n<body>`), loads product config, fetches subscribers, sends emails. Accepts `<path>`, `--product`, `--dry-run`, `--audience` flags. Designed for post-release email delivery.
-- **`mcp.ts`** — MCP server for Claude Desktop. Exposes 9 tools (list/get/update/send/regenerate drafts, list products, list/add/remove subscribers) and 1 prompt (`review_drafts`). Uses stdio transport. Run via `node dist/mcp.js` or `npx cryyer-mcp`.
+- **`mcp.ts`** — MCP server for Claude Desktop. Exposes 9 tools (list/get/update/send/regenerate drafts, list products, list/add/remove subscribers) and 1 prompt (`review_drafts`). Uses stdio transport. Run via `node dist/mcp.js` or `npx @atriumn/cryyer-mcp`.
 
 Key modules:
 

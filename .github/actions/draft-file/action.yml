@@ -91,7 +91,7 @@ runs:
         if [ -n "${{ inputs.version }}" ]; then
           VERSION_FLAG="--version ${{ inputs.version }}"
         fi
-        npx cryyer@${{ inputs.cryyer-version }} draft-file \
+        npx @atriumn/cryyer@${{ inputs.cryyer-version }} draft-file \
           --product ${{ inputs.product }} \
           --output "$OUTPUT" \
           --since "$SINCE" \

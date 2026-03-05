@@ -42,7 +42,7 @@ jobs:
         run: |
           for AUDIENCE in ${{ steps.audiences.outputs.list }}; do
             echo "::group::Drafting for audience: $AUDIENCE"
-            npx cryyer@latest draft-file \
+            npx @atriumn/cryyer@latest draft-file \
               --product cryyer \
               --version "${{ steps.version.outputs.value }}" \
               --since "${{ steps.version.outputs.since }}" \

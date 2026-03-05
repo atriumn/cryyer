@@ -10,7 +10,7 @@ Cryyer sends automated email updates to your users, with per-product voice power
 Run this inside your project repo:
 
 ```bash
-npx cryyer init
+npx @atriumn/cryyer init
 ```
 
 The interactive setup walks you through product name, GitHub repo, voice/tone, LLM provider, subscriber store, and API keys — then creates everything you need:
@@ -24,28 +24,28 @@ The interactive setup walks you through product name, GitHub repo, voice/tone, L
 Then validate and preview:
 
 ```bash
-npx cryyer check         # validate your setup
-npx cryyer run --dry-run  # preview a draft email
+npx @atriumn/cryyer check         # validate your setup
+npx @atriumn/cryyer run --dry-run  # preview a draft email
 ```
 
 When you're ready to run for real:
 
 ```bash
-npx cryyer run            # full pipeline: gather → draft → send
+npx @atriumn/cryyer run            # full pipeline: gather → draft → send
 ```
 
 Or run the two stages separately:
 
 ```bash
-npx cryyer draft          # generate drafts → create GitHub issues
-npx cryyer send           # send emails when a draft issue is closed
+npx @atriumn/cryyer draft          # generate drafts → create GitHub issues
+npx @atriumn/cryyer send           # send emails when a draft issue is closed
 ```
 
 For release-triggered emails, use the file-based commands:
 
 ```bash
-npx cryyer draft-file --product my-app --version 1.2.0  # generate a draft file
-npx cryyer send-file drafts/v1.2.0.md --product my-app  # send from draft file
+npx @atriumn/cryyer draft-file --product my-app --version 1.2.0  # generate a draft file
+npx @atriumn/cryyer send-file drafts/v1.2.0.md --product my-app  # send from draft file
 ```
 
 You can also create `products/*.yaml` files manually — see [Product Configuration](/configuration/product-config) for all fields, and [Environment Variables](/configuration/environment) for all env vars.
