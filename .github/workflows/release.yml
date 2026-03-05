@@ -2,7 +2,7 @@ name: Release
 
 on:
   push:
-    tags: ['v*']
+    tags: ['v*', 'cryyer-v*']
 
 jobs:
   typecheck:
@@ -50,9 +50,11 @@ jobs:
 
       - name: Verify tag matches package.json version
         run: |
-          PKG_VERSION="v$(node -p "require('./package.json').version")"
-          if [ "$PKG_VERSION" != "$GITHUB_REF_NAME" ]; then
-            echo "Tag $GITHUB_REF_NAME does not match package.json version $PKG_VERSION"
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          # Strip component prefix (e.g. "cryyer-v0.2.0" → "0.2.0")
+          TAG_VERSION=$(echo "$GITHUB_REF_NAME" | sed 's/.*v//')
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "Tag $GITHUB_REF_NAME (version $TAG_VERSION) does not match package.json version $PKG_VERSION"
             exit 1
           fi
 
@@ -60,6 +62,7 @@ jobs:
 
       - name: Update major version tag
         run: |
-          MAJOR=$(echo "$GITHUB_REF_NAME" | grep -oP '^v\d+')
+          TAG_VERSION=$(echo "$GITHUB_REF_NAME" | sed 's/.*v/v/')
+          MAJOR=$(echo "$TAG_VERSION" | grep -oP '^v\d+')
           git tag -f "$MAJOR" "$GITHUB_REF_NAME"
           git push -f origin "$MAJOR"
