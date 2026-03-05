@@ -4,6 +4,14 @@ All notable changes to Cryyer are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.2.2](https://github.com/atriumn/cryyer/compare/cryyer-v0.2.1...cryyer-v0.2.2) (2026-03-05)
+
+
+### Bug Fixes
+
+* release workflow tag filter for scoped package ([24ce24f](https://github.com/atriumn/cryyer/commit/24ce24f7cfb5b8eabbdbdad3eb17c9ee081ff262))
+* release workflow tag filter for scoped package ([df0b3d8](https://github.com/atriumn/cryyer/commit/df0b3d8cdd9014ef1437b3d57cc0542ccddd70fb))
+
 ## [0.2.1](https://github.com/atriumn/cryyer/compare/cryyer-v0.2.0...cryyer-v0.2.1) (2026-03-05)
 
 
