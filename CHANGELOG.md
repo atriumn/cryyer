@@ -4,6 +4,14 @@ All notable changes to Cryyer are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.2.1](https://github.com/atriumn/cryyer/compare/cryyer-v0.2.0...cryyer-v0.2.1) (2026-03-05)
+
+
+### Bug Fixes
+
+* build from source and fix version extraction in send-email workflow ([ef61329](https://github.com/atriumn/cryyer/commit/ef61329353fad663dde3c4c2cf8a5b183e411c43))
+* send-email workflow — build from source, fix version parsing ([8eae5dd](https://github.com/atriumn/cryyer/commit/8eae5dd1c47339c3986ea914b34dd411ed980d9d))
+
 ## [0.2.0](https://github.com/atriumn/cryyer/compare/cryyer-v0.1.14...cryyer-v0.2.0) (2026-03-05)
 
 
