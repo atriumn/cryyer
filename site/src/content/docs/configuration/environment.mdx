@@ -8,7 +8,7 @@ description: Complete reference for all Cryyer environment variables.
 | Variable | Required | Description |
 |---|---|---|
 | `GITHUB_TOKEN` | Yes | GitHub personal access token |
-| `RESEND_API_KEY` | Yes | Resend API key for sending emails |
+| `RESEND_API_KEY` | Conditional | Resend API key (required when `EMAIL_PROVIDER=resend` or unset) |
 | `FROM_EMAIL` | Yes | Default sender email address |
 | `FROM_NAME` | No | Default sender name |
 | `CRYYER_REPO` | Workflows | `owner/repo` for draft issue creation |
@@ -29,6 +29,14 @@ description: Complete reference for all Cryyer environment variables.
 Default models: Anthropic `claude-sonnet-4-5-20250514`, OpenAI `gpt-4o`, Gemini `gemini-1.5-flash`.
 
 See [LLM Providers](/llm-providers) for setup details.
+
+## Email Provider
+
+| Variable | Default | Description |
+|---|---|---|
+| `EMAIL_PROVIDER` | `resend` | `resend` or `gmail` |
+| `RESEND_API_KEY` | — | Required when `EMAIL_PROVIDER=resend` (or unset) |
+| `GMAIL_REFRESH_TOKEN` | — | Required when `EMAIL_PROVIDER=gmail`; set via `cryyer auth gmail` |
 
 ## Subscriber Store
 

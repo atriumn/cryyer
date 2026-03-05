@@ -4,7 +4,7 @@ id: example-product
 name: Example Product
 voice: "Friendly and enthusiastic, with a focus on developer experience"
 repo: "owner/repo"
-emailSubjectTemplate: "{{weekOf}} Weekly Update — Example Product"
+emailSubjectTemplate: "{{weekOf}} Weekly Update — Example Product"  # or "Example Product v{{version}}" for release emails
 
 # Optional: filter activity for monorepo products
 # filter:
@@ -17,8 +17,8 @@ emailSubjectTemplate: "{{weekOf}} Weekly Update — Example Product"
 # audiences:
 #   - id: beta
 #     voice: "Casual and enthusiastic, aimed at early adopters"
-#     emailSubjectTemplate: "{{weekOf}} Beta Update — Example Product"
+#     emailSubjectTemplate: "{{weekOf}} Beta Update — Example Product"  # or "Example Product v{{version}} Beta"
 #   - id: enterprise
 #     voice: "Professional and concise, focused on stability and compliance"
-#     emailSubjectTemplate: "{{weekOf}} Release Notes — Example Product"
+#     emailSubjectTemplate: "{{weekOf}} Release Notes — Example Product"  # or "Example Product v{{version}}"
 #     from_name: "Example Product Team"

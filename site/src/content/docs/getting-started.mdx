@@ -5,70 +5,50 @@ description: Get Cryyer up and running in 5 minutes.
 
 Cryyer sends automated email updates to your users, with per-product voice powered by LLM-drafted content.
 
-## Install
+## Quickstart
+
+Run this inside your project repo:
 
 ```bash
-npm install
+npx cryyer init
 ```
 
-## 1. Create a product config
+The interactive setup walks you through product name, GitHub repo, voice/tone, LLM provider, subscriber store, and API keys — then creates everything you need:
 
-Create a YAML file in `products/` (e.g. `products/my-app.yaml`):
+- `products/*.yaml` — product configuration
+- `.env` — API keys and settings
+- `subscribers.json` — subscriber list (when using JSON store)
+- `.gitignore` — ignores `.env` and data files
+- `.github/workflows/` — release pipeline workflows (optional)
 
-```yaml
-id: my-app
-name: My App
-repo: owner/repo
-emailSubjectTemplate: "My App — Week of {{weekOf}}"
-voice: |
-  You are writing a weekly update email for My App beta testers.
-  Be concise, friendly, and focus on what matters to users.
-```
-
-See [Product Configuration](/configuration/product-config) for all fields.
-
-## 2. Add subscribers
-
-Choose a [subscriber store](/subscriber-stores) — the simplest for local dev is JSON:
+Then validate and preview:
 
 ```bash
-export SUBSCRIBER_STORE=json
+npx cryyer check         # validate your setup
+npx cryyer run --dry-run  # preview a draft email
 ```
 
-Create `subscribers.json`:
-
-```json
-[
-  { "email": "alice@example.com", "name": "Alice", "productIds": ["my-app"] },
-  { "email": "bob@example.com", "productIds": ["my-app"] }
-]
-```
-
-## 3. Set environment variables
+When you're ready to run for real:
 
 ```bash
-export GITHUB_TOKEN=ghp_...
-export RESEND_API_KEY=re_...
-export FROM_EMAIL=updates@yourdomain.com
-export LLM_PROVIDER=anthropic          # or openai, gemini
-export ANTHROPIC_API_KEY=sk-ant-...    # key for your chosen provider
-```
-
-See [Environment Variables](/configuration/environment) for the full reference.
-
-## 4. Run
-
-```bash
-npm run build
-npm start              # full pipeline: gather → draft → send
+npx cryyer run            # full pipeline: gather → draft → send
 ```
 
 Or run the two stages separately:
 
 ```bash
-node dist/draft.js         # generate drafts → create GitHub issues
-node dist/send-on-close.js # send emails when a draft issue is closed
+npx cryyer draft          # generate drafts → create GitHub issues
+npx cryyer send           # send emails when a draft issue is closed
 ```
+
+For release-triggered emails, use the file-based commands:
+
+```bash
+npx cryyer draft-file --product my-app --version 1.2.0  # generate a draft file
+npx cryyer send-file drafts/v1.2.0.md --product my-app  # send from draft file
+```
+
+You can also create `products/*.yaml` files manually — see [Product Configuration](/configuration/product-config) for all fields, and [Environment Variables](/configuration/environment) for all env vars.
 
 ## How it works
 

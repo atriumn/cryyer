@@ -40,7 +40,7 @@ EOF
 ## What it does
 
 1. Extracts the version from the release tag (e.g. `v1.2.0` → `1.2.0`)
-2. Reads `drafts/v1.2.0.md` from the repo
+2. Reads `drafts/v1.2.0.md` from the repo (or `drafts/v1.2.0-{audience}.md` for multi-audience products)
 3. Sends emails via the [send-file composite action](/github-actions/composite-actions)
 
 ## Required secrets

@@ -29,7 +29,7 @@ Cryyer requires several sensitive credentials:
 
 - **GitHub Token**: Needed to read repositories and create draft issues. Use a personal access token with minimal required scopes (`repo`, `issues`).
 - **LLM API Keys**: Protect these as you would any authentication credential.
-- **Resend API Key**: Used to send emails. Rotate if compromised.
+- **Resend API Key / Gmail Refresh Token**: Used to send emails. Rotate if compromised.
 - **Supabase/Google Cloud credentials**: Store securely; never commit to version control.
 
 **Best practices**:
@@ -42,7 +42,7 @@ Cryyer requires several sensitive credentials:
 
 ### Email Privacy
 
-Emails are sent via [Resend](https://resend.com), a reputable email delivery service. Subscriber data is stored in your chosen backend (Supabase, JSON file, or Google Sheets).
+Emails are sent via [Resend](https://resend.com) or Gmail, depending on your `EMAIL_PROVIDER` setting. Subscriber data is stored in your chosen backend (Supabase, JSON file, or Google Sheets).
 
 - Ensure your subscriber store is not publicly accessible
 - Use strong authentication on shared backends (Supabase, Google Sheets)
@@ -54,7 +54,7 @@ Cryyer depends on several third-party services and libraries:
 
 - **GitHub**: Repository data and issue creation
 - **LLM Providers**: Anthropic, OpenAI, Google (for draft generation)
-- **Resend**: Email delivery
+- **Resend / Gmail**: Email delivery
 - **Supabase/Google Sheets**: Subscriber storage
 
 Review their security policies before use.

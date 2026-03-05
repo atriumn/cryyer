@@ -61,7 +61,7 @@ pnpm run mcp  # Runs node dist/mcp.js
 ### Key Conventions
 
 - **Adapter pattern**: Pluggable LLM providers (Anthropic, OpenAI, Gemini) and subscriber stores (Supabase, JSON, Google Sheets)
-- **Two-stage pipeline**: Weekly draft generation → send on issue close
+- **Two pipelines**: Release pipeline (file-based drafts with approval gate) and weekly pipeline (issue-based drafts, send on close)
 - **Shared types**: All shared TypeScript types live in `src/types.ts`
 - **Product configuration**: YAML-based product configs in `products/` using `repo` field (not deprecated `githubRepo`)
 - **Bot filtering**: Automated commits (dependabot, renovate, github-actions) are filtered out in activity gathering
@@ -116,13 +116,15 @@ The CI workflow (`ci.yml`) runs on all PRs to main and must pass before merge.
 
 ### Entry Points
 
-Cryyer has four distinct entry points, each compiled from `src/` to `dist/`:
+Cryyer has six distinct entry points, each compiled from `src/` to `dist/`:
 
 | File | Purpose |
 |---|---|
 | `index.ts` | Direct orchestration: gather → draft → send in one run |
 | `draft.ts` | Used by `weekly-draft.yml` workflow; gathers activity and creates draft issues |
 | `send-on-close.ts` | Used by `send-update.yml` workflow; sends emails when issues close |
+| `draft-file.ts` | CLI `cryyer draft-file`; gathers activity → LLM draft → writes YAML front matter file |
+| `send-file.ts` | CLI `cryyer send-file`; reads draft file → sends emails to subscribers |
 | `mcp.ts` | MCP server for Claude Desktop; exposes tools and prompts |
 
 ### Key Modules
@@ -134,7 +136,9 @@ Cryyer has four distinct entry points, each compiled from `src/` to `dist/`:
 | `llm-provider.ts` | LLMProvider interface and factory; adapters for multiple providers |
 | `summarize.ts` | Builds prompt with product voice and calls LLM |
 | `subscriber-store.ts` | SubscriberStore interface and factory; multiple backend support |
-| `send.ts` | Sends batch emails via Resend with HTML template wrapping |
+| `email-provider.ts` | EmailProvider interface and factory; adapters for Resend and Gmail |
+| `send.ts` | Builds email messages and delegates sending via configured email provider |
+| `auth.ts` | `cryyer auth gmail` — OAuth 2.0 flow for Gmail authorization |
 
 ### Product Configuration
 
@@ -144,9 +148,9 @@ Products are YAML files in `products/`. Minimal example:
 id: my-app
 name: My App
 repo: owner/repo
-emailSubjectTemplate: "My App — Week of {{weekOf}}"
+emailSubjectTemplate: "My App — Week of {{weekOf}}"  # or "My App v{{version}}" for release emails
 voice: |
-  You are writing a weekly update email for My App beta testers.
+  You are writing a product update email for My App users.
   Be concise, friendly, and focus on what matters to users.
 ```
 
