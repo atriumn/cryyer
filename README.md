@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/atriumn/cryyer/actions/workflows/ci.yml"><img src="https://github.com/atriumn/cryyer/actions/workflows/ci.yml/badge.svg" alt="CI Status"></a>
-  <a href="https://www.npmjs.com/package/cryyer"><img src="https://img.shields.io/npm/v/cryyer.svg" alt="npm version"></a>
+  <a href="https://www.npmjs.com/package/@atriumn/cryyer"><img src="https://img.shields.io/npm/v/@atriumn/cryyer.svg" alt="npm version"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
   <a href="./package.json"><img src="https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg" alt="Node.js >= 20"></a>
 </p>
@@ -33,7 +33,7 @@ Cryyer supports two pipelines:
 
 ```bash
 mkdir my-updates && cd my-updates
-npx cryyer init
+npx @atriumn/cryyer init
 ```
 
 The interactive setup walks you through product name, GitHub repo, voice/tone, LLM provider, subscriber store, and API keys — then creates everything you need:
@@ -46,28 +46,28 @@ The interactive setup walks you through product name, GitHub repo, voice/tone, L
 Then:
 
 ```bash
-npx cryyer check         # validate your setup
-npx cryyer run --dry-run  # preview a draft email
+npx @atriumn/cryyer check         # validate your setup
+npx @atriumn/cryyer run --dry-run  # preview a draft email
 ```
 
 When you're ready to run for real:
 
 ```bash
-npx cryyer run          # full pipeline: gather → draft → send
+npx @atriumn/cryyer run          # full pipeline: gather → draft → send
 ```
 
 Or run the two stages separately:
 
 ```bash
-npx cryyer draft        # generate drafts → create GitHub issues
-npx cryyer send         # send emails when a draft issue is closed
+npx @atriumn/cryyer draft        # generate drafts → create GitHub issues
+npx @atriumn/cryyer send         # send emails when a draft issue is closed
 ```
 
 For release-triggered emails, use the file-based commands:
 
 ```bash
-npx cryyer draft-file --product my-app --version 1.2.0  # generate a draft file
-npx cryyer send-file drafts/v1.2.0.md --product my-app  # send from draft file
+npx @atriumn/cryyer draft-file --product my-app --version 1.2.0  # generate a draft file
+npx @atriumn/cryyer send-file drafts/v1.2.0.md --product my-app  # send from draft file
 ```
 
 You can also create `products/*.yaml` files manually — see [Product Configuration](#product-configuration) for all fields, and [`.env.example`](./.env.example) for all environment variables.
@@ -262,7 +262,7 @@ The MCP server uses stdio transport and is available as a separate binary: `cryy
 ### Standalone usage
 
 ```bash
-npx cryyer-mcp
+npx @atriumn/cryyer-mcp
 ```
 
 Or if installed locally:
@@ -281,7 +281,7 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
   "mcpServers": {
     "cryyer": {
       "command": "npx",
-      "args": ["cryyer-mcp"],
+      "args": ["@atriumn/cryyer-mcp"],
       "env": {
         "GITHUB_TOKEN": "ghp_...",
         "CRYYER_REPO": "owner/repo",
@@ -301,7 +301,7 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 
 Any MCP client that supports stdio transport can use Cryyer. The generic config is:
 
-- **Command**: `npx cryyer-mcp` (or `node /path/to/cryyer/dist/mcp.js`)
+- **Command**: `npx @atriumn/cryyer-mcp` (or `node /path/to/cryyer/dist/mcp.js`)
 - **Transport**: stdio
 - **Environment variables**: same as above
 

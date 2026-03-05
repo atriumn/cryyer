@@ -515,7 +515,7 @@ export async function main(): Promise<void> {
       step++;
     }
     if (emailProvider === 'gmail') {
-      console.log(`    ${step}. Authorize Gmail     npx cryyer auth gmail`);
+      console.log(`    ${step}. Authorize Gmail     npx @atriumn/cryyer auth gmail`);
       step++;
     }
     if (subscriberStore === 'json') {
@@ -526,9 +526,9 @@ export async function main(): Promise<void> {
       console.log(`    ${step}. Add subscribers     Add rows to your Google Sheet`);
     }
     step++;
-    console.log(`    ${step}. Validate setup      npx cryyer check`);
+    console.log(`    ${step}. Validate setup      npx @atriumn/cryyer check`);
     step++;
-    console.log(`    ${step}. Preview a draft     npx cryyer run --dry-run`);
+    console.log(`    ${step}. Preview a draft     npx @atriumn/cryyer run --dry-run`);
     console.log('');
     console.log('  Docs: https://cryyer.dev');
     console.log('');

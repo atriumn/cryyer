@@ -28,7 +28,7 @@ jobs:
         run: |
           for AUDIENCE in ${{ steps.audiences.outputs.list }}; do
             echo "::group::Sending for audience: $AUDIENCE"
-            npx cryyer@latest send-file \
+            npx @atriumn/cryyer@latest send-file \
               "drafts/v${{ steps.version.outputs.value }}-${AUDIENCE}.md" \
               --product cryyer \
               --audience "$AUDIENCE"

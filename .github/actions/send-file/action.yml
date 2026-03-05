@@ -87,7 +87,7 @@ runs:
         if [ -n "${{ inputs.audience }}" ]; then
           AUDIENCE_FLAG="--audience ${{ inputs.audience }}"
         fi
-        npx cryyer@${{ inputs.cryyer-version }} send-file \
+        npx @atriumn/cryyer@${{ inputs.cryyer-version }} send-file \
           ${{ inputs.draft-path }} \
           --product ${{ inputs.product }} \
           $DRY_RUN_FLAG \
