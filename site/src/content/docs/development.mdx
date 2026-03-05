@@ -6,14 +6,14 @@ description: Set up your local development environment for Cryyer.
 ## Commands
 
 ```bash
-npm install          # install dependencies
-npm run build        # compile TypeScript
-npm run typecheck    # type-check without emitting
-npm run lint         # ESLint
-npm test             # run tests (vitest)
-npm run test:watch   # run tests in watch mode
-npm run dev          # build + run
-npm run mcp          # run MCP server
+pnpm install          # install dependencies
+pnpm run build        # compile TypeScript
+pnpm run typecheck    # type-check without emitting
+pnpm run lint         # ESLint
+pnpm test             # run tests (vitest)
+pnpm run test:watch   # run tests in watch mode
+pnpm run dev          # build + run
+pnpm run mcp          # run MCP server
 ```
 
 ## Project structure
@@ -23,13 +23,17 @@ src/
 ├── index.ts              # Full pipeline entry point
 ├── draft.ts              # Draft generation entry point
 ├── send-on-close.ts      # Send on issue close entry point
+├── draft-file.ts         # CLI: cryyer draft-file (file-based drafts)
+├── send-file.ts          # CLI: cryyer send-file (file-based sends)
 ├── mcp.ts                # MCP server entry point
 ├── config.ts             # Env vars + product YAML loading
 ├── gather.ts             # GitHub activity fetching
 ├── llm-provider.ts       # LLM adapter pattern
 ├── summarize.ts          # Prompt building + LLM calls
 ├── subscriber-store.ts   # Subscriber store adapter pattern
-├── send.ts               # Email sending via Resend
+├── email-provider.ts     # Email provider adapter pattern (Resend, Gmail)
+├── send.ts               # Email sending via configured email provider
+├── auth.ts               # cryyer auth gmail — OAuth 2.0 flow
 └── types.ts              # Shared TypeScript types
 ```
 
@@ -46,17 +50,19 @@ src/
 Tests use [Vitest](https://vitest.dev) and are located alongside source files or in `src/__tests__/`.
 
 ```bash
-npm test             # run once
-npm run test:watch   # watch mode
+pnpm test             # run once
+pnpm run test:watch   # watch mode
 ```
 
 ## Entry points
 
-Cryyer has four distinct entry points, each compiled from `src/` to `dist/`:
+Cryyer has six distinct entry points, each compiled from `src/` to `dist/`:
 
 | Entry point | Purpose | Typical usage |
 |---|---|---|
 | `index.ts` | Full pipeline (gather → draft → send) | Local dev, manual runs |
 | `draft.ts` | Generate drafts, create GitHub issues | `weekly-draft.yml` workflow |
 | `send-on-close.ts` | Send emails when issue is closed | `send-update.yml` workflow |
+| `draft-file.ts` | Gather activity → LLM draft → write file | `draft-email.yml` workflow, CLI |
+| `send-file.ts` | Read draft file → send emails | `send-email.yml` workflow, CLI |
 | `mcp.ts` | MCP server for Claude Desktop | Interactive review |

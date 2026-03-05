@@ -11,16 +11,23 @@
   <a href="./package.json"><img src="https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg" alt="Node.js >= 20"></a>
 </p>
 
-Automated weekly email updates for beta testers, with per-product voice powered by LLM-drafted content.
+Automated product update emails, with per-product voice powered by LLM-drafted content. Supports multiple audiences per product, multiple LLM providers (Anthropic, OpenAI, Gemini), and multiple email providers (Resend, Gmail).
 
 **Website**: [cryyer.dev](https://cryyer.dev)
 **GitHub**: [atriumn/cryyer](https://github.com/atriumn/cryyer)
 **Issues**: [Report a bug](https://github.com/atriumn/cryyer/issues)
 
-Cryyer follows a two-stage pipeline:
+Cryyer supports two pipelines:
 
-1. **Weekly Draft** (cron, Mondays) — gathers GitHub activity (merged PRs, releases, notable commits), generates an email draft via LLM, and creates a GitHub issue for human review.
-2. **Send on Close** — when a draft issue is closed (approved), emails are sent to subscribers via [Resend](https://resend.com).
+**Release pipeline** (manual approval before send):
+1. Push to `main` → release-please opens a version-bump PR
+2. `draft-email.yml` generates a draft file (`drafts/vX.Y.Z.md`) and commits it to the PR branch
+3. Merge the PR → tag pushed → `release.yml` publishes to npm → GitHub Release created
+4. `send-email.yml` fires on release publish but **pauses for approval** — review the draft, then approve to send
+
+**Weekly pipeline** (manual review via GitHub issues):
+1. `weekly-draft.yml` runs on cron (Monday 1pm UTC) — gathers GitHub activity, generates LLM drafts, creates GitHub issues for human review
+2. `send-update.yml` fires when a draft issue is closed — sends emails to subscribers
 
 ## Quickstart
 
@@ -54,6 +61,13 @@ Or run the two stages separately:
 ```bash
 npx cryyer draft        # generate drafts → create GitHub issues
 npx cryyer send         # send emails when a draft issue is closed
+```
+
+For release-triggered emails, use the file-based commands:
+
+```bash
+npx cryyer draft-file --product my-app --version 1.2.0  # generate a draft file
+npx cryyer send-file drafts/v1.2.0.md --product my-app  # send from draft file
 ```
 
 You can also create `products/*.yaml` files manually — see [Product Configuration](#product-configuration) for all fields, and [`.env.example`](./.env.example) for all environment variables.
@@ -194,13 +208,16 @@ Products are defined as YAML files in `products/`. Each file represents one prod
 |---|---|---|
 | `id` | Yes | Unique identifier, also used as GitHub issue label |
 | `name` | Yes | Display name |
-| `voice` | Yes | LLM voice/tone instructions (injected into the draft prompt) |
+| `voice` | Yes* | LLM voice/tone instructions (injected into the draft prompt) |
 | `repo` | Yes | `owner/repo` for GitHub activity gathering |
-| `emailSubjectTemplate` | Yes | Subject line template — use `{{weekOf}}` for the date |
+| `emailSubjectTemplate` | Yes* | Subject line template — use `{{weekOf}}` for the date or `{{version}}` for the release version |
+| `audiences` | No | List of audience-specific overrides (see docs site) |
 | `tagline` | No | Product tagline |
 | `from_name` | No | Override sender name for this product |
 | `from_email` | No | Override sender email for this product |
 | `reply_to` | No | Reply-to address |
+
+*\* Required when `audiences` is not set. When using `audiences`, `voice` and `emailSubjectTemplate` are set per-audience instead.*
 
 ## GitHub Actions Workflows
 
@@ -214,11 +231,27 @@ Secrets needed: `GITHUB_TOKEN`, `CRYYER_REPO`, and the API key for your chosen `
 
 Fires when an issue with the `draft` label is closed. Sends emails to subscribers.
 
-Secrets needed: `GITHUB_TOKEN`, `RESEND_API_KEY`, `FROM_EMAIL`, plus the secrets for your chosen `SUBSCRIBER_STORE`.
+Secrets needed: `GITHUB_TOKEN`, email provider credentials (`RESEND_API_KEY` or `GMAIL_REFRESH_TOKEN`), `FROM_EMAIL`, plus the secrets for your chosen `SUBSCRIBER_STORE`.
+
+### `draft-email.yml`
+
+Runs when a `release-please--*` PR is opened or synced. Generates `drafts/vX.Y.Z.md` via LLM and commits it to the PR branch.
+
+### `release.yml`
+
+Runs on `v*` tag push (after release-please PR is merged). Typechecks, tests, publishes to npm, creates GitHub Release.
+
+### `send-email.yml`
+
+Runs when a GitHub Release is published. Reads the draft file and sends emails to subscribers. Pauses for manual approval via a `production` environment with required reviewers.
 
 ### `ci.yml`
 
 Runs on push/PR to main. Lints, typechecks, and runs tests.
+
+### Composite Actions
+
+Reusable composite actions for consumer repos: `atriumn/cryyer/.github/actions/draft-file@v0` and `atriumn/cryyer/.github/actions/send-file@v0`. Run `cryyer init` to scaffold wrapper workflows. See the [docs site](https://cryyer.dev) for full input references.
 
 ## MCP Server
 
@@ -300,7 +333,7 @@ All log output goes to stderr (stdout is reserved for JSON-RPC). If something is
 
 ### Prompt
 
-Use the `review_weekly_drafts` prompt for the Monday morning review workflow — it walks through each pending draft and asks whether to send, edit, regenerate, or skip.
+Use the `review_drafts` prompt for the Monday morning review workflow — it walks through each pending draft and asks whether to send, edit, regenerate, or skip.
 
 ## Development
 

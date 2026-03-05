@@ -13,7 +13,7 @@ name: My App
 repo: owner/repo
 emailSubjectTemplate: "My App — Week of {{weekOf}}"
 voice: |
-  You are writing a weekly update email for My App beta testers.
+  You are writing a product update email for My App users.
   Be concise, friendly, and focus on what matters to users.
 ```
 
@@ -40,7 +40,7 @@ The `voice` field is injected directly into the LLM prompt and controls the tone
 
 ```yaml
 voice: |
-  You are writing a weekly update for Acme Cloud beta testers.
+  You are writing a product update for Acme Cloud users.
   Tone: professional but approachable. Use "we" not "I".
   Focus on user-facing changes. Skip internal refactors.
   Keep paragraphs short — these are busy developers.
@@ -158,9 +158,17 @@ If both `labels` and `paths` are set, `labels` is used for PRs (more efficient) 
 
 ## Subject template
 
-The `emailSubjectTemplate` supports a `{{weekOf}}` placeholder that gets replaced with the current week's date:
+The `emailSubjectTemplate` supports these placeholders:
+
+- `{{weekOf}}` — replaced with the current week's date (for weekly pipeline)
+- `{{version}}` — replaced with the release version (for release pipeline)
 
 ```yaml
+# Weekly pipeline
 emailSubjectTemplate: "My App — Week of {{weekOf}}"
 # → "My App — Week of January 6, 2025"
+
+# Release pipeline
+emailSubjectTemplate: "My App v{{version}} Release Notes"
+# → "My App v1.2.0 Release Notes"
 ```
