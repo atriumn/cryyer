@@ -32,6 +32,14 @@ jobs:
           fi
           echo "since=$SINCE" >> "$GITHUB_OUTPUT"
 
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build
+
       - name: Parse audience IDs
         id: audiences
         run: |
@@ -42,7 +50,7 @@ jobs:
         run: |
           for AUDIENCE in ${{ steps.audiences.outputs.list }}; do
             echo "::group::Drafting for audience: $AUDIENCE"
-            npx @atriumn/cryyer@latest draft-file \
+            node dist/cli.js draft-file \
               --product cryyer \
               --version "${{ steps.version.outputs.value }}" \
               --since "${{ steps.version.outputs.since }}" \
