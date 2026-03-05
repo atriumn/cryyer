@@ -10,12 +10,20 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build
 
       - name: Extract version from tag
         id: version
         run: |
-          VERSION=${{ github.event.release.tag_name }}
-          VERSION="${VERSION#v}"
+          TAG=${{ github.event.release.tag_name }}
+          # Strip component prefix (e.g. "cryyer-v0.2.0" → "v0.2.0") and leading "v"
+          VERSION="${TAG##*-v}"
           echo "value=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Parse audience IDs
@@ -28,7 +36,7 @@ jobs:
         run: |
           for AUDIENCE in ${{ steps.audiences.outputs.list }}; do
             echo "::group::Sending for audience: $AUDIENCE"
-            npx @atriumn/cryyer@latest send-file \
+            node dist/cli.js send-file \
               "drafts/v${{ steps.version.outputs.value }}-${AUDIENCE}.md" \
               --product cryyer \
               --audience "$AUDIENCE"
