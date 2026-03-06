@@ -26,7 +26,7 @@ inputs:
     required: false
     default: Cryyer Updates
   subscriber-store:
-    description: Subscriber store (json, supabase, google-sheets)
+    description: Subscriber store (json, supabase, google-sheets, gist)
     required: false
     default: json
   supabase-url:
@@ -44,6 +44,13 @@ inputs:
   google-private-key:
     description: Google service account private key (required when subscriber-store is google-sheets)
     required: false
+  github-gist-id:
+    description: Gist ID for subscriber storage (required when subscriber-store is gist)
+    required: false
+  github-token:
+    description: GitHub token for gist access (required when subscriber-store is gist)
+    required: false
+    default: ${{ github.token }}
   audience:
     description: Audience ID for multi-audience products
     required: false
@@ -78,6 +85,8 @@ runs:
         GOOGLE_SHEETS_SPREADSHEET_ID: ${{ inputs.google-sheets-spreadsheet-id }}
         GOOGLE_SERVICE_ACCOUNT_EMAIL: ${{ inputs.google-service-account-email }}
         GOOGLE_PRIVATE_KEY: ${{ inputs.google-private-key }}
+        GITHUB_GIST_ID: ${{ inputs.github-gist-id }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
         DRY_RUN_FLAG=""
         if [ "${{ inputs.dry-run }}" = "true" ]; then

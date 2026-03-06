@@ -53,7 +53,7 @@ Key modules:
 | `gather.ts` | Fetches merged PRs, releases, fallback commits via Octokit (`gatherActivity`); filters bots |
 | `llm-provider.ts` | LLMProvider interface and factory; adapters for Anthropic, OpenAI, Gemini |
 | `summarize.ts` | Builds prompt with product voice, calls LLM provider, parses JSON `{subject, body}` response |
-| `subscriber-store.ts` | SubscriberStore interface and factory; adapters for Supabase, JSON file, Google Sheets. Supports `getSubscribers`, `recordEmailSent`, `addSubscriber`, `removeSubscriber`. |
+| `subscriber-store.ts` | SubscriberStore interface and factory; adapters for Supabase, JSON file, GitHub Gist, Google Sheets. Supports `getSubscribers`, `recordEmailSent`, `addSubscriber`, `removeSubscriber`. |
 | `mcp.ts` | MCP server entry point; 9 tools + 1 prompt for draft review and subscriber management |
 | `email-provider.ts` | EmailProvider interface and factory; adapters for Resend, Gmail |
 | `auth.ts` | `cryyer auth gmail` — OAuth 2.0 flow for Gmail authorization |
@@ -148,12 +148,15 @@ GMAIL_REFRESH_TOKEN  # Required when EMAIL_PROVIDER=gmail; set via "cryyer auth 
 ### Subscriber Store Configuration
 
 ```
-SUBSCRIBER_STORE             # "supabase" (default), "json", or "google-sheets"
+SUBSCRIBER_STORE             # "supabase" (default), "json", "gist", or "google-sheets"
 # Supabase (default):
 SUPABASE_URL, SUPABASE_SERVICE_KEY
 # JSON file:
 SUBSCRIBERS_JSON_PATH        # Default: ./subscribers.json
 EMAIL_LOG_JSON_PATH          # Default: ./email-log.json
+# GitHub Gist (private storage for public repos):
+GITHUB_GIST_ID               # Gist ID containing subscribers.json
+GITHUB_TOKEN                 # Already available in GitHub Actions
 # Google Sheets:
 GOOGLE_SHEETS_SPREADSHEET_ID
 GOOGLE_SERVICE_ACCOUNT_EMAIL

@@ -8,6 +8,20 @@ vi.mock('@supabase/supabase-js', () => ({
   createClient: vi.fn(() => ({ from: mockFrom })),
 }));
 
+// --- Octokit / Gist mocks ---
+const mockGistGet = vi.fn();
+const mockGistUpdate = vi.fn();
+vi.mock('octokit', () => ({
+  Octokit: class MockOctokit {
+    rest = {
+      gists: {
+        get: mockGistGet,
+        update: mockGistUpdate,
+      },
+    };
+  },
+}));
+
 // --- Google Sheets mocks ---
 const mockAddRow = vi.fn();
 const mockSheetsByTitle: Record<string, unknown> = {};
@@ -29,7 +43,7 @@ vi.mock('google-auth-library', () => ({
   },
 }));
 
-import { createSubscriberStore, SupabaseStore, JsonFileStore, GoogleSheetsStore } from '../subscriber-store.js';
+import { createSubscriberStore, SupabaseStore, JsonFileStore, GoogleSheetsStore, GistStore } from '../subscriber-store.js';
 
 describe('createSubscriberStore', () => {
   const originalEnv = { ...process.env };
@@ -552,5 +566,180 @@ describe('GoogleSheetsStore', () => {
     await store.removeSubscriber('my-app', 'nonexistent@test.com');
 
     expect(mockRows[0].save).not.toHaveBeenCalled();
+  });
+});
+
+describe('createSubscriberStore gist', () => {
+  const originalEnv = { ...process.env };
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+  });
+
+  it('creates GistStore when SUBSCRIBER_STORE=gist', () => {
+    process.env.SUBSCRIBER_STORE = 'gist';
+    process.env.GITHUB_GIST_ID = 'abc123';
+    process.env.GITHUB_TOKEN = 'ghp_test';
+    const store = createSubscriberStore();
+    expect(store).toBeInstanceOf(GistStore);
+  });
+
+  it('throws when GITHUB_GIST_ID is missing for gist', () => {
+    process.env.SUBSCRIBER_STORE = 'gist';
+    delete process.env.GITHUB_GIST_ID;
+    process.env.GITHUB_TOKEN = 'ghp_test';
+    expect(() => createSubscriberStore()).toThrow('Missing GITHUB_GIST_ID');
+  });
+
+  it('throws when GITHUB_TOKEN is missing for gist', () => {
+    process.env.SUBSCRIBER_STORE = 'gist';
+    process.env.GITHUB_GIST_ID = 'abc123';
+    delete process.env.GITHUB_TOKEN;
+    expect(() => createSubscriberStore()).toThrow('Missing GITHUB_TOKEN');
+  });
+});
+
+describe('GistStore', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGistUpdate.mockResolvedValue({});
+  });
+
+  function mockGistFiles(files: Record<string, string>) {
+    mockGistGet.mockResolvedValue({
+      data: {
+        files: Object.fromEntries(
+          Object.entries(files).map(([name, content]) => [name, { content }]),
+        ),
+      },
+    });
+  }
+
+  it('getSubscribers returns matching subscribers from gist', async () => {
+    mockGistFiles({
+      'subscribers.json': JSON.stringify([
+        { email: 'alice@test.com', name: 'Alice', productIds: ['my-app'] },
+        { email: 'bob@test.com', productIds: ['other'] },
+      ]),
+    });
+
+    const store = new GistStore('gist123', 'token');
+    const subs = await store.getSubscribers('my-app');
+
+    expect(subs).toEqual([{ email: 'alice@test.com', name: 'Alice' }]);
+    expect(mockGistGet).toHaveBeenCalledWith({ gist_id: 'gist123' });
+  });
+
+  it('getSubscribers returns empty array when gist file missing', async () => {
+    mockGistGet.mockResolvedValue({ data: { files: {} } });
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const store = new GistStore('gist123', 'token');
+    const subs = await store.getSubscribers('my-app');
+
+    expect(subs).toEqual([]);
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  it('addSubscriber creates new entry in gist', async () => {
+    mockGistFiles({ 'subscribers.json': '[]' });
+
+    const store = new GistStore('gist123', 'token');
+    await store.addSubscriber('my-app', 'alice@test.com', 'Alice');
+
+    expect(mockGistUpdate).toHaveBeenCalledWith({
+      gist_id: 'gist123',
+      files: {
+        'subscribers.json': {
+          content: expect.stringContaining('"alice@test.com"'),
+        },
+      },
+    });
+  });
+
+  it('addSubscriber appends productId to existing subscriber', async () => {
+    mockGistFiles({
+      'subscribers.json': JSON.stringify([
+        { email: 'alice@test.com', name: 'Alice', productIds: ['app-a'] },
+      ]),
+    });
+
+    const store = new GistStore('gist123', 'token');
+    await store.addSubscriber('app-b', 'alice@test.com');
+
+    const written = JSON.parse(mockGistUpdate.mock.calls[0][0].files['subscribers.json'].content);
+    expect(written[0].productIds).toEqual(['app-a', 'app-b']);
+  });
+
+  it('addSubscriber creates file when gist has no subscribers.json', async () => {
+    mockGistGet.mockResolvedValue({ data: { files: {} } });
+
+    const store = new GistStore('gist123', 'token');
+    await store.addSubscriber('my-app', 'alice@test.com');
+
+    const written = JSON.parse(mockGistUpdate.mock.calls[0][0].files['subscribers.json'].content);
+    expect(written).toHaveLength(1);
+    expect(written[0].email).toBe('alice@test.com');
+  });
+
+  it('removeSubscriber removes productId from subscriber', async () => {
+    mockGistFiles({
+      'subscribers.json': JSON.stringify([
+        { email: 'alice@test.com', productIds: ['app-a', 'app-b'] },
+      ]),
+    });
+
+    const store = new GistStore('gist123', 'token');
+    await store.removeSubscriber('app-a', 'alice@test.com');
+
+    const written = JSON.parse(mockGistUpdate.mock.calls[0][0].files['subscribers.json'].content);
+    expect(written[0].productIds).toEqual(['app-b']);
+  });
+
+  it('removeSubscriber removes entry when no productIds left', async () => {
+    mockGistFiles({
+      'subscribers.json': JSON.stringify([
+        { email: 'alice@test.com', productIds: ['my-app'] },
+      ]),
+    });
+
+    const store = new GistStore('gist123', 'token');
+    await store.removeSubscriber('my-app', 'alice@test.com');
+
+    const written = JSON.parse(mockGistUpdate.mock.calls[0][0].files['subscribers.json'].content);
+    expect(written).toEqual([]);
+  });
+
+  it('removeSubscriber is no-op when gist file missing', async () => {
+    mockGistGet.mockResolvedValue({ data: { files: {} } });
+
+    const store = new GistStore('gist123', 'token');
+    await store.removeSubscriber('my-app', 'alice@test.com');
+
+    expect(mockGistUpdate).not.toHaveBeenCalled();
+  });
+
+  it('recordEmailSent appends to email log in gist', async () => {
+    mockGistFiles({ 'email-log.json': '[]' });
+
+    const store = new GistStore('gist123', 'token');
+    await store.recordEmailSent('alice@test.com', 'my-app', '2024-01-15');
+
+    const written = JSON.parse(mockGistUpdate.mock.calls[0][0].files['email-log.json'].content);
+    expect(written).toHaveLength(1);
+    expect(written[0].email).toBe('alice@test.com');
+    expect(written[0].productId).toBe('my-app');
+  });
+
+  it('recordEmailSent creates log file when missing', async () => {
+    mockGistGet.mockResolvedValue({ data: { files: {} } });
+
+    const store = new GistStore('gist123', 'token');
+    await store.recordEmailSent('alice@test.com', 'my-app', '2024-01-15');
+
+    expect(mockGistUpdate).toHaveBeenCalled();
+    const written = JSON.parse(mockGistUpdate.mock.calls[0][0].files['email-log.json'].content);
+    expect(written).toHaveLength(1);
   });
 });
