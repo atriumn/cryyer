@@ -4,6 +4,24 @@ All notable changes to Cryyer are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.6.0](https://github.com/atriumn/cryyer/compare/cryyer-v0.5.0...cryyer-v0.6.0) (2026-03-06)
+
+
+### Features
+
+* add GitHub Gist subscriber store ([8bfd4cc](https://github.com/atriumn/cryyer/commit/8bfd4cc284db1f80ee99108ac0df1b6c4194088c))
+* add GitHub Gist subscriber store for public repos ([62aba5b](https://github.com/atriumn/cryyer/commit/62aba5b7f4fc77e3b4df5a38bed48c642f2bb653))
+
+
+### Bug Fixes
+
+* only run draft-email on PR opened ([94fc391](https://github.com/atriumn/cryyer/commit/94fc3910d4b82726343c7f8dd60f98d9c30dd779))
+* only run draft-email on PR opened, not synchronize ([8f27c46](https://github.com/atriumn/cryyer/commit/8f27c462c1c69ff3d58307b3f2209ebde888c391))
+* skip draft-email when drafts already exist ([4823121](https://github.com/atriumn/cryyer/commit/4823121224ea16d287847bd093f24e0e9085ad59))
+* skip draft-email when drafts already exist ([265ddc4](https://github.com/atriumn/cryyer/commit/265ddc451dbfb051bf4db1e03e454da949df7894))
+* use PAT for draft-email push so CI retriggers ([f54b434](https://github.com/atriumn/cryyer/commit/f54b4349499bf18ebe2ae5c6b344cb7a6f0ea55b))
+* use PAT for draft-email push so CI retriggers ([652bc91](https://github.com/atriumn/cryyer/commit/652bc9128a7dc5ccb9f7faa8b2c347ec09031f52))
+
 ## [0.5.0](https://github.com/atriumn/cryyer/compare/cryyer-v0.4.1...cryyer-v0.5.0) (2026-03-06)
 
 
