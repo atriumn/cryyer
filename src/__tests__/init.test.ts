@@ -32,7 +32,7 @@ describe('parseInitFlags', () => {
       '--email-provider', 'gmail',
       '--from-email', 'hi@acme.dev',
       '--yes',
-      '--workflows',
+      '--pipeline', 'weekly',
     ]);
     expect(flags).toEqual({
       product: 'My App',
@@ -43,7 +43,7 @@ describe('parseInitFlags', () => {
       emailProvider: 'gmail',
       fromEmail: 'hi@acme.dev',
       yes: true,
-      workflows: true,
+      pipeline: 'weekly',
     });
   });
 
@@ -51,8 +51,18 @@ describe('parseInitFlags', () => {
     expect(parseInitFlags(['-y']).yes).toBe(true);
   });
 
-  it('parses --no-workflows', () => {
-    expect(parseInitFlags(['--no-workflows']).workflows).toBe(false);
+  it('parses --pipeline with all valid values', () => {
+    expect(parseInitFlags(['--pipeline', 'weekly']).pipeline).toBe('weekly');
+    expect(parseInitFlags(['--pipeline', 'release']).pipeline).toBe('release');
+    expect(parseInitFlags(['--pipeline', 'both']).pipeline).toBe('both');
+  });
+
+  it('throws on invalid --pipeline value', () => {
+    expect(() => parseInitFlags(['--pipeline', 'invalid'])).toThrow('Invalid pipeline');
+  });
+
+  it('--workflows back-compat maps to release', () => {
+    expect(parseInitFlags(['--workflows']).pipeline).toBe('release');
   });
 
   it('returns empty flags for no arguments', () => {
@@ -242,8 +252,8 @@ describe('main (init)', () => {
     'ghp_test',           // github token
     're_test',            // resend key
     'updates@acme.dev',   // from email
-    // Workflow setup
-    'Y',                  // set up workflows
+    // Pipeline setup
+    '1',                  // weekly pipeline (default)
   ];
 
   function setupFreshDir() {
@@ -493,7 +503,7 @@ describe('main (init)', () => {
     expect(envContent).not.toContain('RESEND_API_KEY');
   });
 
-  it('creates workflow files when user opts in', async () => {
+  it('creates weekly workflow files when user selects weekly pipeline', async () => {
     setupFreshDir();
     makeRl(freshAnswers);
 
@@ -505,17 +515,17 @@ describe('main (init)', () => {
       { recursive: true }
     );
 
-    // draft-email.yml
+    // weekly-draft.yml
     expect(writeFileSync).toHaveBeenCalledWith(
-      expect.stringContaining('draft-email.yml'),
-      expect.stringContaining('atriumn/cryyer/.github/actions/draft-file@v0'),
+      expect.stringContaining('weekly-draft.yml'),
+      expect.stringContaining('Weekly Draft'),
       'utf-8'
     );
 
-    // send-email.yml
+    // send-update.yml
     expect(writeFileSync).toHaveBeenCalledWith(
-      expect.stringContaining('send-email.yml'),
-      expect.stringContaining('atriumn/cryyer/.github/actions/send-file@v0'),
+      expect.stringContaining('send-update.yml'),
+      expect.stringContaining('Send Update'),
       'utf-8'
     );
   });
@@ -636,9 +646,9 @@ describe('main (non-interactive)', () => {
     expect(envCalls).toHaveLength(0);
   });
 
-  it('creates workflows when --workflows is passed', async () => {
+  it('creates release workflows with --pipeline release', async () => {
     setupFreshDir();
-    setArgv('-y', '--product', 'Acme', '--repo', 'acme/cli', '--voice', 'Casual', '--workflows');
+    setArgv('-y', '--product', 'Acme', '--repo', 'acme/cli', '--voice', 'Casual', '--pipeline', 'release');
 
     await main();
 
@@ -654,6 +664,60 @@ describe('main (non-interactive)', () => {
     expect(writeFileSync).toHaveBeenCalledWith(
       expect.stringContaining('send-email.yml'),
       expect.stringContaining('atriumn/cryyer'),
+      'utf-8'
+    );
+  });
+
+  it('creates weekly workflows with --pipeline weekly', async () => {
+    setupFreshDir();
+    setArgv('-y', '--product', 'Acme', '--repo', 'acme/cli', '--voice', 'Casual', '--pipeline', 'weekly');
+
+    await main();
+
+    expect(writeFileSync).toHaveBeenCalledWith(
+      expect.stringContaining('weekly-draft.yml'),
+      expect.stringContaining('Weekly Draft'),
+      'utf-8'
+    );
+    expect(writeFileSync).toHaveBeenCalledWith(
+      expect.stringContaining('send-update.yml'),
+      expect.stringContaining('Send Update'),
+      'utf-8'
+    );
+    // Should NOT create release workflows
+    const releaseCalls = (writeFileSync as Mock).mock.calls.filter(
+      (call) => typeof call[0] === 'string' && call[0].includes('draft-email.yml')
+    );
+    expect(releaseCalls).toHaveLength(0);
+  });
+
+  it('creates both pipelines with --pipeline both', async () => {
+    setupFreshDir();
+    setArgv('-y', '--product', 'Acme', '--repo', 'acme/cli', '--voice', 'Casual', '--pipeline', 'both');
+
+    await main();
+
+    expect(writeFileSync).toHaveBeenCalledWith(
+      expect.stringContaining('weekly-draft.yml'),
+      expect.any(String),
+      'utf-8'
+    );
+    expect(writeFileSync).toHaveBeenCalledWith(
+      expect.stringContaining('draft-email.yml'),
+      expect.any(String),
+      'utf-8'
+    );
+  });
+
+  it('--workflows back-compat maps to release pipeline', async () => {
+    setupFreshDir();
+    setArgv('-y', '--product', 'Acme', '--repo', 'acme/cli', '--voice', 'Casual', '--workflows');
+
+    await main();
+
+    expect(writeFileSync).toHaveBeenCalledWith(
+      expect.stringContaining('draft-email.yml'),
+      expect.any(String),
       'utf-8'
     );
   });
@@ -681,7 +745,7 @@ describe('main (non-interactive)', () => {
 
   it('respects --llm flag', async () => {
     setupFreshDir();
-    setArgv('-y', '--product', 'Acme', '--repo', 'acme/cli', '--voice', 'Casual', '--llm', 'gemini', '--workflows');
+    setArgv('-y', '--product', 'Acme', '--repo', 'acme/cli', '--voice', 'Casual', '--llm', 'gemini', '--pipeline', 'release');
 
     await main();
 
