@@ -4,6 +4,14 @@ All notable changes to Cryyer are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.4.1](https://github.com/atriumn/cryyer/compare/cryyer-v0.4.0...cryyer-v0.4.1) (2026-03-06)
+
+
+### Bug Fixes
+
+* add npm auth to release workflow ([ff04d8a](https://github.com/atriumn/cryyer/commit/ff04d8a493062cced62d134984709526ef07ec6a))
+* use OIDC trusted publishing instead of npm token ([3dac767](https://github.com/atriumn/cryyer/commit/3dac767875c250798f13f208c309e178188fc900))
+
 ## [0.4.0](https://github.com/atriumn/cryyer/compare/cryyer-v0.3.0...cryyer-v0.4.0) (2026-03-06)
 
 
