@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildDraftWorkflowContent, buildSendWorkflowContent } from '../init.js';
+import { buildDraftWorkflowContent, buildSendWorkflowContent, buildWeeklyDraftWorkflowContent, buildSendUpdateWorkflowContent } from '../init.js';
 
 describe('buildDraftWorkflowContent', () => {
   it('generates valid YAML with correct structure', () => {
@@ -123,5 +123,76 @@ describe('buildSendWorkflowContent', () => {
   it('includes FROM_EMAIL secret', () => {
     const content = buildSendWorkflowContent('acme-cli', 'resend', 'json');
     expect(content).toContain('secrets.FROM_EMAIL');
+  });
+});
+
+describe('buildWeeklyDraftWorkflowContent', () => {
+  it('generates valid YAML with cron schedule', () => {
+    const content = buildWeeklyDraftWorkflowContent('acme-cli', 'anthropic');
+    expect(content).toContain('name: Weekly Draft');
+    expect(content).toContain('schedule:');
+    expect(content).toContain('workflow_dispatch:');
+  });
+
+  it('uses npx @atriumn/cryyer@latest draft', () => {
+    const content = buildWeeklyDraftWorkflowContent('acme-cli', 'anthropic');
+    expect(content).toContain('npx @atriumn/cryyer@latest draft');
+  });
+
+  it('uses correct LLM secret for provider', () => {
+    expect(buildWeeklyDraftWorkflowContent('app', 'anthropic')).toContain('ANTHROPIC_API_KEY');
+    expect(buildWeeklyDraftWorkflowContent('app', 'openai')).toContain('OPENAI_API_KEY');
+    expect(buildWeeklyDraftWorkflowContent('app', 'gemini')).toContain('GEMINI_API_KEY');
+  });
+
+  it('sets CRYYER_REPO to github.repository', () => {
+    const content = buildWeeklyDraftWorkflowContent('acme-cli', 'anthropic');
+    expect(content).toContain('CRYYER_REPO: ${{ github.repository }}');
+  });
+});
+
+describe('buildSendUpdateWorkflowContent', () => {
+  it('generates valid YAML that triggers on issue close', () => {
+    const content = buildSendUpdateWorkflowContent('acme-cli', 'resend', 'json');
+    expect(content).toContain('name: Send Update');
+    expect(content).toContain('issues:');
+    expect(content).toContain("types: [closed]");
+    expect(content).toContain("contains(github.event.issue.labels.*.name, 'draft')");
+  });
+
+  it('uses npx @atriumn/cryyer@latest send-on-close', () => {
+    const content = buildSendUpdateWorkflowContent('acme-cli', 'resend', 'json');
+    expect(content).toContain('npx @atriumn/cryyer@latest send-on-close');
+  });
+
+  it('includes resend credentials for resend provider', () => {
+    const content = buildSendUpdateWorkflowContent('acme-cli', 'resend', 'json');
+    expect(content).toContain('RESEND_API_KEY');
+    expect(content).not.toContain('GMAIL_REFRESH_TOKEN');
+  });
+
+  it('includes gmail credentials for gmail provider', () => {
+    const content = buildSendUpdateWorkflowContent('acme-cli', 'gmail', 'json');
+    expect(content).toContain('GMAIL_REFRESH_TOKEN');
+    expect(content).not.toContain('RESEND_API_KEY');
+  });
+
+  it('includes supabase credentials for supabase store', () => {
+    const content = buildSendUpdateWorkflowContent('acme-cli', 'resend', 'supabase');
+    expect(content).toContain('SUPABASE_URL');
+    expect(content).toContain('SUPABASE_SERVICE_KEY');
+  });
+
+  it('includes google sheets credentials for google-sheets store', () => {
+    const content = buildSendUpdateWorkflowContent('acme-cli', 'resend', 'google-sheets');
+    expect(content).toContain('GOOGLE_SHEETS_SPREADSHEET_ID');
+    expect(content).toContain('GOOGLE_SERVICE_ACCOUNT_EMAIL');
+    expect(content).toContain('GOOGLE_PRIVATE_KEY');
+  });
+
+  it('includes ISSUE_NUMBER and FROM_EMAIL', () => {
+    const content = buildSendUpdateWorkflowContent('acme-cli', 'resend', 'json');
+    expect(content).toContain('ISSUE_NUMBER');
+    expect(content).toContain('FROM_EMAIL');
   });
 });
