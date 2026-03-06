@@ -359,10 +359,10 @@ Use the `review_drafts` prompt for the Monday morning review workflow — it wal
 
 Show that your project uses Cryyer for emails:
 
-[![Emails by Cryyer](https://cryyer.dev/badge.svg)](https://github.com/atriumn/cryyer)
+[![Emails by Cryyer](https://img.shields.io/badge/emails%20by-cryyer-2c3e6b?style=flat&logo=data%3Aimage%2Fpng%3Bbase64%2CiVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAABEElEQVR42r2UIU4EQRREq2bWrSIIAgmCYJCbgMESNIYDLHfgEnAJFAdAYUCgOAUCgYWsJGRnH4KaMDuZzO6GLN%2F83%2Bn%2B1b%2Bq0i39RwAlUPwVpGgBOrWXBagbhsA1cNjcKwuvBFYmP%2FITt8BBc9KlwIBB8jm%2FsQ%2BMgQdgGyh6wQDn0A5wF5AbYBeYZD2y53XsFLksJOA%2BTRXwCrxlfdmkv0joTeADmAKzBr2X%2BrI2rfZo9S2nkjZSW9I09XMNYJs%2BoHrzS9J76pmkgaQrSeMAs4r1F6HzmXzWdLQdXao75PckVaFVSTrps7vTvsw9imbD5KPo0knLXc7ZBjiWtJVGS5rYflr7T%2BEFr9%2Fz4rla%2B0TfpaQEQwE4wDoAAAAASUVORK5CYII%3D)](https://github.com/atriumn/cryyer)
 
 ```md
-[![Emails by Cryyer](https://cryyer.dev/badge.svg)](https://github.com/atriumn/cryyer)
+[![Emails by Cryyer](https://img.shields.io/badge/emails%20by-cryyer-2c3e6b?style=flat&logo=data%3Aimage%2Fpng%3Bbase64%2CiVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAABEElEQVR42r2UIU4EQRREq2bWrSIIAgmCYJCbgMESNIYDLHfgEnAJFAdAYUCgOAUCgYWsJGRnH4KaMDuZzO6GLN%2F83%2Bn%2B1b%2Bq0i39RwAlUPwVpGgBOrWXBagbhsA1cNjcKwuvBFYmP%2FITt8BBc9KlwIBB8jm%2FsQ%2BMgQdgGyh6wQDn0A5wF5AbYBeYZD2y53XsFLksJOA%2BTRXwCrxlfdmkv0joTeADmAKzBr2X%2BrI2rfZo9S2nkjZSW9I09XMNYJs%2BoHrzS9J76pmkgaQrSeMAs4r1F6HzmXzWdLQdXao75PckVaFVSTrps7vTvsw9imbD5KPo0knLXc7ZBjiWtJVGS5rYflr7T%2BEFr9%2Fz4rla%2B0TfpaQEQwE4wDoAAAAASUVORK5CYII%3D)](https://github.com/atriumn/cryyer)
 ```
 
 ## Development
