@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, vi } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import type { Mock } from 'vitest';
 
 vi.mock('readline/promises', () => ({
@@ -203,8 +203,16 @@ describe('buildGitignoreContent', () => {
 });
 
 describe('main (init)', () => {
+  const savedCI = process.env.CI;
+
   afterEach(() => {
     vi.clearAllMocks();
+    process.env.CI = savedCI;
+  });
+
+  // Ensure interactive mode in CI environments
+  beforeEach(() => {
+    delete process.env.CI;
   });
 
   function makeRl(answers: string[]) {
