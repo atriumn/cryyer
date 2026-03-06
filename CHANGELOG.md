@@ -4,6 +4,14 @@ All notable changes to Cryyer are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.4.0](https://github.com/atriumn/cryyer/compare/cryyer-v0.3.0...cryyer-v0.4.0) (2026-03-06)
+
+
+### Features
+
+* add --pipeline flag for weekly/release/both workflow choice ([d5e049e](https://github.com/atriumn/cryyer/commit/d5e049e393d1568d0ed3269edbccf8490e6de4b6))
+* add --pipeline flag to choose weekly, release, or both workflows ([5f3e9fe](https://github.com/atriumn/cryyer/commit/5f3e9fe3f24337e545d68b74b53dd47b7a03e9b0))
+
 ## [0.3.0](https://github.com/atriumn/cryyer/compare/cryyer-v0.2.2...cryyer-v0.3.0) (2026-03-06)
 
 
