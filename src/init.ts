@@ -263,9 +263,53 @@ function parseSelection(raw: string, options: readonly string[], defaultIndex: n
   throw new Error(`Invalid selection: "${trimmed}". Enter a number 1-${options.length}.`);
 }
 
+export interface InitFlags {
+  product?: string;
+  repo?: string;
+  voice?: string;
+  llm?: string;
+  subscriberStore?: string;
+  emailProvider?: string;
+  fromEmail?: string;
+  yes?: boolean;
+  workflows?: boolean;
+}
+
+export function parseInitFlags(argv: string[]): InitFlags {
+  const flags: InitFlags = {};
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    const next = argv[i + 1];
+    switch (arg) {
+      case '--product': flags.product = next; i++; break;
+      case '--repo': flags.repo = next; i++; break;
+      case '--voice': flags.voice = next; i++; break;
+      case '--llm': flags.llm = next; i++; break;
+      case '--subscriber-store': flags.subscriberStore = next; i++; break;
+      case '--email-provider': flags.emailProvider = next; i++; break;
+      case '--from-email': flags.fromEmail = next; i++; break;
+      case '--yes': case '-y': flags.yes = true; break;
+      case '--no-workflows': flags.workflows = false; break;
+      case '--workflows': flags.workflows = true; break;
+    }
+  }
+  return flags;
+}
+
+function isNonInteractive(flags: InitFlags): boolean {
+  return !!(flags.yes || process.env.CI === 'true');
+}
+
 export async function main(): Promise<void> {
-  const rl = createInterface({ input, output });
+  const flags = parseInitFlags(process.argv.slice(2));
+  const nonInteractive = isNonInteractive(flags);
+  const rl = nonInteractive ? null : createInterface({ input, output });
   const cwd = process.cwd();
+
+  async function ask(prompt: string, defaultValue?: string): Promise<string> {
+    if (nonInteractive) return defaultValue ?? '';
+    return rl!.question(prompt);
+  }
 
   let version: string;
   try {
@@ -283,17 +327,15 @@ export async function main(): Promise<void> {
   try {
     // Check if products already exist
     const productsDir = join(cwd, 'products');
-    let hasExistingProducts = false;
-    if (existsSync(productsDir)) {
+    if (!nonInteractive && existsSync(productsDir)) {
       const existing = readdirSync(productsDir).filter((f) => f.endsWith('.yaml') || f.endsWith('.yml'));
       if (existing.length > 0) {
-        hasExistingProducts = true;
         console.log(`  Found existing products: ${existing.map((f) => f.replace(/\.ya?ml$/, '')).join(', ')}`);
-        const rawAdd = await rl.question('  Add another product? (Y/n): ');
+        const rawAdd = await ask('  Add another product? (Y/n): ');
         if (rawAdd.trim().toLowerCase() === 'n') {
           console.log('  Skipping product setup.');
           console.log('');
-          rl.close();
+          rl?.close();
           return;
         }
         console.log('');
@@ -301,38 +343,56 @@ export async function main(): Promise<void> {
     }
 
     // --- Phase 1: Product ---
-    const rawName = await rl.question('? Product name: ');
-    const productName = rawName.trim();
+    const productName = flags.product || (await ask('? Product name: ')).trim();
     if (!productName) throw new Error('Product name is required');
 
-    const rawRepo = await rl.question('? GitHub repo (owner/repo): ');
-    const repo = rawRepo.trim();
+    const repo = flags.repo || (await ask('? GitHub repo (owner/repo): ')).trim();
     if (!repo || !repo.includes('/')) throw new Error('GitHub repo must be in owner/repo format');
 
-    const rawVoice = await rl.question('? Voice/tone: ');
-    const voice = rawVoice.trim();
+    const voice = flags.voice || (await ask('? Voice/tone: ')).trim();
     if (!voice) throw new Error('Voice/tone is required');
 
     const productId = sanitizeId(productName);
     const emailSubjectTemplate = `{{weekOf}} Weekly Update — ${productName}`;
 
-    console.log('');
+    if (!nonInteractive) console.log('');
 
     // --- Phase 2: LLM provider ---
-    const llmPrompt = `? LLM provider (${LLM_PROVIDERS.map((p, i) => `${i + 1}=${LLM_LABELS[p]}`).join(', ')}) [1]: `;
-    const rawLlm = await rl.question(llmPrompt);
-    const llmProvider = parseSelection(rawLlm, LLM_PROVIDERS, 0);
+    let llmProvider: string;
+    if (flags.llm) {
+      if (!(LLM_PROVIDERS as readonly string[]).includes(flags.llm)) {
+        throw new Error(`Invalid LLM provider: "${flags.llm}". Must be one of: ${LLM_PROVIDERS.join(', ')}`);
+      }
+      llmProvider = flags.llm;
+    } else if (nonInteractive) {
+      llmProvider = 'anthropic';
+    } else {
+      const llmPrompt = `? LLM provider (${LLM_PROVIDERS.map((p, i) => `${i + 1}=${LLM_LABELS[p]}`).join(', ')}) [1]: `;
+      llmProvider = parseSelection(await ask(llmPrompt), LLM_PROVIDERS, 0);
+    }
 
-    const rawLlmKey = await rl.question(`? ${LLM_KEY_PROMPTS[llmProvider]}: `);
-    const llmApiKey = rawLlmKey.trim();
-    if (!llmApiKey) throw new Error(`${LLM_LABELS[llmProvider]} API key is required`);
+    // In non-interactive mode, read API key from env var
+    const llmKeyEnv = LLM_KEY_NAMES[llmProvider];
+    const llmApiKey = nonInteractive
+      ? (process.env[llmKeyEnv] ?? '')
+      : (await ask(`? ${LLM_KEY_PROMPTS[llmProvider]}: `)).trim();
+    if (!llmApiKey && !nonInteractive) throw new Error(`${LLM_LABELS[llmProvider]} API key is required`);
 
-    console.log('');
+    if (!nonInteractive) console.log('');
 
     // --- Phase 3: Subscriber store ---
-    const storePrompt = `? Subscriber store (${SUBSCRIBER_STORES.map((s, i) => `${i + 1}=${STORE_LABELS[s]}`).join(', ')}) [1]: `;
-    const rawStore = await rl.question(storePrompt);
-    const subscriberStore = parseSelection(rawStore, SUBSCRIBER_STORES, 0);
+    let subscriberStore: string;
+    if (flags.subscriberStore) {
+      if (!(SUBSCRIBER_STORES as readonly string[]).includes(flags.subscriberStore)) {
+        throw new Error(`Invalid subscriber store: "${flags.subscriberStore}". Must be one of: ${SUBSCRIBER_STORES.join(', ')}`);
+      }
+      subscriberStore = flags.subscriberStore;
+    } else if (nonInteractive) {
+      subscriberStore = 'json';
+    } else {
+      const storePrompt = `? Subscriber store (${SUBSCRIBER_STORES.map((s, i) => `${i + 1}=${STORE_LABELS[s]}`).join(', ')}) [1]: `;
+      subscriberStore = parseSelection(await ask(storePrompt), SUBSCRIBER_STORES, 0);
+    }
 
     // Collect store-specific credentials
     let supabaseUrl: string | undefined;
@@ -342,55 +402,78 @@ export async function main(): Promise<void> {
     let googlePrivateKey: string | undefined;
 
     if (subscriberStore === 'supabase') {
-      const rawUrl = await rl.question('? Supabase URL: ');
-      supabaseUrl = rawUrl.trim();
-      if (!supabaseUrl) throw new Error('Supabase URL is required');
+      if (nonInteractive) {
+        supabaseUrl = process.env.SUPABASE_URL;
+        supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
+      } else {
+        const rawUrl = await ask('? Supabase URL: ');
+        supabaseUrl = rawUrl.trim();
+        if (!supabaseUrl) throw new Error('Supabase URL is required');
 
-      const rawKey = await rl.question('? Supabase service key: ');
-      supabaseServiceKey = rawKey.trim();
-      if (!supabaseServiceKey) throw new Error('Supabase service key is required');
+        const rawKey = await ask('? Supabase service key: ');
+        supabaseServiceKey = rawKey.trim();
+        if (!supabaseServiceKey) throw new Error('Supabase service key is required');
+      }
     }
 
     if (subscriberStore === 'google-sheets') {
-      const rawId = await rl.question('? Google Sheets spreadsheet ID: ');
-      googleSheetsSpreadsheetId = rawId.trim();
-      if (!googleSheetsSpreadsheetId) throw new Error('Spreadsheet ID is required');
+      if (nonInteractive) {
+        googleSheetsSpreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
+        googleServiceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+        googlePrivateKey = process.env.GOOGLE_PRIVATE_KEY;
+      } else {
+        const rawId = await ask('? Google Sheets spreadsheet ID: ');
+        googleSheetsSpreadsheetId = rawId.trim();
+        if (!googleSheetsSpreadsheetId) throw new Error('Spreadsheet ID is required');
 
-      const rawEmail = await rl.question('? Google service account email: ');
-      googleServiceAccountEmail = rawEmail.trim();
-      if (!googleServiceAccountEmail) throw new Error('Service account email is required');
+        const rawEmail = await ask('? Google service account email: ');
+        googleServiceAccountEmail = rawEmail.trim();
+        if (!googleServiceAccountEmail) throw new Error('Service account email is required');
 
-      const rawPk = await rl.question('? Google private key: ');
-      googlePrivateKey = rawPk.trim();
-      if (!googlePrivateKey) throw new Error('Private key is required');
+        const rawPk = await ask('? Google private key: ');
+        googlePrivateKey = rawPk.trim();
+        if (!googlePrivateKey) throw new Error('Private key is required');
+      }
     }
 
-    console.log('');
+    if (!nonInteractive) console.log('');
 
     // --- Phase 4: Email provider ---
-    const emailPrompt = `? Email provider (${EMAIL_PROVIDERS.map((p, i) => `${i + 1}=${EMAIL_PROVIDER_LABELS[p]}`).join(', ')}) [1]: `;
-    const rawEmail = await rl.question(emailPrompt);
-    const emailProvider = parseSelection(rawEmail, EMAIL_PROVIDERS, 0);
+    let emailProvider: string;
+    if (flags.emailProvider) {
+      if (!(EMAIL_PROVIDERS as readonly string[]).includes(flags.emailProvider)) {
+        throw new Error(`Invalid email provider: "${flags.emailProvider}". Must be one of: ${EMAIL_PROVIDERS.join(', ')}`);
+      }
+      emailProvider = flags.emailProvider;
+    } else if (nonInteractive) {
+      emailProvider = 'resend';
+    } else {
+      const emailPrompt = `? Email provider (${EMAIL_PROVIDERS.map((p, i) => `${i + 1}=${EMAIL_PROVIDER_LABELS[p]}`).join(', ')}) [1]: `;
+      emailProvider = parseSelection(await ask(emailPrompt), EMAIL_PROVIDERS, 0);
+    }
 
-    console.log('');
+    if (!nonInteractive) console.log('');
 
     // --- Phase 5: Common credentials ---
-    const rawGithubToken = await rl.question('? GitHub token (github.com/settings/tokens, "repo" scope): ');
-    const githubToken = rawGithubToken.trim();
-    if (!githubToken) throw new Error('GitHub token is required');
+    const githubToken = nonInteractive
+      ? (process.env.GITHUB_TOKEN ?? '')
+      : (await ask('? GitHub token (github.com/settings/tokens, "repo" scope): ')).trim();
+    if (!githubToken && !nonInteractive) throw new Error('GitHub token is required');
 
     let resendApiKey: string | undefined;
     if (emailProvider === 'resend') {
-      const rawResendKey = await rl.question('? Resend API key (resend.com/api-keys): ');
-      resendApiKey = rawResendKey.trim();
-      if (!resendApiKey) throw new Error('Resend API key is required');
+      resendApiKey = nonInteractive
+        ? (process.env.RESEND_API_KEY ?? '')
+        : (await ask('? Resend API key (resend.com/api-keys): ')).trim();
+      if (!resendApiKey && !nonInteractive) throw new Error('Resend API key is required');
     }
 
-    const rawFromEmail = await rl.question('? Sender email address: ');
-    const fromEmail = rawFromEmail.trim();
-    if (!fromEmail) throw new Error('Sender email address is required');
+    const fromEmail = flags.fromEmail || (nonInteractive
+      ? (process.env.FROM_EMAIL ?? '')
+      : (await ask('? Sender email address: ')).trim());
+    if (!fromEmail && !nonInteractive) throw new Error('Sender email address is required');
 
-    console.log('');
+    if (!nonInteractive) console.log('');
 
     // --- Generate files ---
     const created: Array<[string, string]> = [];
@@ -403,8 +486,8 @@ export async function main(): Promise<void> {
     const yamlPath = join(productsDir, `${productId}.yaml`);
     let writeYaml = true;
 
-    if (existsSync(yamlPath)) {
-      const rawOverwrite = await rl.question(`  ${productId}.yaml already exists. Overwrite? (y/N): `);
+    if (existsSync(yamlPath) && !nonInteractive) {
+      const rawOverwrite = await ask(`  ${productId}.yaml already exists. Overwrite? (y/N): `);
       writeYaml = rawOverwrite.trim().toLowerCase() === 'y';
     }
 
@@ -415,19 +498,19 @@ export async function main(): Promise<void> {
       created.push([`products/${productId}.yaml`, 'Product configuration']);
     }
 
-    // 2. .env
+    // 2. .env (skip in non-interactive — secrets come from env vars already)
     const envPath = join(cwd, '.env');
-    let writeEnv = true;
+    let writeEnv = !nonInteractive;
 
-    if (existsSync(envPath)) {
-      const rawOverwrite = await rl.question('  .env already exists. Overwrite? (y/N): ');
+    if (writeEnv && existsSync(envPath)) {
+      const rawOverwrite = await ask('  .env already exists. Overwrite? (y/N): ');
       writeEnv = rawOverwrite.trim().toLowerCase() === 'y';
     }
 
     if (writeEnv) {
       const answers: InitAnswers = {
         productName, repo, voice, llmProvider, llmApiKey,
-        subscriberStore, emailProvider, githubToken, resendApiKey, fromEmail,
+        subscriberStore, emailProvider, githubToken, resendApiKey: resendApiKey ?? '', fromEmail,
         supabaseUrl, supabaseServiceKey,
         googleSheetsSpreadsheetId, googleServiceAccountEmail, googlePrivateKey,
       };
@@ -458,8 +541,15 @@ export async function main(): Promise<void> {
     }
 
     // --- Phase 6: GitHub Actions workflows ---
-    const rawSetupWorkflows = await rl.question('? Set up GitHub Actions for release-triggered emails? (Y/n): ');
-    const setupWorkflows = rawSetupWorkflows.trim().toLowerCase() !== 'n';
+    let setupWorkflows: boolean;
+    if (flags.workflows !== undefined) {
+      setupWorkflows = flags.workflows;
+    } else if (nonInteractive) {
+      setupWorkflows = false;
+    } else {
+      const rawSetupWorkflows = await ask('? Set up GitHub Actions for release-triggered emails? (Y/n): ');
+      setupWorkflows = rawSetupWorkflows.trim().toLowerCase() !== 'n';
+    }
     const workflowSecrets: string[] = [];
 
     if (setupWorkflows) {
@@ -468,8 +558,8 @@ export async function main(): Promise<void> {
 
       const draftWorkflowPath = join(workflowsDir, 'draft-email.yml');
       let writeDraftWorkflow = true;
-      if (existsSync(draftWorkflowPath)) {
-        const rawOverwrite = await rl.question('  draft-email.yml already exists. Overwrite? (y/N): ');
+      if (existsSync(draftWorkflowPath) && !nonInteractive) {
+        const rawOverwrite = await ask('  draft-email.yml already exists. Overwrite? (y/N): ');
         writeDraftWorkflow = rawOverwrite.trim().toLowerCase() === 'y';
       }
       if (writeDraftWorkflow) {
@@ -479,8 +569,8 @@ export async function main(): Promise<void> {
 
       const sendWorkflowPath = join(workflowsDir, 'send-email.yml');
       let writeSendWorkflow = true;
-      if (existsSync(sendWorkflowPath)) {
-        const rawOverwrite = await rl.question('  send-email.yml already exists. Overwrite? (y/N): ');
+      if (existsSync(sendWorkflowPath) && !nonInteractive) {
+        const rawOverwrite = await ask('  send-email.yml already exists. Overwrite? (y/N): ');
         writeSendWorkflow = rawOverwrite.trim().toLowerCase() === 'y';
       }
       if (writeSendWorkflow) {
@@ -533,7 +623,7 @@ export async function main(): Promise<void> {
     console.log('  Docs: https://cryyer.dev');
     console.log('');
   } finally {
-    rl.close();
+    rl?.close();
   }
 }
 
