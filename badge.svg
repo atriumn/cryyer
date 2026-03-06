@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="138" height="20" role="img" aria-label="emails by: cryyer">
+  <title>emails by: cryyer</title>
+  <linearGradient id="s" x2="0" y2="100%">
+    <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+    <stop offset="1" stop-opacity=".1"/>
+  </linearGradient>
+  <clipPath id="r">
+    <rect width="138" height="20" rx="3" fill="#fff"/>
+  </clipPath>
+  <g clip-path="url(#r)">
+    <rect width="85" height="20" fill="#555"/>
+    <rect x="85" width="53" height="20" fill="#2c3e6b"/>
+    <rect width="138" height="20" fill="url(#s)"/>
+  </g>
+  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="110">
+    <image x="5" y="3" width="14" height="14" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAACEklEQVR42r2UUUhTYRTH/+f77qAahhXOWiDUgpYrCeeTlFsyMFzNCC9prUwqKRB6SILs4W5CZNCLD1FvQoQPE4IeEoIeGkQQFJLFiPBhlAXdmPSyNbb73dPDloy4TCHsvB0+vh/n/P9/DvBfStclYIh/xawAUildMoOqLa0VQADQ3Nbm9rUfudPSHg3+eWBmkoIcYU5js67r8vvCQr6kEGzcJN9cOtf36O6Nk34iYmWzAMB/wxz3N02TAKBsFe4f2iuQzdGZ5/OF8s3rI0MPpsaf+YOHdxiGQbUwJxCFw2F7INbpPdXVctbMb8D7bGn69cKXUn9PcCoWao0IoZonJpJ2FeZchmEIKYArQ71zY6MDPHb1gorH+7NPZ24vfX03w8PDp69VDEjJVYWG179tTzCyfDQateKDMfvDi3tc+PyERy5fXKyIboi6GoVCIQkAAW9TpGv/5i3fli3k8hp9XCpaDx/P4+XbxVfMTIlExZTav1pt4/F4GAB8Xio1Naicb7urUdm/7NFbc5pllSd/fEqPUyJBSCZ5jWkGvK2d53d3RPl437Fid+8J9h7oiVWn1uqmd2U90yQC4N7o2qUU1L6dmsXMCsTd9VLtSGcAzHRQai65tUG6iRguQR0AOF1df1VQOp1WFWfkpLKtaUuBS0WLwPgJAJidVet6KOqEyhDQPSKVCAggIDKBgEAmw+t+un4DFSfEO6Dj1DsAAAAASUVORK5CYII="/>
+    <text aria-hidden="true" x="520" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="550">emails by</text>
+    <text x="520" y="140" transform="scale(.1)" fill="#fff" textLength="550">emails by</text>
+    <text aria-hidden="true" x="1105" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="430">cryyer</text>
+    <text x="1105" y="140" transform="scale(.1)" fill="#fff" textLength="430">cryyer</text>
+  </g>
+</svg>

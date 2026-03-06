@@ -355,6 +355,16 @@ All log output goes to stderr (stdout is reserved for JSON-RPC). If something is
 
 Use the `review_drafts` prompt for the Monday morning review workflow — it walks through each pending draft and asks whether to send, edit, regenerate, or skip.
 
+## Badge
+
+Show that your project uses Cryyer for emails:
+
+[![Emails by Cryyer](https://cryyer.dev/badge.svg)](https://github.com/atriumn/cryyer)
+
+```md
+[![Emails by Cryyer](https://cryyer.dev/badge.svg)](https://github.com/atriumn/cryyer)
+```
+
 ## Development
 
 ```bash
