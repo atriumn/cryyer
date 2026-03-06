@@ -42,7 +42,7 @@ See [LLM Providers](/llm-providers) for setup details.
 
 | Variable | Default | Description |
 |---|---|---|
-| `SUBSCRIBER_STORE` | `supabase` | `supabase`, `json`, or `google-sheets` |
+| `SUBSCRIBER_STORE` | `supabase` | `supabase`, `json`, `gist`, or `google-sheets` |
 
 ### Supabase
 
@@ -57,6 +57,13 @@ See [LLM Providers](/llm-providers) for setup details.
 |---|---|---|
 | `SUBSCRIBERS_JSON_PATH` | `./subscribers.json` | Path to subscriber data |
 | `EMAIL_LOG_JSON_PATH` | `./email-log.json` | Path to email send log |
+
+### GitHub Gist
+
+| Variable | Description |
+|---|---|
+| `GITHUB_GIST_ID` | ID of a private Gist containing `subscribers.json` |
+| `GITHUB_TOKEN` | GitHub token with gist scope (automatic in Actions) |
 
 ### Google Sheets
 

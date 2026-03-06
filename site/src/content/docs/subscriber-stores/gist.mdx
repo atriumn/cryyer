@@ -1,0 +1,101 @@
+---
+title: GitHub Gist Store
+description: Use a private GitHub Gist for subscriber data.
+---
+
+Store subscribers in a **private GitHub Gist** — ideal for public repos where you can't commit a `subscribers.json` file without exposing email addresses.
+
+## Why use this?
+
+The [JSON file store](/subscriber-stores/json) requires `subscribers.json` to be checked into the repo so GitHub Actions can read it. In a **public repo**, that means subscriber emails are visible to anyone. The Gist store solves this by keeping the same JSON format in a private Gist that's only accessible via the GitHub API with a token.
+
+## Setup
+
+### 1. Create a private Gist
+
+Create a [new secret Gist](https://gist.github.com/) with a file named `subscribers.json`:
+
+```json
+[]
+```
+
+Copy the Gist ID from the URL (e.g., `https://gist.github.com/yourname/abc123def456` → `abc123def456`).
+
+### 2. Add the Gist ID as a repository secret
+
+```bash
+gh secret set SUBSCRIBERS_GIST_ID --body "abc123def456"
+```
+
+### 3. Set environment variables
+
+```bash
+export SUBSCRIBER_STORE=gist
+export GITHUB_GIST_ID=abc123def456
+export GITHUB_TOKEN=ghp_...
+```
+
+In GitHub Actions, `GITHUB_TOKEN` is already available automatically.
+
+## Configuration
+
+| Variable | Required | Description |
+|---|---|---|
+| `GITHUB_GIST_ID` | Yes | ID of the private Gist |
+| `GITHUB_TOKEN` | Yes | GitHub token with `gist` scope (automatic in Actions) |
+
+## File format
+
+The Gist uses the same JSON format as the [JSON file store](/subscriber-stores/json):
+
+```json
+[
+  {
+    "email": "alice@example.com",
+    "name": "Alice",
+    "productIds": ["my-app", "other-app"]
+  },
+  {
+    "email": "bob@example.com",
+    "productIds": ["my-app"]
+  }
+]
+```
+
+[Audience](/configuration/product-config#audiences) compound keys work the same way:
+
+```json
+[
+  {
+    "email": "alice@example.com",
+    "productIds": ["my-app:beta"]
+  }
+]
+```
+
+## Email logging
+
+Sent emails are logged to an `email-log.json` file in the same Gist (created automatically on first send).
+
+## GitHub Actions usage
+
+```yaml
+- uses: atriumn/cryyer/.github/actions/send-file@v0
+  with:
+    product: my-app
+    draft-path: drafts/v1.2.0.md
+    from-email: updates@yourdomain.com
+    email-api-key: ${{ secrets.RESEND_API_KEY }}
+    subscriber-store: gist
+    github-gist-id: ${{ secrets.SUBSCRIBERS_GIST_ID }}
+```
+
+The `github-token` input defaults to `${{ github.token }}`, which already has gist access in Actions.
+
+## Managing subscribers
+
+You can manage subscribers through any of the standard Cryyer interfaces:
+
+- **MCP tools**: `add_subscriber`, `remove_subscriber`, `list_subscribers`
+- **Directly**: Edit the Gist at `https://gist.github.com/{id}`
+- **GitHub CLI**: `gh gist edit {id}`

@@ -3,11 +3,12 @@ title: Subscriber Stores
 description: Choose where Cryyer reads subscriber data from.
 ---
 
-Cryyer supports three subscriber store backends. Set the `SUBSCRIBER_STORE` environment variable to choose yours. Default is `supabase`.
+Cryyer supports four subscriber store backends. Set the `SUBSCRIBER_STORE` environment variable to choose yours. Default is `supabase`.
 
 | Store | Best for | Features |
 |---|---|---|
 | [JSON File](/subscriber-stores/json) | Local dev, small lists | Simplest setup, file-based |
+| [GitHub Gist](/subscriber-stores/gist) | Public repos, small lists | Private storage, no extra services |
 | [Supabase](/subscriber-stores/supabase) | Production, dynamic lists | Full CRUD, email logging |
 | [Google Sheets](/subscriber-stores/google-sheets) | Non-technical teams | Spreadsheet UI, easy sharing |
 
@@ -29,6 +30,9 @@ When using [audiences](/configuration/product-config#audiences), subscriber look
 ```bash
 # JSON (simplest)
 SUBSCRIBER_STORE=json
+
+# GitHub Gist (private storage for public repos)
+SUBSCRIBER_STORE=gist
 
 # Supabase (default, production-ready)
 SUBSCRIBER_STORE=supabase

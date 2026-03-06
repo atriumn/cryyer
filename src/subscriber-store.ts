@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { createClient } from '@supabase/supabase-js';
+import { Octokit } from 'octokit';
 
 export interface Subscriber {
   email: string;
@@ -249,9 +250,99 @@ export class GoogleSheetsStore implements SubscriberStore {
   }
 }
 
+// --- GistStore ---
+
+interface GistFileContent {
+  content: string;
+}
+
+export class GistStore implements SubscriberStore {
+  private octokit: Octokit;
+  private gistId: string;
+  private subscribersFile = 'subscribers.json';
+  private emailLogFile = 'email-log.json';
+
+  constructor(gistId: string, token: string) {
+    this.gistId = gistId;
+    this.octokit = new Octokit({ auth: token });
+  }
+
+  private async readGistFile(filename: string): Promise<string | null> {
+    const { data } = await this.octokit.rest.gists.get({ gist_id: this.gistId });
+    const file = data.files?.[filename] as GistFileContent | undefined;
+    return file?.content ?? null;
+  }
+
+  private async writeGistFile(filename: string, content: string): Promise<void> {
+    await this.octokit.rest.gists.update({
+      gist_id: this.gistId,
+      files: { [filename]: { content } },
+    });
+  }
+
+  async getSubscribers(productId: string): Promise<Subscriber[]> {
+    const raw = await this.readGistFile(this.subscribersFile);
+    if (!raw) {
+      console.warn(`[subscribers] Gist file not found: ${this.subscribersFile}`);
+      return [];
+    }
+
+    const entries: JsonSubscriberEntry[] = JSON.parse(raw);
+    const subscribers = entries
+      .filter((e) => e.productIds.includes(productId))
+      .map((e) => ({ email: e.email, name: e.name }));
+
+    if (subscribers.length === 0) {
+      console.warn(`[subscribers] No active subscribers found for product: ${productId}`);
+    }
+
+    return subscribers;
+  }
+
+  async recordEmailSent(email: string, productId: string, weekOf: string): Promise<void> {
+    const raw = await this.readGistFile(this.emailLogFile);
+    const log: JsonEmailLogEntry[] = raw ? JSON.parse(raw) : [];
+    log.push({ email, productId, weekOf, sentAt: new Date().toISOString() });
+    await this.writeGistFile(this.emailLogFile, JSON.stringify(log, null, 2) + '\n');
+  }
+
+  async addSubscriber(productId: string, email: string, name?: string): Promise<void> {
+    const raw = await this.readGistFile(this.subscribersFile);
+    const entries: JsonSubscriberEntry[] = raw ? JSON.parse(raw) : [];
+
+    const existing = entries.find((e) => e.email === email);
+    if (existing) {
+      if (!existing.productIds.includes(productId)) {
+        existing.productIds.push(productId);
+      }
+      if (name) existing.name = name;
+    } else {
+      entries.push({ email, name, productIds: [productId] });
+    }
+
+    await this.writeGistFile(this.subscribersFile, JSON.stringify(entries, null, 2) + '\n');
+  }
+
+  async removeSubscriber(productId: string, email: string): Promise<void> {
+    const raw = await this.readGistFile(this.subscribersFile);
+    if (!raw) return;
+
+    let entries: JsonSubscriberEntry[] = JSON.parse(raw);
+    const existing = entries.find((e) => e.email === email);
+    if (!existing) return;
+
+    existing.productIds = existing.productIds.filter((id) => id !== productId);
+    if (existing.productIds.length === 0) {
+      entries = entries.filter((e) => e.email !== email);
+    }
+
+    await this.writeGistFile(this.subscribersFile, JSON.stringify(entries, null, 2) + '\n');
+  }
+}
+
 // --- Factory ---
 
-export type SubscriberStoreType = 'supabase' | 'json' | 'google-sheets';
+export type SubscriberStoreType = 'supabase' | 'json' | 'google-sheets' | 'gist';
 
 export function createSubscriberStore(overrides?: {
   store?: SubscriberStoreType;
@@ -280,7 +371,14 @@ export function createSubscriberStore(overrides?: {
       if (!privateKey) throw new Error('Missing GOOGLE_PRIVATE_KEY environment variable');
       return new GoogleSheetsStore(spreadsheetId, email, privateKey);
     }
+    case 'gist': {
+      const gistId = process.env.GITHUB_GIST_ID;
+      const token = process.env.GITHUB_TOKEN;
+      if (!gistId) throw new Error('Missing GITHUB_GIST_ID environment variable');
+      if (!token) throw new Error('Missing GITHUB_TOKEN environment variable');
+      return new GistStore(gistId, token);
+    }
     default:
-      throw new Error(`Unknown subscriber store: ${storeType}. Supported: supabase, json, google-sheets`);
+      throw new Error(`Unknown subscriber store: ${storeType}. Supported: supabase, json, google-sheets, gist`);
   }
 }

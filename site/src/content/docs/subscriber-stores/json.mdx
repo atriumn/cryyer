@@ -5,6 +5,10 @@ description: Use a local JSON file for subscriber data.
 
 The simplest subscriber store — perfect for local development and small lists.
 
+:::caution[Public repos]
+In a public repo, `subscribers.json` must be committed for GitHub Actions to read it, which exposes subscriber emails. Use the [GitHub Gist store](/subscriber-stores/gist) instead — it keeps the same JSON format in a private Gist.
+:::
+
 ## Setup
 
 ```bash
