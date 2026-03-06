@@ -2,7 +2,7 @@ name: Draft Email
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened]
 
 jobs:
   draft:
