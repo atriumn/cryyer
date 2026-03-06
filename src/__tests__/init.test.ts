@@ -16,10 +16,50 @@ vi.mock('fs', async (importOriginal) => {
   };
 });
 
-import { sanitizeId, buildEnvContent, buildSubscribersJson, buildGitignoreContent, buildDraftWorkflowContent, buildSendWorkflowContent, main } from '../init.js';
+import { sanitizeId, buildEnvContent, buildSubscribersJson, buildGitignoreContent, buildDraftWorkflowContent, buildSendWorkflowContent, parseInitFlags, main } from '../init.js';
 import type { InitAnswers } from '../init.js';
 import { createInterface } from 'readline/promises';
 import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync } from 'fs';
+
+describe('parseInitFlags', () => {
+  it('parses all flags', () => {
+    const flags = parseInitFlags([
+      '--product', 'My App',
+      '--repo', 'acme/my-app',
+      '--voice', 'Casual',
+      '--llm', 'openai',
+      '--subscriber-store', 'supabase',
+      '--email-provider', 'gmail',
+      '--from-email', 'hi@acme.dev',
+      '--yes',
+      '--workflows',
+    ]);
+    expect(flags).toEqual({
+      product: 'My App',
+      repo: 'acme/my-app',
+      voice: 'Casual',
+      llm: 'openai',
+      subscriberStore: 'supabase',
+      emailProvider: 'gmail',
+      fromEmail: 'hi@acme.dev',
+      yes: true,
+      workflows: true,
+    });
+  });
+
+  it('parses -y shorthand', () => {
+    expect(parseInitFlags(['-y']).yes).toBe(true);
+  });
+
+  it('parses --no-workflows', () => {
+    expect(parseInitFlags(['--no-workflows']).workflows).toBe(false);
+  });
+
+  it('returns empty flags for no arguments', () => {
+    const flags = parseInitFlags([]);
+    expect(flags).toEqual({});
+  });
+});
 
 describe('sanitizeId', () => {
   it('lowercases the input', () => {
@@ -498,5 +538,156 @@ describe('main (init)', () => {
     expect(content).toContain('node_modules/');
     expect(content).toContain('# cryyer');
     expect(content).toContain('.env');
+  });
+});
+
+describe('main (non-interactive)', () => {
+  const originalArgv = process.argv;
+  const originalEnv = { ...process.env };
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    process.argv = originalArgv;
+    process.env = { ...originalEnv };
+  });
+
+  function setupFreshDir() {
+    (existsSync as Mock).mockReturnValue(false);
+    (readdirSync as Mock).mockReturnValue([]);
+    (readFileSync as Mock).mockImplementation((path: string) => {
+      if (path.includes('package.json')) return JSON.stringify({ version: '0.1.5' });
+      throw new Error(`Unexpected read: ${path}`);
+    });
+  }
+
+  function setArgv(...args: string[]) {
+    process.argv = ['node', 'init.js', ...args];
+  }
+
+  it('creates product YAML without prompting in --yes mode', async () => {
+    setupFreshDir();
+    setArgv('--yes', '--product', 'Acme CLI', '--repo', 'acme/acme-cli', '--voice', 'Casual');
+
+    await main();
+
+    // Should NOT have called createInterface
+    expect(createInterface).not.toHaveBeenCalled();
+
+    // Product YAML should be written
+    expect(writeFileSync).toHaveBeenCalledWith(
+      expect.stringContaining('acme-cli.yaml'),
+      expect.stringContaining('acme/acme-cli'),
+      'utf-8'
+    );
+  });
+
+  it('detects CI=true as non-interactive', async () => {
+    setupFreshDir();
+    process.env.CI = 'true';
+    setArgv('--product', 'Acme CLI', '--repo', 'acme/acme-cli', '--voice', 'Casual');
+
+    await main();
+
+    expect(createInterface).not.toHaveBeenCalled();
+    expect(writeFileSync).toHaveBeenCalledWith(
+      expect.stringContaining('acme-cli.yaml'),
+      expect.stringContaining('acme/acme-cli'),
+      'utf-8'
+    );
+  });
+
+  it('defaults to anthropic, json store, resend, no workflows', async () => {
+    setupFreshDir();
+    setArgv('-y', '--product', 'Acme', '--repo', 'acme/cli', '--voice', 'Casual');
+
+    await main();
+
+    // Should create subscribers.json (json store default)
+    expect(writeFileSync).toHaveBeenCalledWith(
+      expect.stringContaining('subscribers.json'),
+      expect.stringContaining('acme'),
+      'utf-8'
+    );
+
+    // Should NOT create workflow files (default off in non-interactive)
+    const workflowCalls = (writeFileSync as Mock).mock.calls.filter(
+      (call) => typeof call[0] === 'string' && call[0].includes('workflows')
+    );
+    expect(workflowCalls).toHaveLength(0);
+  });
+
+  it('skips .env file in non-interactive mode', async () => {
+    setupFreshDir();
+    setArgv('-y', '--product', 'Acme', '--repo', 'acme/cli', '--voice', 'Casual');
+
+    await main();
+
+    const envCalls = (writeFileSync as Mock).mock.calls.filter(
+      (call) => typeof call[0] === 'string' && call[0].endsWith('.env')
+    );
+    expect(envCalls).toHaveLength(0);
+  });
+
+  it('creates workflows when --workflows is passed', async () => {
+    setupFreshDir();
+    setArgv('-y', '--product', 'Acme', '--repo', 'acme/cli', '--voice', 'Casual', '--workflows');
+
+    await main();
+
+    expect(mkdirSync).toHaveBeenCalledWith(
+      expect.stringContaining('.github/workflows'),
+      { recursive: true }
+    );
+    expect(writeFileSync).toHaveBeenCalledWith(
+      expect.stringContaining('draft-email.yml'),
+      expect.stringContaining('atriumn/cryyer'),
+      'utf-8'
+    );
+    expect(writeFileSync).toHaveBeenCalledWith(
+      expect.stringContaining('send-email.yml'),
+      expect.stringContaining('atriumn/cryyer'),
+      'utf-8'
+    );
+  });
+
+  it('throws when required --product is missing in non-interactive mode', async () => {
+    setupFreshDir();
+    setArgv('-y', '--repo', 'acme/cli', '--voice', 'Casual');
+
+    await expect(main()).rejects.toThrow('Product name is required');
+  });
+
+  it('throws when required --repo is missing in non-interactive mode', async () => {
+    setupFreshDir();
+    setArgv('-y', '--product', 'Acme');
+
+    await expect(main()).rejects.toThrow('owner/repo format');
+  });
+
+  it('throws when required --voice is missing in non-interactive mode', async () => {
+    setupFreshDir();
+    setArgv('-y', '--product', 'Acme', '--repo', 'acme/cli');
+
+    await expect(main()).rejects.toThrow('Voice/tone is required');
+  });
+
+  it('respects --llm flag', async () => {
+    setupFreshDir();
+    setArgv('-y', '--product', 'Acme', '--repo', 'acme/cli', '--voice', 'Casual', '--llm', 'gemini', '--workflows');
+
+    await main();
+
+    expect(writeFileSync).toHaveBeenCalledWith(
+      expect.stringContaining('draft-email.yml'),
+      expect.stringContaining('GEMINI_API_KEY'),
+      'utf-8'
+    );
+  });
+
+  it('throws on invalid --llm value', async () => {
+    setupFreshDir();
+    setArgv('-y', '--product', 'Acme', '--repo', 'acme/cli', '--voice', 'Casual', '--llm', 'invalid');
+
+    await expect(main()).rejects.toThrow('Invalid LLM provider');
   });
 });

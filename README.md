@@ -31,6 +31,8 @@ Cryyer supports two pipelines:
 
 ## Quickstart
 
+### For humans — interactive wizard
+
 ```bash
 mkdir my-updates && cd my-updates
 npx @atriumn/cryyer init
@@ -42,6 +44,25 @@ The interactive setup walks you through product name, GitHub repo, voice/tone, L
 - `.env` — API keys and settings
 - `subscribers.json` — subscriber list (when using JSON store)
 - `.gitignore` — ignores `.env` and data files
+
+### For CI — flags + env vars
+
+```bash
+npx @atriumn/cryyer init --yes \
+  --product "My App" \
+  --repo owner/my-app \
+  --voice "Friendly and concise" \
+  --llm gemini \
+  --workflows
+```
+
+Non-interactive mode (`--yes` or `CI=true`) skips all prompts. Secrets are read from environment variables (`ANTHROPIC_API_KEY`, `RESEND_API_KEY`, etc.) instead of being written to `.env`. Defaults: `anthropic` LLM, `json` subscriber store, `resend` email, no workflows.
+
+Available flags: `--product`, `--repo`, `--voice`, `--llm`, `--subscriber-store`, `--email-provider`, `--from-email`, `--workflows`/`--no-workflows`.
+
+### For agents — write files directly
+
+AI coding agents (Claude Code, Cursor, etc.) can skip `init` entirely and write the files themselves. All you need is a `products/*.yaml` file — see [Product Configuration](#product-configuration) for the schema.
 
 Then:
 
