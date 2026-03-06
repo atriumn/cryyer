@@ -84,6 +84,18 @@ Both pipelines gather GitHub activity (merged PRs, releases, notable commits), g
 
 See [GitHub Actions](/github-actions) for setup details.
 
+## Public repos
+
+If your repo is **public**, don't use the default JSON subscriber store — `subscribers.json` would need to be committed, exposing subscriber emails. Use the [GitHub Gist store](/subscriber-stores/gist) instead. It keeps the same JSON format in a private Gist:
+
+```bash
+SUBSCRIBER_STORE=gist
+GITHUB_GIST_ID=your_gist_id
+GITHUB_TOKEN=ghp_your_pat   # PAT with gist scope
+```
+
+See [GitHub Gist Store](/subscriber-stores/gist) for setup steps.
+
 ## Next steps
 
 - [Configure your products](/configuration/product-config)

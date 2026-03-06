@@ -48,9 +48,8 @@ inputs:
     description: Gist ID for subscriber storage (required when subscriber-store is gist)
     required: false
   github-token:
-    description: GitHub token for gist access (required when subscriber-store is gist)
+    description: GitHub PAT with gist scope (required when subscriber-store is gist)
     required: false
-    default: ${{ github.token }}
   audience:
     description: Audience ID for multi-audience products
     required: false
