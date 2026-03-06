@@ -255,6 +255,91 @@ jobs:
 `;
 }
 
+export function buildWeeklyDraftWorkflowContent(productId: string, llmProvider: string): string {
+  const secretName = LLM_KEY_NAMES[llmProvider] ?? 'ANTHROPIC_API_KEY';
+  return `name: Weekly Draft
+
+on:
+  schedule:
+    - cron: '0 13 * * 1'  # Monday 1pm UTC
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  draft:
+    name: Generate Weekly Draft
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npx @atriumn/cryyer@latest draft
+        env:
+          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+          CRYYER_REPO: \${{ github.repository }}
+          LLM_PROVIDER: ${llmProvider}
+          ${secretName}: \${{ secrets.${secretName} }}
+`;
+}
+
+export function buildSendUpdateWorkflowContent(
+  productId: string,
+  emailProvider: string,
+  subscriberStore: string,
+): string {
+  const envLines: string[] = [
+    `          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}`,
+    `          FROM_EMAIL: \${{ secrets.FROM_EMAIL }}`,
+    `          EMAIL_PROVIDER: ${emailProvider}`,
+    `          ISSUE_NUMBER: \${{ github.event.issue.number }}`,
+    `          SUBSCRIBER_STORE: ${subscriberStore}`,
+  ];
+
+  if (emailProvider === 'resend') {
+    envLines.push(`          RESEND_API_KEY: \${{ secrets.RESEND_API_KEY }}`);
+  } else if (emailProvider === 'gmail') {
+    envLines.push(`          GMAIL_REFRESH_TOKEN: \${{ secrets.GMAIL_REFRESH_TOKEN }}`);
+  }
+
+  if (subscriberStore === 'supabase') {
+    envLines.push(`          SUPABASE_URL: \${{ secrets.SUPABASE_URL }}`);
+    envLines.push(`          SUPABASE_SERVICE_KEY: \${{ secrets.SUPABASE_SERVICE_KEY }}`);
+  } else if (subscriberStore === 'google-sheets') {
+    envLines.push(`          GOOGLE_SHEETS_SPREADSHEET_ID: \${{ secrets.GOOGLE_SHEETS_SPREADSHEET_ID }}`);
+    envLines.push(`          GOOGLE_SERVICE_ACCOUNT_EMAIL: \${{ secrets.GOOGLE_SERVICE_ACCOUNT_EMAIL }}`);
+    envLines.push(`          GOOGLE_PRIVATE_KEY: \${{ secrets.GOOGLE_PRIVATE_KEY }}`);
+  }
+
+  return `name: Send Update
+
+on:
+  issues:
+    types: [closed]
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  send:
+    name: Send Email Update
+    runs-on: ubuntu-latest
+    if: contains(github.event.issue.labels.*.name, 'draft')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npx @atriumn/cryyer@latest send-on-close
+        env:
+${envLines.join('\n')}
+`;
+}
+
 function parseSelection(raw: string, options: readonly string[], defaultIndex: number): string {
   const trimmed = raw.trim();
   if (!trimmed) return options[defaultIndex];
@@ -262,6 +347,9 @@ function parseSelection(raw: string, options: readonly string[], defaultIndex: n
   if (num >= 1 && num <= options.length) return options[num - 1];
   throw new Error(`Invalid selection: "${trimmed}". Enter a number 1-${options.length}.`);
 }
+
+const PIPELINES = ['weekly', 'release', 'both'] as const;
+type Pipeline = typeof PIPELINES[number];
 
 export interface InitFlags {
   product?: string;
@@ -272,7 +360,7 @@ export interface InitFlags {
   emailProvider?: string;
   fromEmail?: string;
   yes?: boolean;
-  workflows?: boolean;
+  pipeline?: Pipeline;
 }
 
 export function parseInitFlags(argv: string[]): InitFlags {
@@ -289,8 +377,18 @@ export function parseInitFlags(argv: string[]): InitFlags {
       case '--email-provider': flags.emailProvider = next; i++; break;
       case '--from-email': flags.fromEmail = next; i++; break;
       case '--yes': case '-y': flags.yes = true; break;
-      case '--no-workflows': flags.workflows = false; break;
-      case '--workflows': flags.workflows = true; break;
+      case '--pipeline': {
+        const val = next as Pipeline;
+        if (!PIPELINES.includes(val)) {
+          throw new Error(`Invalid pipeline: "${next}". Must be one of: ${PIPELINES.join(', ')}`);
+        }
+        flags.pipeline = val;
+        i++;
+        break;
+      }
+      // Back-compat: --workflows maps to --pipeline release, --no-workflows skips
+      case '--workflows': flags.pipeline = flags.pipeline ?? 'release'; break;
+      case '--no-workflows': if (!flags.pipeline) flags.pipeline = undefined; break;
     }
   }
   return flags;
@@ -541,41 +639,82 @@ export async function main(): Promise<void> {
     }
 
     // --- Phase 6: GitHub Actions workflows ---
-    let setupWorkflows: boolean;
-    if (flags.workflows !== undefined) {
-      setupWorkflows = flags.workflows;
+    let pipeline: Pipeline | undefined;
+    if (flags.pipeline !== undefined) {
+      pipeline = flags.pipeline;
     } else if (nonInteractive) {
-      setupWorkflows = false;
+      pipeline = undefined; // no workflows by default in non-interactive
     } else {
-      const rawSetupWorkflows = await ask('? Set up GitHub Actions for release-triggered emails? (Y/n): ');
-      setupWorkflows = rawSetupWorkflows.trim().toLowerCase() !== 'n';
+      const pipelinePrompt = '? Set up GitHub Actions? (1=Weekly digest, 2=Release emails, 3=Both, n=Skip) [1]: ';
+      const rawPipeline = await ask(pipelinePrompt);
+      const trimmed = rawPipeline.trim().toLowerCase();
+      if (trimmed === 'n' || trimmed === 'skip') {
+        pipeline = undefined;
+      } else if (trimmed === '' || trimmed === '1') {
+        pipeline = 'weekly';
+      } else if (trimmed === '2') {
+        pipeline = 'release';
+      } else if (trimmed === '3') {
+        pipeline = 'both';
+      } else {
+        pipeline = undefined;
+      }
     }
     const workflowSecrets: string[] = [];
 
-    if (setupWorkflows) {
+    if (pipeline) {
       const workflowsDir = join(cwd, '.github', 'workflows');
       mkdirSync(workflowsDir, { recursive: true });
 
-      const draftWorkflowPath = join(workflowsDir, 'draft-email.yml');
-      let writeDraftWorkflow = true;
-      if (existsSync(draftWorkflowPath) && !nonInteractive) {
-        const rawOverwrite = await ask('  draft-email.yml already exists. Overwrite? (y/N): ');
-        writeDraftWorkflow = rawOverwrite.trim().toLowerCase() === 'y';
-      }
-      if (writeDraftWorkflow) {
-        writeFileSync(draftWorkflowPath, buildDraftWorkflowContent(productId, llmProvider), 'utf-8');
-        created.push(['.github/workflows/draft-email.yml', 'Draft email on release PR']);
+      const wantsWeekly = pipeline === 'weekly' || pipeline === 'both';
+      const wantsRelease = pipeline === 'release' || pipeline === 'both';
+
+      if (wantsWeekly) {
+        const weeklyDraftPath = join(workflowsDir, 'weekly-draft.yml');
+        let writeIt = true;
+        if (existsSync(weeklyDraftPath) && !nonInteractive) {
+          const raw = await ask('  weekly-draft.yml already exists. Overwrite? (y/N): ');
+          writeIt = raw.trim().toLowerCase() === 'y';
+        }
+        if (writeIt) {
+          writeFileSync(weeklyDraftPath, buildWeeklyDraftWorkflowContent(productId, llmProvider), 'utf-8');
+          created.push(['.github/workflows/weekly-draft.yml', 'Weekly draft on cron + manual trigger']);
+        }
+
+        const sendUpdatePath = join(workflowsDir, 'send-update.yml');
+        let writeSend = true;
+        if (existsSync(sendUpdatePath) && !nonInteractive) {
+          const raw = await ask('  send-update.yml already exists. Overwrite? (y/N): ');
+          writeSend = raw.trim().toLowerCase() === 'y';
+        }
+        if (writeSend) {
+          writeFileSync(sendUpdatePath, buildSendUpdateWorkflowContent(productId, emailProvider, subscriberStore), 'utf-8');
+          created.push(['.github/workflows/send-update.yml', 'Send email when draft issue closed']);
+        }
       }
 
-      const sendWorkflowPath = join(workflowsDir, 'send-email.yml');
-      let writeSendWorkflow = true;
-      if (existsSync(sendWorkflowPath) && !nonInteractive) {
-        const rawOverwrite = await ask('  send-email.yml already exists. Overwrite? (y/N): ');
-        writeSendWorkflow = rawOverwrite.trim().toLowerCase() === 'y';
-      }
-      if (writeSendWorkflow) {
-        writeFileSync(sendWorkflowPath, buildSendWorkflowContent(productId, emailProvider, subscriberStore), 'utf-8');
-        created.push(['.github/workflows/send-email.yml', 'Send email on release']);
+      if (wantsRelease) {
+        const draftWorkflowPath = join(workflowsDir, 'draft-email.yml');
+        let writeDraftWorkflow = true;
+        if (existsSync(draftWorkflowPath) && !nonInteractive) {
+          const rawOverwrite = await ask('  draft-email.yml already exists. Overwrite? (y/N): ');
+          writeDraftWorkflow = rawOverwrite.trim().toLowerCase() === 'y';
+        }
+        if (writeDraftWorkflow) {
+          writeFileSync(draftWorkflowPath, buildDraftWorkflowContent(productId, llmProvider), 'utf-8');
+          created.push(['.github/workflows/draft-email.yml', 'Draft email on release PR']);
+        }
+
+        const sendWorkflowPath = join(workflowsDir, 'send-email.yml');
+        let writeSendWorkflow = true;
+        if (existsSync(sendWorkflowPath) && !nonInteractive) {
+          const rawOverwrite = await ask('  send-email.yml already exists. Overwrite? (y/N): ');
+          writeSendWorkflow = rawOverwrite.trim().toLowerCase() === 'y';
+        }
+        if (writeSendWorkflow) {
+          writeFileSync(sendWorkflowPath, buildSendWorkflowContent(productId, emailProvider, subscriberStore), 'utf-8');
+          created.push(['.github/workflows/send-email.yml', 'Send email on release']);
+        }
       }
 
       workflowSecrets.push(LLM_KEY_NAMES[llmProvider]);

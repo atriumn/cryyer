@@ -30,13 +30,12 @@ npx @atriumn/cryyer init --yes \
   --product "My App" \
   --repo owner/my-app \
   --voice "Friendly and concise" \
-  --llm gemini \
-  --workflows
+  --pipeline weekly
 ```
 
 Non-interactive mode (`--yes` or `CI=true`) skips all prompts. Secrets are read from environment variables (`ANTHROPIC_API_KEY`, `RESEND_API_KEY`, etc.) instead of being written to `.env`. Defaults: `anthropic` LLM, `json` subscriber store, `resend` email, no workflows.
 
-Available flags: `--product`, `--repo`, `--voice`, `--llm`, `--subscriber-store`, `--email-provider`, `--from-email`, `--workflows`/`--no-workflows`.
+Available flags: `--product`, `--repo`, `--voice`, `--llm`, `--subscriber-store`, `--email-provider`, `--from-email`, `--pipeline` (`weekly`, `release`, or `both`).
 
 ### For agents — write files directly
 
