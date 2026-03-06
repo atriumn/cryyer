@@ -4,6 +4,19 @@ All notable changes to Cryyer are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.3.0](https://github.com/atriumn/cryyer/compare/cryyer-v0.2.2...cryyer-v0.3.0) (2026-03-06)
+
+
+### Features
+
+* non-interactive cryyer init ([d6d503e](https://github.com/atriumn/cryyer/commit/d6d503e012c796b3753a78aaa89927cee0d73079))
+* support non-interactive `cryyer init` for CI and automation ([51758dd](https://github.com/atriumn/cryyer/commit/51758dd910c4c1cea1f54abc107901f640440f8b)), closes [#105](https://github.com/atriumn/cryyer/issues/105)
+
+
+### Bug Fixes
+
+* clear CI env var in interactive init tests ([f720ad0](https://github.com/atriumn/cryyer/commit/f720ad04d388286e87489651351c5d872796ccf4))
+
 ## [0.2.2](https://github.com/atriumn/cryyer/compare/cryyer-v0.2.1...cryyer-v0.2.2) (2026-03-05)
 
 
