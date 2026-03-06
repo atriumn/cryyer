@@ -4,6 +4,21 @@ All notable changes to Cryyer are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.5.0](https://github.com/atriumn/cryyer/compare/cryyer-v0.4.1...cryyer-v0.5.0) (2026-03-06)
+
+
+### Features
+
+* add "emails by cryyer" badge for consumer repos ([af6b8d9](https://github.com/atriumn/cryyer/commit/af6b8d9fd980c3c61587cd875098235ee1d0e846))
+
+
+### Bug Fixes
+
+* use light badge colors so logo is visible ([4c3d1a6](https://github.com/atriumn/cryyer/commit/4c3d1a6a4ccbc8dba1b9858b09cfa4f902fe5d00))
+* use shields.io for badge so logo renders on GitHub ([8c85926](https://github.com/atriumn/cryyer/commit/8c85926ccba8a266da40656a816c563dffd2662b))
+* use shields.io for badge so logo renders on GitHub ([4ad31ea](https://github.com/atriumn/cryyer/commit/4ad31ea4bc47852b4f44a032da5367f5302bfcef))
+* use white logo silhouette on dark badge background ([824f9b4](https://github.com/atriumn/cryyer/commit/824f9b4ead4a6696bff511168240cfe76934f8fc))
+
 ## [0.4.1](https://github.com/atriumn/cryyer/compare/cryyer-v0.4.0...cryyer-v0.4.1) (2026-03-06)
 
 
