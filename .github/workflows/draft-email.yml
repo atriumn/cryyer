@@ -46,7 +46,19 @@ jobs:
           AUDIENCES=$(grep -A1 '^\s*- id:' products/cryyer.yaml | grep 'id:' | awk '{print $3}' | tr '\n' ' ')
           echo "list=$AUDIENCES" >> "$GITHUB_OUTPUT"
 
+      - name: Check if drafts already exist
+        id: check
+        run: |
+          MISSING=false
+          for AUDIENCE in ${{ steps.audiences.outputs.list }}; do
+            if [ ! -f "drafts/v${{ steps.version.outputs.value }}-${AUDIENCE}.md" ]; then
+              MISSING=true
+            fi
+          done
+          echo "needs_draft=$MISSING" >> "$GITHUB_OUTPUT"
+
       - name: Generate drafts per audience
+        if: steps.check.outputs.needs_draft == 'true'
         run: |
           for AUDIENCE in ${{ steps.audiences.outputs.list }}; do
             echo "::group::Drafting for audience: $AUDIENCE"
@@ -65,6 +77,7 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
       - name: Commit drafts
+        if: steps.check.outputs.needs_draft == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
