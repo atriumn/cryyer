@@ -115,6 +115,38 @@ File format — array of objects with `email`, optional `name`, and `productIds`
 ]
 ```
 
+> **Public repos:** Don't use the JSON store if your repo is public — `subscribers.json` would need to be committed, exposing subscriber emails. Use the [GitHub Gist store](#github-gist) instead.
+
+### GitHub Gist
+
+Stores subscribers in a private GitHub Gist — same JSON format as the JSON file store, but private. Ideal for public repos.
+
+```bash
+SUBSCRIBER_STORE=gist
+```
+
+| Variable | Description |
+|---|---|
+| `GITHUB_GIST_ID` | ID of a private Gist containing `subscribers.json` |
+| `GITHUB_TOKEN` | GitHub PAT with `gist` scope (the default Actions token cannot access private gists) |
+
+**Setup:**
+
+1. Create a [secret Gist](https://gist.github.com/) with a file named `subscribers.json` containing `[]`
+2. Copy the Gist ID from the URL
+3. Create a PAT with `gist` scope
+4. Add both as repo secrets (`SUBSCRIBERS_GIST_ID`, `SUBSCRIBERS_GIST_TOKEN`)
+
+Same file format as the JSON store:
+
+```json
+[
+  { "email": "alice@example.com", "name": "Alice", "productIds": ["my-app"] }
+]
+```
+
+When using [audiences](https://cryyer.dev/configuration/product-config#audiences), use compound keys in `productIds` (e.g. `"my-app:beta"`).
+
 ### Supabase (default)
 
 ```bash
