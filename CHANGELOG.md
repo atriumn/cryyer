@@ -4,6 +4,15 @@ All notable changes to Cryyer are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.6.2](https://github.com/atriumn/cryyer/compare/cryyer-v0.6.1...cryyer-v0.6.2) (2026-03-07)
+
+
+### Documentation
+
+* add gist subscriber store to README ([ea174f8](https://github.com/atriumn/cryyer/commit/ea174f8f2ebd92321deded331bb0a132dffb31ac))
+* add gist subscriber store to README ([567636d](https://github.com/atriumn/cryyer/commit/567636dd02c62b5407b32ecb09ba968b7b926911))
+* add git workflow rules to CLAUDE.md ([dca2eb8](https://github.com/atriumn/cryyer/commit/dca2eb82fe2972a4915f459251e9063931c6810b))
+
 ## [0.6.1](https://github.com/atriumn/cryyer/compare/cryyer-v0.6.0...cryyer-v0.6.1) (2026-03-07)
 
 

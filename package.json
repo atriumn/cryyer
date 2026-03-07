@@ -1,6 +1,6 @@
 {
   "name": "@atriumn/cryyer",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Automated product update emails with per-product voice powered by LLM drafts",
   "license": "MIT",
   "author": "Atriumn",
