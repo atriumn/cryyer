@@ -238,6 +238,14 @@ Wraps `cryyer send-file`. Maps all credential inputs to env vars for email and s
 | `dry-run` | no | `false` | Preview without sending |
 | `cryyer-version` | no | `latest` | Cryyer package version |
 
+## Git Workflow
+
+- **Always create a fresh branch from `origin/main`** for each new PR. Run `git fetch origin main` first.
+- **Never push additional commits to an already-merged PR branch.** If a PR was merged and you have more changes, create a new branch from `origin/main` and a new PR.
+- **Before committing to a branch, verify the associated PR is still open.** Use `gh pr view <number> --json state` to check.
+- **One concern per PR.** Don't add unrelated fixes to an existing PR branch.
+- Conventional commit prefixes: `feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `test:`
+
 ## Conventions
 
 - ESM modules (`"type": "module"` in package.json), imports use `.js` extensions
