@@ -4,6 +4,16 @@ All notable changes to Cryyer are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.6.1](https://github.com/atriumn/cryyer/compare/cryyer-v0.6.0...cryyer-v0.6.1) (2026-03-07)
+
+
+### Bug Fixes
+
+* gist store requires PAT, not default GITHUB_TOKEN ([35d6818](https://github.com/atriumn/cryyer/commit/35d6818f973cf434e5c380e64dac905a5c94b3fd))
+* gist store requires PAT, not default GITHUB_TOKEN ([563c47e](https://github.com/atriumn/cryyer/commit/563c47ef83cde1d4e24f1e0c228a1cfabc404747))
+* retry LLM call once on unparseable response ([4d72866](https://github.com/atriumn/cryyer/commit/4d72866e00bf9d40a934d82ed4e4766f650e0b42))
+* retry LLM call once on unparseable response ([024ac2d](https://github.com/atriumn/cryyer/commit/024ac2d381ca2d4d20024938a029156bddef5805))
+
 ## [0.6.0](https://github.com/atriumn/cryyer/compare/cryyer-v0.5.0...cryyer-v0.6.0) (2026-03-06)
 
 
