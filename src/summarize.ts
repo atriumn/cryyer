@@ -59,7 +59,13 @@ Respond with ONLY a JSON object — no explanation, no markdown fences, just the
 }`;
 
   const text = await provider.generate(prompt, 2048);
-  return parseResponse(text);
+  try {
+    return parseResponse(text);
+  } catch {
+    console.warn('[summarize] LLM returned unparseable response, retrying once...');
+    const retry = await provider.generate(prompt, 2048);
+    return parseResponse(retry);
+  }
 }
 
 export function formatActivity(activity: GatheredActivity): string {
