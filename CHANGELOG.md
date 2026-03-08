@@ -4,6 +4,14 @@ All notable changes to Cryyer are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.6.3](https://github.com/atriumn/cryyer/compare/cryyer-v0.6.2...cryyer-v0.6.3) (2026-03-08)
+
+
+### Documentation
+
+* clarify PAT requirements for gist subscriber store ([9e41235](https://github.com/atriumn/cryyer/commit/9e4123584165aa73c9bba990ebdc76462bae6631))
+* clarify PAT requirements for gist subscriber store ([a979932](https://github.com/atriumn/cryyer/commit/a979932c2f249f48a9153add7719f2cd56c3cdc1))
+
 ## [0.6.2](https://github.com/atriumn/cryyer/compare/cryyer-v0.6.1...cryyer-v0.6.2) (2026-03-07)
 
 
