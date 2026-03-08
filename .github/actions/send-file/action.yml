@@ -48,7 +48,7 @@ inputs:
     description: Gist ID for subscriber storage (required when subscriber-store is gist)
     required: false
   github-token:
-    description: GitHub PAT with gist scope (required when subscriber-store is gist)
+    description: Classic PAT with gist scope (fine-grained PATs don't work; required when subscriber-store is gist)
     required: false
   audience:
     description: Audience ID for multi-audience products
