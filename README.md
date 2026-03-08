@@ -128,13 +128,13 @@ SUBSCRIBER_STORE=gist
 | Variable | Description |
 |---|---|
 | `GITHUB_GIST_ID` | ID of a private Gist containing `subscribers.json` |
-| `GITHUB_TOKEN` | GitHub PAT with `gist` scope (the default Actions token cannot access private gists) |
+| `GITHUB_TOKEN` | PAT with gist access: classic PAT with `gist` scope, or fine-grained PAT with Gists read/write (the default Actions token cannot access private gists) |
 
 **Setup:**
 
 1. Create a [secret Gist](https://gist.github.com/) with a file named `subscribers.json` containing `[]`
 2. Copy the Gist ID from the URL
-3. Create a PAT with `gist` scope
+3. Create a PAT with gist access — [classic PAT](https://github.com/settings/tokens/new) with `gist` scope, or [fine-grained PAT](https://github.com/settings/tokens?type=beta) with Gists read/write
 4. Add both as repo secrets (`SUBSCRIBERS_GIST_ID`, `SUBSCRIBERS_GIST_TOKEN`)
 
 Same file format as the JSON store:
