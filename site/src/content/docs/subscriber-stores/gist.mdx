@@ -21,12 +21,13 @@ Create a [new secret Gist](https://gist.github.com/) with a file named `subscrib
 
 Copy the Gist ID from the URL (e.g., `https://gist.github.com/yourname/abc123def456` → `abc123def456`).
 
-### 2. Create a GitHub PAT with gist access
+### 2. Create a classic PAT with `gist` scope
 
-The default `GITHUB_TOKEN` in Actions is scoped to the repository and **cannot access private gists**. Create one of:
+The default `GITHUB_TOKEN` in Actions is scoped to the repository and **cannot access private gists**. Create a [classic PAT](https://github.com/settings/tokens/new) and check the **gist** scope.
 
-- **[Classic PAT](https://github.com/settings/tokens/new)** — check the `gist` scope
-- **[Fine-grained PAT](https://github.com/settings/tokens?type=beta)** — enable **Gists** → Read and write under Account permissions
+:::note
+You must use a **classic** PAT (starts with `ghp_`). Fine-grained PATs do not support gist API access.
+:::
 
 ### 3. Add repository secrets
 
@@ -48,7 +49,7 @@ export GITHUB_TOKEN=ghp_your_pat_here
 | Variable | Required | Description |
 |---|---|---|
 | `GITHUB_GIST_ID` | Yes | ID of the private Gist |
-| `GITHUB_TOKEN` | Yes | PAT with gist access — classic PAT with `gist` scope, or fine-grained PAT with Gists read/write (the default Actions token cannot access private gists) |
+| `GITHUB_TOKEN` | Yes | Classic PAT with `gist` scope (fine-grained PATs do not support gists; the default Actions token cannot access private gists) |
 
 ## File format
 
@@ -98,7 +99,7 @@ Sent emails are logged to an `email-log.json` file in the same Gist (created aut
 ```
 
 :::caution
-You must use a PAT with gist access — the default `${{ github.token }}` cannot access private gists. Use a classic PAT with `gist` scope, or a fine-grained PAT with **Gists** read/write permission.
+You must use a **classic** PAT with `gist` scope — fine-grained PATs do not support gists, and the default `${{ github.token }}` cannot access private gists.
 :::
 
 ## Managing subscribers
