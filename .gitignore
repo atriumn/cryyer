@@ -37,6 +37,9 @@ products/*.yaml
 !products/example.yaml
 !products/cryyer.yaml
 
+# Release email drafts (generated, not public)
+drafts/
+
 # Subscriber data (local JSON store)
 # subscribers.json is committed for cryyer's own dogfooding
 email-log.json
