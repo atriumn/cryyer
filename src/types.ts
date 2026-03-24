@@ -1,3 +1,5 @@
+import type { SocialConfig } from './social/types.js';
+
 export interface ProductFilter {
   labels?: string[];
   paths?: string[];
@@ -37,6 +39,7 @@ export interface Product {
   from_email?: string;
   reply_to?: string;
   audiences?: Audience[];
+  social?: SocialConfig;
 }
 
 export interface BetaTester {
