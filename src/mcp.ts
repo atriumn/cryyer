@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { join } from 'path';
+import { readdirSync, existsSync } from 'fs';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
@@ -13,10 +14,17 @@ import { createEmailProvider } from './email-provider.js';
 import { gatherActivity } from './gather.js';
 import { generateEmailDraft } from './summarize.js';
 import { createLLMProvider } from './llm-provider.js';
+import { appendSeed } from './social/seed.js';
+import { parseSeeds } from './social/parse-seeds.js';
+import { loadPlatforms } from './social/platforms.js';
+import { generateSocialPosts } from './social/generate.js';
+import { writeSocialDraft, readSocialDraft } from './social/draft-file.js';
+import * as bufferProvider from './social/buffer-provider.js';
 import type { Product, BetaTester } from './types.js';
 import type { SubscriberStore } from './subscriber-store.js';
 import type { EmailProvider } from './email-provider.js';
 import type { LLMProvider } from './llm-provider.js';
+import type { ContentType, SocialDraft } from './social/types.js';
 import { subscriberKey, resolveAudiences } from './types.js';
 
 // --- Helpers ---
@@ -90,6 +98,7 @@ export interface McpDeps {
   generateEmailDraft: typeof generateEmailDraft;
   fromEmail: string;
   fromName: string;
+  projectRoot: string;
 }
 
 // --- MCP Server Factory ---
@@ -500,6 +509,246 @@ export function createServer(deps: McpDeps): McpServer {
     }
   );
 
+  // --- Social tools ---
+
+  server.tool(
+    'social_add_seed',
+    'Append a content seed to a product\'s seeds file',
+    {
+      product_id: z.string().describe('The product ID'),
+      type: z.enum(['pain', 'insight', 'capability', 'proof', 'update', 'blog']).describe('Content type'),
+      text: z.string().describe('The seed text'),
+    },
+    async ({ product_id, type, text }) => {
+      const seedsDir = join(deps.projectRoot, 'seeds');
+      const filePath = appendSeed(seedsDir, product_id, type as ContentType, text);
+      return {
+        content: [{ type: 'text', text: `Added ${type} seed to ${filePath}` }],
+      };
+    }
+  );
+
+  server.tool(
+    'social_draft',
+    'Generate social posts from seeds for a product',
+    {
+      product_id: z.string().describe('The product ID'),
+      content_type: z.enum(['pain', 'insight', 'capability', 'proof', 'update', 'blog']).optional().describe('Filter seeds by content type'),
+    },
+    async ({ product_id, content_type }) => {
+      const products = deps.getProducts();
+      const product = products.find((p) => p.id === product_id);
+      if (!product) {
+        return {
+          content: [{ type: 'text', text: `Product not found: ${product_id}. Available: ${products.map((p) => p.id).join(', ')}` }],
+          isError: true,
+        };
+      }
+
+      if (!product.social?.platforms?.length) {
+        return {
+          content: [{ type: 'text', text: `Product "${product_id}" has no social.platforms configured` }],
+          isError: true,
+        };
+      }
+
+      const allPlatforms = loadPlatforms(join(deps.projectRoot, 'platforms'));
+      const platforms = allPlatforms.filter((p) =>
+        product.social!.platforms.includes(p.id),
+      );
+      if (platforms.length === 0) {
+        return {
+          content: [{ type: 'text', text: `No matching platform configs found for: ${product.social.platforms.join(', ')}` }],
+          isError: true,
+        };
+      }
+
+      const seedsFile = join(deps.projectRoot, 'seeds', `${product_id}.md`);
+      if (!existsSync(seedsFile)) {
+        return {
+          content: [{ type: 'text', text: `No seeds file found at ${seedsFile}. Use social_add_seed to add seeds first.` }],
+          isError: true,
+        };
+      }
+
+      let seeds = parseSeeds(seedsFile);
+      if (content_type) {
+        seeds = seeds.filter((s) => s.type === content_type);
+        if (seeds.length === 0) {
+          return {
+            content: [{ type: 'text', text: `No seeds found with type "${content_type}" in ${seedsFile}` }],
+            isError: true,
+          };
+        }
+      }
+
+      // Gather activity for update-type seeds
+      let activity;
+      const hasUpdateSeeds = seeds.some((s) => s.type === 'update');
+      if (hasUpdateSeeds && product.repo) {
+        const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        activity = await deps.gatherActivity(deps.octokit, product, since);
+      }
+
+      const llm = deps.createLLMProvider();
+      const posts = await generateSocialPosts(llm, product, seeds, platforms, activity);
+
+      const draft: SocialDraft = {
+        product: product_id,
+        generatedAt: new Date().toISOString(),
+        seeds: seeds.length,
+        posts,
+      };
+
+      const outputDir = join(deps.projectRoot, 'social-drafts');
+      const filePath = writeSocialDraft(draft, outputDir);
+
+      const summary = posts.map((p) => `- ${p.seed.type} | ${p.platform.id}: ${p.text.slice(0, 80)}...`).join('\n');
+      return {
+        content: [{ type: 'text', text: `Generated ${posts.length} posts, saved to ${filePath}\n\n${summary}` }],
+      };
+    }
+  );
+
+  server.tool(
+    'social_list_drafts',
+    'List generated social draft files in social-drafts/',
+    {},
+    async () => {
+      const draftsDir = join(deps.projectRoot, 'social-drafts');
+      if (!existsSync(draftsDir)) {
+        return { content: [{ type: 'text', text: 'No social-drafts/ directory found.' }] };
+      }
+
+      const files = readdirSync(draftsDir)
+        .filter((f) => f.endsWith('.md'))
+        .sort()
+        .reverse();
+
+      if (files.length === 0) {
+        return { content: [{ type: 'text', text: 'No social draft files found.' }] };
+      }
+
+      return {
+        content: [{ type: 'text', text: files.join('\n') }],
+      };
+    }
+  );
+
+  server.tool(
+    'social_get_draft',
+    'Read a social draft file and display its contents',
+    {
+      filename: z.string().describe('The draft filename (e.g. "cryyer-2026-03-25.md")'),
+    },
+    async ({ filename }) => {
+      const filePath = join(deps.projectRoot, 'social-drafts', filename);
+      if (!existsSync(filePath)) {
+        return {
+          content: [{ type: 'text', text: `Draft file not found: ${filePath}` }],
+          isError: true,
+        };
+      }
+
+      const draft = readSocialDraft(filePath);
+      const lines: string[] = [
+        `Product: ${draft.product}`,
+        `Generated: ${draft.generatedAt}`,
+        `Seeds: ${draft.seeds}`,
+        `Posts: ${draft.posts.length}`,
+        '',
+      ];
+
+      for (const post of draft.posts) {
+        lines.push(`--- ${post.seed.type} | ${post.platform.id} ---`);
+        lines.push(post.text);
+        lines.push('');
+      }
+
+      return {
+        content: [{ type: 'text', text: lines.join('\n') }],
+      };
+    }
+  );
+
+  server.tool(
+    'social_send',
+    'Send a social draft to Buffer for publishing',
+    {
+      filename: z.string().describe('The draft filename (e.g. "cryyer-2026-03-25.md")'),
+      dry_run: z.boolean().optional().describe('Preview without sending to Buffer'),
+    },
+    async ({ filename, dry_run }) => {
+      const filePath = join(deps.projectRoot, 'social-drafts', filename);
+      if (!existsSync(filePath)) {
+        return {
+          content: [{ type: 'text', text: `Draft file not found: ${filePath}` }],
+          isError: true,
+        };
+      }
+
+      const draft = readSocialDraft(filePath);
+      const platformEnvMap: Record<string, string> = {
+        twitter: 'BUFFER_PROFILE_TWITTER',
+        linkedin: 'BUFFER_PROFILE_LINKEDIN',
+        bluesky: 'BUFFER_PROFILE_BLUESKY',
+      };
+
+      if (dry_run) {
+        const lines = draft.posts.map(
+          (p) => `[DRY RUN] ${p.platform.id}: ${p.text.slice(0, 100)}...`,
+        );
+        return {
+          content: [{ type: 'text', text: `${lines.join('\n')}\n\n${draft.posts.length} posts (dry run)` }],
+        };
+      }
+
+      const token = process.env['BUFFER_ACCESS_TOKEN'];
+      if (!token) {
+        return {
+          content: [{ type: 'text', text: 'Missing BUFFER_ACCESS_TOKEN environment variable' }],
+          isError: true,
+        };
+      }
+
+      const profiles = await bufferProvider.listProfiles(token);
+      const profileMap = new Map<string, string>();
+      for (const [platformId, envVar] of Object.entries(platformEnvMap)) {
+        const envProfileId = process.env[envVar];
+        if (envProfileId) {
+          const found = profiles.find((p) => p.id === envProfileId);
+          if (!found) {
+            console.error(`Warning: ${envVar}=${envProfileId} not found in Buffer profiles`);
+          }
+          profileMap.set(platformId, envProfileId);
+        }
+      }
+
+      let queued = 0;
+      const skipped: string[] = [];
+
+      for (const post of draft.posts) {
+        const profileId = profileMap.get(post.platform.id);
+        if (!profileId) {
+          skipped.push(post.platform.id);
+          continue;
+        }
+        await bufferProvider.createPost(token, profileId, post.text);
+        queued++;
+      }
+
+      let result = `Queued ${queued} of ${draft.posts.length} posts to Buffer.`;
+      if (skipped.length > 0) {
+        const unique = [...new Set(skipped)];
+        result += ` Skipped platforms (no profile configured): ${unique.join(', ')}`;
+      }
+
+      return {
+        content: [{ type: 'text', text: result }],
+      };
+    }
+  );
+
   // --- Prompts ---
 
   server.prompt(
@@ -552,6 +801,7 @@ function defaultDeps(): McpDeps {
     generateEmailDraft,
     fromEmail,
     fromName,
+    projectRoot,
   };
 }
 
