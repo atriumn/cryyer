@@ -1,4 +1,4 @@
-export type ContentType = 'pain' | 'insight' | 'capability' | 'proof' | 'update';
+export type ContentType = 'pain' | 'insight' | 'capability' | 'proof' | 'update' | 'blog';
 
 export interface Seed {
   type: ContentType;
@@ -15,14 +15,15 @@ export interface Platform {
 }
 
 export interface SocialPost {
-  platform: string;
   seed: Seed;
-  content: string;
+  platform: Platform;
+  text: string;
 }
 
 export interface SocialDraft {
   product: string;
   generatedAt: string;
+  seeds: number;
   posts: SocialPost[];
 }
 

@@ -61,6 +61,7 @@ function mockDeps(overrides: Partial<McpDeps> = {}): McpDeps {
     generateEmailDraft: vi.fn().mockResolvedValue({ subject: 'Generated Subject', body: 'Generated Body' }),
     fromEmail: 'from@test.com',
     fromName: 'Test Updates',
+    projectRoot: '/tmp/cryyer-test',
     ...overrides,
   };
 }

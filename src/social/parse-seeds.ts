@@ -1,8 +1,31 @@
 import { readFileSync } from 'fs';
-import type { Seed, ContentType } from './types.js';
+import type { ContentType, Seed } from './types.js';
 
-const VALID_CONTENT_TYPES = new Set<string>(['pain', 'insight', 'capability', 'proof', 'update']);
+const VALID_TYPES: ReadonlySet<string> = new Set<ContentType>([
+  'pain',
+  'insight',
+  'capability',
+  'proof',
+  'update',
+  'blog',
+]);
 
+/**
+ * Parse a markdown seed file into an array of Seed objects.
+ *
+ * Expected format:
+ * ```
+ * ## pain
+ * first seed paragraph
+ *
+ * second seed paragraph
+ *
+ * ## insight
+ * another seed
+ * ```
+ *
+ * One seed per paragraph under each `## type` heading.
+ */
 export function parseSeeds(filePath: string): Seed[] {
   const content = readFileSync(filePath, 'utf-8');
   return parseSeedsFromString(content);
@@ -13,38 +36,41 @@ export function parseSeedsFromString(content: string): Seed[] {
   const lines = content.split('\n');
 
   let currentType: ContentType | null = null;
-  let paragraphLines: string[] = [];
+  let currentParagraph: string[] = [];
 
-  function flushParagraph() {
-    const text = paragraphLines.join('\n').trim();
-    if (text && currentType) {
-      seeds.push({ type: currentType, text });
+  const flushParagraph = (): void => {
+    if (currentType && currentParagraph.length > 0) {
+      const text = currentParagraph.join('\n').trim();
+      if (text) {
+        seeds.push({ type: currentType, text });
+      }
     }
-    paragraphLines = [];
-  }
+    currentParagraph = [];
+  };
 
   for (const line of lines) {
-    const headingMatch = line.match(/^##\s+(\S+)\s*$/);
+    const headingMatch = line.match(/^##\s+(.+)$/);
     if (headingMatch) {
       flushParagraph();
-      const typeStr = headingMatch[1].toLowerCase();
-      if (!VALID_CONTENT_TYPES.has(typeStr)) {
-        throw new Error(`Unknown content type: "${typeStr}"`);
+      const type = headingMatch[1].trim().toLowerCase();
+      if (!VALID_TYPES.has(type)) {
+        throw new Error(`Unknown content type: "${type}"`);
       }
-      currentType = typeStr as ContentType;
+      currentType = type as ContentType;
       continue;
     }
 
-    if (currentType === null) continue;
+    if (currentType === null) {
+      continue;
+    }
 
     if (line.trim() === '') {
       flushParagraph();
     } else {
-      paragraphLines.push(line);
+      currentParagraph.push(line);
     }
   }
 
   flushParagraph();
-
   return seeds;
 }

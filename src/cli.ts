@@ -27,6 +27,7 @@ Commands:
   draft-file    Generate a draft → write to markdown file
   send-file     Send emails from a draft markdown file
   preview       Show gathered activity without drafting
+  social        Social content pipeline (seed, draft, send)
 
 Options:
   --help, -h    Show this help message
@@ -34,6 +35,55 @@ Options:
 
 Run 'cryyer <command> --help' for more information on a command.
 `.trimStart());
+}
+
+function printSocialHelp(): void {
+  console.log(`
+cryyer social — social content pipeline
+
+Usage:
+  cryyer social <command> [options]
+
+Commands:
+  seed <productId> <type> "<text>"        Add a seed to seeds/{productId}.md
+  draft --product <id> [--type <type>]    Generate social posts from seeds
+  send <draft-path>                       Send posts to Buffer queue
+
+Options:
+  --config-dir <path>  Config directory (products/, seeds/, social-drafts/)
+  --help, -h           Show this help message
+
+Environment:
+  CRYYER_CONFIG_DIR    Fallback for --config-dir when flag is not provided
+
+Run 'cryyer social <command> --help' for more information on a command.
+`.trimStart());
+}
+
+async function runSocial(args: string[]): Promise<void> {
+  const subcommand = args[0];
+
+  if (!subcommand || subcommand === '--help' || subcommand === '-h') {
+    printSocialHelp();
+    return;
+  }
+
+  const socialCommands: Record<string, string> = {
+    seed: './social/seed.js',
+    draft: './social/draft.js',
+    send: './social/send.js',
+  };
+
+  const modulePath = socialCommands[subcommand];
+  if (!modulePath) {
+    console.error(`Unknown social command: ${subcommand}\n`);
+    printSocialHelp();
+    process.exitCode = 1;
+    return;
+  }
+
+  const mod = await import(modulePath) as { main: () => Promise<void> };
+  await mod.main();
 }
 
 async function run(): Promise<void> {
@@ -47,6 +97,11 @@ async function run(): Promise<void> {
 
   if (command === '--version' || command === '-V') {
     console.log(getVersion());
+    return;
+  }
+
+  if (command === 'social') {
+    await runSocial(args.slice(1));
     return;
   }
 

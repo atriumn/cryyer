@@ -4,6 +4,28 @@ All notable changes to Cryyer are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.7.0](https://github.com/atriumn/cryyer/compare/cryyer-v0.6.3...cryyer-v0.7.0) (2026-03-25)
+
+
+### Features
+
+* add --config-dir flag to social commands and example configs ([65cc810](https://github.com/atriumn/cryyer/commit/65cc81034d092db6fb09b0ba12a87429f13c4e49))
+* add seed parser, platform config loader, and update social types ([181964c](https://github.com/atriumn/cryyer/commit/181964c9e4033bbbd6b760a8337efa315aaaea07))
+* add social content prompts, generator, and draft file writer ([86ab30e](https://github.com/atriumn/cryyer/commit/86ab30e4a0ab4a1b5f911d32fde0c81813598953))
+* add social seed, draft, and send CLI commands with Buffer provider ([73122d4](https://github.com/atriumn/cryyer/commit/73122d41a63cdbdb7f2f7250469dc682ea3363ca))
+* add Social types and extend Product with social config ([6323e9c](https://github.com/atriumn/cryyer/commit/6323e9c010691ee8494c0b3f6a0e6692faa05c10))
+* add Social types and extend Product with social config ([78b41a2](https://github.com/atriumn/cryyer/commit/78b41a272c24e5cfd54bdda0842fabe6979da482)), closes [#128](https://github.com/atriumn/cryyer/issues/128)
+
+
+### Bug Fixes
+
+* gitignore drafts/ and remove from tracking ([2fddbe1](https://github.com/atriumn/cryyer/commit/2fddbe139d009e22b2fdbd1d7e1c176219ee5357))
+
+
+### Documentation
+
+* gist store requires classic PAT, not fine-grained ([#126](https://github.com/atriumn/cryyer/issues/126)) ([2c314f9](https://github.com/atriumn/cryyer/commit/2c314f9a0c3373c6b01a5d691328db811cbdecb1))
+
 ## [0.6.3](https://github.com/atriumn/cryyer/compare/cryyer-v0.6.2...cryyer-v0.6.3) (2026-03-08)
 
 
