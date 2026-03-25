@@ -50,7 +50,11 @@ Commands:
   send <draft-path>                       Send posts to Buffer queue
 
 Options:
-  --help, -h    Show this help message
+  --config-dir <path>  Config directory (products/, seeds/, social-drafts/)
+  --help, -h           Show this help message
+
+Environment:
+  CRYYER_CONFIG_DIR    Fallback for --config-dir when flag is not provided
 
 Run 'cryyer social <command> --help' for more information on a command.
 `.trimStart());

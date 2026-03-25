@@ -22,3 +22,15 @@ emailSubjectTemplate: "{{weekOf}} Weekly Update — Example Product"  # or "Exam
 #     voice: "Professional and concise, focused on stability and compliance"
 #     emailSubjectTemplate: "{{weekOf}} Release Notes — Example Product"  # or "Example Product v{{version}}"
 #     from_name: "Example Product Team"
+
+# Optional: social content pipeline configuration
+social:
+  platforms: [twitter, linkedin, bluesky]
+  context: |
+    Cryyer is an automated email update tool for software teams. It connects to your GitHub
+    repo, uses LLMs to draft release notes and weekly updates in your product's voice,
+    and sends them to your subscriber list. Designed for indie developers and small teams
+    who want to keep users informed without manual effort.
+  cta:
+    default: "Try Cryyer"
+    link: "https://github.com/atriumn/cryyer"

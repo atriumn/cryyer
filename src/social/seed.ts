@@ -16,17 +16,32 @@ export function parseArgv(argv: string[]): {
   productId: string;
   type: ContentType;
   text: string;
+  configDir?: string;
 } {
   // argv may come from cli.ts with 'seed' stripped, or from process.argv.slice(2) with 'social seed' stripped
   const args = argv[0] === 'seed' ? argv.slice(1) : argv;
 
-  if (args.length < 3) {
-    throw new Error('Usage: cryyer social seed <productId> <type> "<text>"');
+  let configDir: string | undefined = process.env['CRYYER_CONFIG_DIR'];
+  const positional: string[] = [];
+
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--config-dir' && args[i + 1]) {
+      configDir = args[i + 1];
+      i++;
+    } else {
+      positional.push(args[i]);
+    }
   }
 
-  const productId = args[0];
-  const type = args[1];
-  const text = args.slice(2).join(' ');
+  if (positional.length < 3) {
+    throw new Error(
+      'Usage: cryyer social seed <productId> <type> "<text>" [--config-dir <path>]',
+    );
+  }
+
+  const productId = positional[0];
+  const type = positional[1];
+  const text = positional.slice(2).join(' ');
 
   if (!VALID_TYPES.has(type)) {
     throw new Error(
@@ -34,7 +49,7 @@ export function parseArgv(argv: string[]): {
     );
   }
 
-  return { productId, type: type as ContentType, text };
+  return { productId, type: type as ContentType, text, configDir: configDir || undefined };
 }
 
 /**
@@ -87,9 +102,10 @@ export function appendSeed(
 }
 
 export async function main(): Promise<void> {
-  const { productId, type, text } = parseArgv(process.argv.slice(2));
+  const { productId, type, text, configDir } = parseArgv(process.argv.slice(2));
 
-  const seedsDir = join(process.cwd(), 'seeds');
+  const root = configDir ?? process.cwd();
+  const seedsDir = join(root, 'seeds');
   const filePath = appendSeed(seedsDir, productId, type, text);
 
   console.log(`Added ${type} seed to ${filePath}`);
