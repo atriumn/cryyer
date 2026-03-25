@@ -40,6 +40,13 @@ products/*.yaml
 # Release email drafts (generated, not public)
 drafts/
 
+# Social seeds (keep only example.md; user seeds stay local)
+seeds/*.md
+!seeds/example.md
+
+# Social drafts (generated output)
+social-drafts/
+
 # Subscriber data (local JSON store)
 # subscribers.json is committed for cryyer's own dogfooding
 email-log.json

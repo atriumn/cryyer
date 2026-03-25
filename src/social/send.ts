@@ -11,15 +11,20 @@ const PLATFORM_ENV_MAP: Record<string, string> = {
 export function parseArgv(argv: string[]): {
   draftPath: string;
   dryRun: boolean;
+  configDir?: string;
 } {
   const args = argv[0] === 'send' ? argv.slice(1) : argv;
 
   let draftPath: string | undefined;
   let dryRun = false;
+  let configDir: string | undefined = process.env['CRYYER_CONFIG_DIR'];
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--dry-run') {
       dryRun = true;
+    } else if (args[i] === '--config-dir' && args[i + 1]) {
+      configDir = args[i + 1];
+      i++;
     } else if (!args[i].startsWith('-') && !draftPath) {
       draftPath = args[i];
     }
@@ -27,11 +32,11 @@ export function parseArgv(argv: string[]): {
 
   if (!draftPath) {
     throw new Error(
-      'Missing draft path. Usage: cryyer social send <draft-path> [--dry-run]',
+      'Missing draft path. Usage: cryyer social send <draft-path> [--dry-run] [--config-dir <path>]',
     );
   }
 
-  return { draftPath, dryRun };
+  return { draftPath, dryRun, configDir: configDir || undefined };
 }
 
 export async function main(): Promise<void> {
