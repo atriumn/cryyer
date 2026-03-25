@@ -1,0 +1,39 @@
+name: Social Draft
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # Monday 9am UTC
+  workflow_dispatch:
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install -g @atriumn/cryyer@latest
+      - name: Generate social draft
+        run: cryyer social draft --product cryyer --type update
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LLM_PROVIDER: anthropic
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      - name: Create review issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const draftsDir = 'social-drafts';
+            const files = fs.readdirSync(draftsDir).sort().reverse();
+            const latest = files[0];
+            const content = fs.readFileSync(path.join(draftsDir, latest), 'utf8');
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Social draft: ${latest}`,
+              body: content,
+              labels: ['social-draft']
+            });
