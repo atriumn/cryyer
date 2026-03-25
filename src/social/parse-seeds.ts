@@ -28,9 +28,13 @@ const VALID_TYPES: ReadonlySet<string> = new Set<ContentType>([
  */
 export function parseSeeds(filePath: string): Seed[] {
   const content = readFileSync(filePath, 'utf-8');
+  return parseSeedsFromString(content);
+}
+
+export function parseSeedsFromString(content: string): Seed[] {
+  const seeds: Seed[] = [];
   const lines = content.split('\n');
 
-  const seeds: Seed[] = [];
   let currentType: ContentType | null = null;
   let currentParagraph: string[] = [];
 
