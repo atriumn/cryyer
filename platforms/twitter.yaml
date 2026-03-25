@@ -1,0 +1,6 @@
+id: twitter
+name: Twitter
+maxLength: 280
+voice: "concise, direct, technical audience, 1-2 hashtags max, no emoji unless meaningful"
+threadSupport: true
+threadMaxParts: 4
