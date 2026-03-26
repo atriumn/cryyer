@@ -8,14 +8,14 @@ vi.mock('@supabase/supabase-js', () => ({
 }));
 vi.mock('fs', async (importOriginal) => {
   const actual = await importOriginal<typeof import('fs')>();
-  return { ...actual, existsSync: vi.fn() };
+  return { ...actual, existsSync: vi.fn(), readFileSync: vi.fn(actual.readFileSync) };
 });
 
 import { checkProducts, checkGitHub, checkLLMProvider, checkSubscriberStore, checkEmailConfig, runChecks, main } from '../check.js';
 import { loadProducts } from '../config.js';
 import { Octokit } from 'octokit';
 import { createClient } from '@supabase/supabase-js';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 
 describe('checkProducts', () => {
   beforeEach(() => {
@@ -137,12 +137,24 @@ describe('checkLLMProvider', () => {
     expect(result.message).toContain('anthropic');
   });
 
-  it('fails when ANTHROPIC_API_KEY is missing', () => {
+  it('fails when ANTHROPIC_API_KEY is missing and no OAuth credentials', () => {
     delete process.env['LLM_PROVIDER'];
     delete process.env['ANTHROPIC_API_KEY'];
+    (readFileSync as Mock).mockImplementation(() => { throw new Error('ENOENT'); });
     const result = checkLLMProvider();
     expect(result.passed).toBe(false);
     expect(result.message).toContain('ANTHROPIC_API_KEY');
+  });
+
+  it('passes when ANTHROPIC_API_KEY is missing but OAuth credentials exist', () => {
+    delete process.env['LLM_PROVIDER'];
+    delete process.env['ANTHROPIC_API_KEY'];
+    (readFileSync as Mock).mockReturnValue(
+      JSON.stringify({ claudeAiOauth: { accessToken: 'oauth-token' } })
+    );
+    const result = checkLLMProvider();
+    expect(result.passed).toBe(true);
+    expect(result.message).toContain('Claude OAuth');
   });
 
   it('passes when OPENAI_API_KEY is set with openai provider', () => {
