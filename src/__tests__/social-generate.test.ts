@@ -54,7 +54,7 @@ describe('generateSocialPosts', () => {
 
     const posts = await generateSocialPosts(provider, product, seeds, [twitter]);
 
-    expect(posts[0].text).toBe('trimmed content');
+    expect(posts[0].text).toBe('trimmed content\nhttps://noxaudit.dev');
   });
 
   it('uses higher maxTokens for blog type', async () => {
@@ -88,7 +88,7 @@ describe('generateSocialPosts', () => {
     );
     // Still returns the post despite warning
     expect(posts).toHaveLength(1);
-    expect(posts[0].text).toBe(longText);
+    expect(posts[0].text).toBe(longText + '\nhttps://noxaudit.dev');
 
     warnSpy.mockRestore();
   });
@@ -139,6 +139,34 @@ describe('generateSocialPosts', () => {
     const provider = mockProvider('content');
     const posts = await generateSocialPosts(provider, product, [], [twitter]);
     expect(posts).toEqual([]);
+  });
+
+  it('appends CTA link when not already in text', async () => {
+    const seeds: Seed[] = [{ type: 'pain', text: 'drift' }];
+    const provider = mockProvider('Check this out');
+
+    const posts = await generateSocialPosts(provider, product, seeds, [twitter]);
+
+    expect(posts[0].text).toBe('Check this out\nhttps://noxaudit.dev');
+  });
+
+  it('does not duplicate CTA link when already in text', async () => {
+    const seeds: Seed[] = [{ type: 'pain', text: 'drift' }];
+    const provider = mockProvider('Check this out https://noxaudit.dev');
+
+    const posts = await generateSocialPosts(provider, product, seeds, [twitter]);
+
+    expect(posts[0].text).toBe('Check this out https://noxaudit.dev');
+  });
+
+  it('skips CTA link when product has no social.cta.link', async () => {
+    const productNoCta: Product = { id: 'bare', name: 'Bare' };
+    const seeds: Seed[] = [{ type: 'pain', text: 'drift' }];
+    const provider = mockProvider('plain post');
+
+    const posts = await generateSocialPosts(provider, productNoCta, seeds, [twitter]);
+
+    expect(posts[0].text).toBe('plain post');
   });
 
   it('returns empty array for no platforms', async () => {

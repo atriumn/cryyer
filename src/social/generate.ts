@@ -55,7 +55,10 @@ export async function generateSocialPosts(
         );
       }
 
-      posts.push({ seed, platform, text });
+      const ctaLink = product.social?.cta?.link;
+      const finalText = ctaLink && !text.includes(ctaLink) ? `${text}\n${ctaLink}` : text;
+
+      posts.push({ seed, platform, text: finalText });
     }
   }
 
