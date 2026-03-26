@@ -1,6 +1,7 @@
-import { join } from 'path';
+import { join, resolve } from 'path';
 import { fileURLToPath } from 'url';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
+import { homedir } from 'os';
 import { Octokit } from 'octokit';
 import { loadProducts } from './config.js';
 
@@ -62,6 +63,17 @@ export async function checkGitHub(): Promise<CheckResult> {
   }
 }
 
+function hasClaudeOAuthCredentials(): boolean {
+  try {
+    const credPath = resolve(homedir(), '.claude', '.credentials.json');
+    const raw = readFileSync(credPath, 'utf-8');
+    const creds = JSON.parse(raw);
+    return !!creds?.claudeAiOauth?.accessToken;
+  } catch {
+    return false;
+  }
+}
+
 export function checkLLMProvider(): CheckResult {
   const provider = process.env['LLM_PROVIDER'] || 'anthropic';
   const keyMap: Record<string, string> = {
@@ -81,6 +93,14 @@ export function checkLLMProvider(): CheckResult {
 
   const apiKey = process.env[envKey];
   if (!apiKey) {
+    // For Anthropic, check Claude OAuth credentials as fallback
+    if (provider === 'anthropic' && hasClaudeOAuthCredentials()) {
+      return {
+        name: 'LLM provider',
+        passed: true,
+        message: `Provider 'anthropic' configured (Claude OAuth credentials found)`,
+      };
+    }
     return {
       name: 'LLM provider',
       passed: false,

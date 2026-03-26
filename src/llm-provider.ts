@@ -1,19 +1,55 @@
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
+import { homedir } from 'os';
+
 export interface LLMProvider {
   generate(prompt: string, maxTokens: number): Promise<string>;
 }
 
+function readClaudeOAuthToken(): string | null {
+  try {
+    const credPath = resolve(homedir(), '.claude', '.credentials.json');
+    const raw = readFileSync(credPath, 'utf-8');
+    const creds = JSON.parse(raw);
+    return creds?.claudeAiOauth?.accessToken ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export class AnthropicProvider implements LLMProvider {
-  private apiKey: string;
+  private apiKey: string | null;
+  private useOAuth: boolean;
   private model: string;
 
-  constructor(apiKey: string, model?: string) {
+  constructor(apiKey: string | null, model?: string, useOAuth?: boolean) {
     this.apiKey = apiKey;
+    this.useOAuth = useOAuth ?? false;
     this.model = model || 'claude-sonnet-4-5-20250514';
   }
 
   async generate(prompt: string, maxTokens: number): Promise<string> {
     const { default: Anthropic } = await import('@anthropic-ai/sdk');
-    const client = new Anthropic({ apiKey: this.apiKey });
+
+    let client: InstanceType<typeof Anthropic>;
+    if (this.apiKey) {
+      client = new Anthropic({ apiKey: this.apiKey });
+    } else if (this.useOAuth) {
+      // Re-read token on every call — Claude Code keeps it refreshed
+      const oauthToken = readClaudeOAuthToken();
+      if (!oauthToken) {
+        throw new Error(
+          'Claude OAuth token not found. Ensure Claude Code is running and ~/.claude/.credentials.json exists.'
+        );
+      }
+      client = new Anthropic({
+        authToken: oauthToken,
+        apiKey: null,
+        defaultHeaders: { 'anthropic-beta': 'oauth-2025-04-20' },
+      });
+    } else {
+      throw new Error('No Anthropic API key or OAuth token available');
+    }
 
     const message = await client.messages.create({
       model: this.model,
@@ -94,9 +130,13 @@ export function createLLMProvider(overrides?: {
 
   switch (providerName) {
     case 'anthropic': {
-      const apiKey = overrides?.apiKey || process.env.ANTHROPIC_API_KEY;
-      if (!apiKey) throw new Error('Missing ANTHROPIC_API_KEY environment variable');
-      return new AnthropicProvider(apiKey, model);
+      const apiKey = overrides?.apiKey || process.env.ANTHROPIC_API_KEY || null;
+      if (!apiKey && !readClaudeOAuthToken()) {
+        throw new Error(
+          'Missing ANTHROPIC_API_KEY environment variable and no Claude OAuth credentials found at ~/.claude/.credentials.json'
+        );
+      }
+      return new AnthropicProvider(apiKey, model, !apiKey);
     }
     case 'openai': {
       const apiKey = overrides?.apiKey || process.env.OPENAI_API_KEY;

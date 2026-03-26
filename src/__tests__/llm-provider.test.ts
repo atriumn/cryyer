@@ -1,7 +1,12 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 
+let lastAnthropicOpts: Record<string, unknown> | undefined;
+
 vi.mock('@anthropic-ai/sdk', () => ({
   default: class MockAnthropic {
+    constructor(opts: Record<string, unknown>) {
+      lastAnthropicOpts = opts;
+    }
     messages = {
       create: vi.fn().mockResolvedValue({
         content: [{ type: 'text', text: '{"subject":"S","body":"B"}' }],
@@ -9,6 +14,11 @@ vi.mock('@anthropic-ai/sdk', () => ({
     };
   },
 }));
+
+vi.mock('fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('fs')>();
+  return { ...actual, readFileSync: vi.fn(actual.readFileSync) };
+});
 
 vi.mock('openai', () => ({
   default: class MockOpenAI {
@@ -34,6 +44,8 @@ vi.mock('@google/generative-ai', () => ({
   },
 }));
 
+import { readFileSync } from 'fs';
+import type { Mock } from 'vitest';
 import { createLLMProvider, AnthropicProvider, OpenAIProvider, GeminiProvider } from '../llm-provider.js';
 
 describe('createLLMProvider', () => {
@@ -76,10 +88,30 @@ describe('createLLMProvider', () => {
     expect(() => createLLMProvider()).toThrow('Unknown LLM provider: unknown');
   });
 
-  it('throws when API key is missing for anthropic', () => {
+  it('throws when API key is missing for anthropic and no OAuth credentials', () => {
     delete process.env.ANTHROPIC_API_KEY;
     process.env.LLM_PROVIDER = 'anthropic';
+    // Mock readFileSync to throw (no credentials file)
+    (readFileSync as Mock).mockImplementation((path: string) => {
+      if (typeof path === 'string' && path.includes('.credentials.json')) {
+        throw new Error('ENOENT');
+      }
+      throw new Error('ENOENT');
+    });
     expect(() => createLLMProvider()).toThrow('Missing ANTHROPIC_API_KEY');
+  });
+
+  it('falls back to OAuth when ANTHROPIC_API_KEY is missing but credentials exist', () => {
+    delete process.env.ANTHROPIC_API_KEY;
+    process.env.LLM_PROVIDER = 'anthropic';
+    (readFileSync as Mock).mockImplementation((path: string) => {
+      if (typeof path === 'string' && path.includes('.credentials.json')) {
+        return JSON.stringify({ claudeAiOauth: { accessToken: 'oauth-token-123' } });
+      }
+      throw new Error('ENOENT');
+    });
+    const provider = createLLMProvider();
+    expect(provider).toBeInstanceOf(AnthropicProvider);
   });
 
   it('throws when API key is missing for openai', () => {
@@ -125,6 +157,31 @@ describe('AnthropicProvider.generate', () => {
     const provider = new AnthropicProvider('test-key');
     const result = await provider.generate('test prompt', 1024);
     expect(result).toBe('{"subject":"S","body":"B"}');
+  });
+
+  it('uses OAuth token when useOAuth is true', async () => {
+    (readFileSync as Mock).mockImplementation((path: string) => {
+      if (typeof path === 'string' && path.includes('.credentials.json')) {
+        return JSON.stringify({ claudeAiOauth: { accessToken: 'oauth-test-token' } });
+      }
+      throw new Error('ENOENT');
+    });
+    const provider = new AnthropicProvider(null, undefined, true);
+    const result = await provider.generate('test prompt', 1024);
+    expect(result).toBe('{"subject":"S","body":"B"}');
+    expect(lastAnthropicOpts).toMatchObject({
+      authToken: 'oauth-test-token',
+      apiKey: null,
+      defaultHeaders: { 'anthropic-beta': 'oauth-2025-04-20' },
+    });
+  });
+
+  it('throws when useOAuth is true but no credentials file', async () => {
+    (readFileSync as Mock).mockImplementation(() => {
+      throw new Error('ENOENT');
+    });
+    const provider = new AnthropicProvider(null, undefined, true);
+    await expect(provider.generate('test prompt', 1024)).rejects.toThrow('Claude OAuth token not found');
   });
 });
 
