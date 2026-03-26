@@ -1,6 +1,7 @@
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { homedir } from 'os';
+import { spawn } from 'child_process';
 
 export interface LLMProvider {
   generate(prompt: string, maxTokens: number): Promise<string>;
@@ -62,6 +63,52 @@ export class AnthropicProvider implements LLMProvider {
       throw new Error('Unexpected response type from Anthropic API');
     }
     return content.text;
+  }
+}
+
+const CLAUDE_CLI = process.env.CLAUDE_CLI_PATH || 'claude';
+/** Models supported directly via OAuth (Haiku tier) */
+const OAUTH_DIRECT_MODELS = new Set(['claude-haiku-4-5']);
+
+export class ClaudeCLIProvider implements LLMProvider {
+  private model: string;
+
+  constructor(model?: string) {
+    this.model = model || 'claude-opus-4-6';
+  }
+
+  async generate(prompt: string, _maxTokens: number): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const proc = spawn(CLAUDE_CLI, [
+        '-p', '--model', this.model, '--output-format', 'json', '--dangerously-skip-permissions',
+      ], {
+        env: { ...process.env, ANTHROPIC_API_KEY: '' },
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+
+      let stdout = '';
+      let stderr = '';
+      proc.stdout.on('data', (d: Buffer) => { stdout += d; });
+      proc.stderr.on('data', (d: Buffer) => { stderr += d; });
+      proc.stdin.write(prompt);
+      proc.stdin.end();
+
+      const timer = setTimeout(() => { proc.kill(); reject(new Error('claude CLI timeout (5m)')); }, 300_000);
+      proc.on('close', (code: number) => {
+        clearTimeout(timer);
+        if (code !== 0 && !stdout.trim()) {
+          reject(new Error(`claude CLI exited ${code}: ${stderr.slice(0, 300)}`));
+          return;
+        }
+        try {
+          const envelope = JSON.parse(stdout.trim());
+          resolve(envelope.result || stdout);
+        } catch {
+          resolve(stdout);
+        }
+      });
+      proc.on('error', (err: Error) => { clearTimeout(timer); reject(err); });
+    });
   }
 }
 
@@ -131,12 +178,19 @@ export function createLLMProvider(overrides?: {
   switch (providerName) {
     case 'anthropic': {
       const apiKey = overrides?.apiKey || process.env.ANTHROPIC_API_KEY || null;
-      if (!apiKey && !readClaudeOAuthToken()) {
-        throw new Error(
-          'Missing ANTHROPIC_API_KEY environment variable and no Claude OAuth credentials found at ~/.claude/.credentials.json'
-        );
+      const effectiveModel = model || 'claude-opus-4-6';
+      if (apiKey) {
+        return new AnthropicProvider(apiKey, effectiveModel, false);
       }
-      return new AnthropicProvider(apiKey, model, !apiKey);
+      // No API key — use OAuth direct for Haiku, CLI for everything else
+      if (OAUTH_DIRECT_MODELS.has(effectiveModel)) {
+        if (!readClaudeOAuthToken()) {
+          throw new Error('No Claude OAuth credentials found at ~/.claude/.credentials.json');
+        }
+        return new AnthropicProvider(null, effectiveModel, true);
+      }
+      // Opus/Sonnet: spawn the claude CLI (uses Claude Code's own auth)
+      return new ClaudeCLIProvider(effectiveModel);
     }
     case 'openai': {
       const apiKey = overrides?.apiKey || process.env.OPENAI_API_KEY;
