@@ -45,9 +45,10 @@ Usage:
   cryyer social <command> [options]
 
 Commands:
-  seed <productId> <type> "<text>"        Add a seed to seeds/{productId}.md
-  draft --product <id> [--type <type>]    Generate social posts from seeds
-  send <draft-path>                       Send posts to Buffer queue
+  seed <productId> <type> "<text>"                     Add a seed to seeds/{productId}.md
+  draft --product <id> [--type <type>]                 Generate social posts from seeds
+  send <draft-path>                                    Send posts to Buffer queue
+  blog-publish <draft-path> --product <id>             Commit blog post to product repo
 
 Options:
   --config-dir <path>  Config directory (products/, seeds/, social-drafts/)
@@ -72,6 +73,7 @@ async function runSocial(args: string[]): Promise<void> {
     seed: './social/seed.js',
     draft: './social/draft.js',
     send: './social/send.js',
+    'blog-publish': './social/blog-publish.js',
   };
 
   const modulePath = socialCommands[subcommand];
