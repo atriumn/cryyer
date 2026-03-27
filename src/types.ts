@@ -1,5 +1,15 @@
 import type { SocialConfig } from './social/types.js';
 
+export interface BlogFrontmatterTemplate {
+  [key: string]: string;
+}
+
+export interface BlogConfig {
+  path: string;   // directory in the repo to commit to (e.g. "src/content/writing")
+  format: string; // file extension without dot (e.g. "mdx", "md")
+  frontmatter?: BlogFrontmatterTemplate; // template values with {{variable}} placeholders
+}
+
 export interface ProductFilter {
   labels?: string[];
   paths?: string[];
@@ -40,6 +50,7 @@ export interface Product {
   reply_to?: string;
   audiences?: Audience[];
   social?: SocialConfig;
+  blog?: BlogConfig;
 }
 
 export interface BetaTester {
