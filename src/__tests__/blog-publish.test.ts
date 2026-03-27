@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseArgv, generateSlug, extractTitle, buildFrontmatter } from '../social/blog-publish.js';
+import { parseArgv, generateSlug, extractTitle, buildFrontmatter, extractExcerpt } from '../social/blog-publish.js';
 
 describe('blog-publish parseArgv', () => {
   it('parses positional draft path and --product flag', () => {
@@ -21,6 +21,12 @@ describe('blog-publish parseArgv', () => {
 
   it('strips leading "blog-publish" command word', () => {
     const result = parseArgv(['blog-publish', 'draft.md', '--product', 'noxaudit']);
+    expect(result.draftPath).toBe('draft.md');
+    expect(result.productId).toBe('noxaudit');
+  });
+
+  it('strips leading "publish" command word', () => {
+    const result = parseArgv(['publish', 'draft.md', '--product', 'noxaudit']);
     expect(result.draftPath).toBe('draft.md');
     expect(result.productId).toBe('noxaudit');
   });
@@ -56,6 +62,36 @@ describe('extractTitle', () => {
 
   it('returns "untitled" when no h1 heading', () => {
     expect(extractTitle('Just some text without a heading.')).toBe('untitled');
+  });
+});
+
+describe('extractExcerpt', () => {
+  it('strips heading and returns first 160 chars of body', () => {
+    const content = '# My Post\n\nThis is the body text of the post.';
+    const result = extractExcerpt(content);
+    expect(result).toBe('This is the body text of the post.');
+    expect(result.length).toBeLessThanOrEqual(160);
+  });
+
+  it('strips markdown bold and italic syntax', () => {
+    const content = '# Title\n\n**Bold text** and *italic text* here.';
+    expect(extractExcerpt(content)).toBe('Bold text and italic text here.');
+  });
+
+  it('strips markdown link syntax', () => {
+    const content = '# Title\n\nCheck out [this link](https://example.com) for more.';
+    expect(extractExcerpt(content)).toBe('Check out this link for more.');
+  });
+
+  it('truncates to 160 characters', () => {
+    const longBody = 'a'.repeat(200);
+    const content = `# Title\n\n${longBody}`;
+    expect(extractExcerpt(content).length).toBe(160);
+  });
+
+  it('collapses newlines into spaces', () => {
+    const content = '# Title\n\nFirst line.\nSecond line.\nThird line.';
+    expect(extractExcerpt(content)).toBe('First line. Second line. Third line.');
   });
 });
 

@@ -10,7 +10,7 @@ export function parseArgv(argv: string[]): {
   dryRun: boolean;
   configDir?: string;
 } {
-  const args = argv[0] === 'blog-publish' ? argv.slice(1) : argv;
+  const args = (argv[0] === 'blog-publish' || argv[0] === 'publish') ? argv.slice(1) : argv;
 
   let draftPath: string | undefined;
   let productId: string | undefined;
@@ -33,12 +33,12 @@ export function parseArgv(argv: string[]): {
 
   if (!draftPath) {
     throw new Error(
-      'Missing <path>. Usage: cryyer social blog-publish <draft-path> --product <id> [--dry-run]',
+      'Missing <path>. Usage: cryyer blog publish <draft-path> --product <id> [--dry-run]',
     );
   }
   if (!productId) {
     throw new Error(
-      'Missing --product <id>. Usage: cryyer social blog-publish <draft-path> --product <id> [--dry-run]',
+      'Missing --product <id>. Usage: cryyer blog publish <draft-path> --product <id> [--dry-run]',
     );
   }
 
@@ -57,6 +57,17 @@ export function generateSlug(title: string): string {
 export function extractTitle(content: string): string {
   const match = content.match(/^#\s+(.+)$/m);
   return match ? match[1].trim() : 'untitled';
+}
+
+export function extractExcerpt(content: string): string {
+  return content
+    .replace(/^#[^\n]*\n+/, '')         // strip heading
+    .replace(/\*\*(.+?)\*\*/g, '$1')    // strip bold
+    .replace(/\*(.+?)\*/g, '$1')        // strip italic
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // strip links
+    .replace(/\n/g, ' ')                // collapse newlines
+    .trim()
+    .slice(0, 160);
 }
 
 export function buildFrontmatter(
@@ -116,7 +127,7 @@ export async function main(): Promise<void> {
   for (const post of blogPosts) {
     const title = extractTitle(post.text);
     const slug = generateSlug(title);
-    const excerpt = post.text.replace(/^#[^\n]*\n+/, '').slice(0, 160).replace(/\n/g, ' ').trim();
+    const excerpt = extractExcerpt(post.text);
 
     const vars: Record<string, string> = { title, date, excerpt };
     const fm = buildFrontmatter(frontmatterTemplate as Record<string, string> | undefined, vars);

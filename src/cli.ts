@@ -28,6 +28,7 @@ Commands:
   send-file     Send emails from a draft markdown file
   preview       Show gathered activity without drafting
   social        Social content pipeline (seed, draft, send)
+  blog          Blog publishing (publish to product repos)
 
 Options:
   --help, -h    Show this help message
@@ -59,6 +60,52 @@ Environment:
 
 Run 'cryyer social <command> --help' for more information on a command.
 `.trimStart());
+}
+
+function printBlogHelp(): void {
+  console.log(`
+cryyer blog — blog publishing
+
+Usage:
+  cryyer blog <command> [options]
+
+Commands:
+  publish <draft-path> --product <id>    Commit blog post to product repo
+
+Options:
+  --dry-run            Preview without committing
+  --config-dir <path>  Config directory (products/, seeds/, social-drafts/)
+  --help, -h           Show this help message
+
+Environment:
+  CRYYER_CONFIG_DIR    Fallback for --config-dir when flag is not provided
+
+Run 'cryyer blog <command> --help' for more information on a command.
+`.trimStart());
+}
+
+async function runBlog(args: string[]): Promise<void> {
+  const subcommand = args[0];
+
+  if (!subcommand || subcommand === '--help' || subcommand === '-h') {
+    printBlogHelp();
+    return;
+  }
+
+  const blogCommands: Record<string, string> = {
+    publish: './social/blog-publish.js',
+  };
+
+  const modulePath = blogCommands[subcommand];
+  if (!modulePath) {
+    console.error(`Unknown blog command: ${subcommand}\n`);
+    printBlogHelp();
+    process.exitCode = 1;
+    return;
+  }
+
+  const mod = await import(modulePath) as { main: () => Promise<void> };
+  await mod.main();
 }
 
 async function runSocial(args: string[]): Promise<void> {
@@ -104,6 +151,11 @@ async function run(): Promise<void> {
 
   if (command === 'social') {
     await runSocial(args.slice(1));
+    return;
+  }
+
+  if (command === 'blog') {
+    await runBlog(args.slice(1));
     return;
   }
 
