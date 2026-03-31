@@ -92,7 +92,7 @@ export function blogPrompt(seed: Seed, product: Product, platform: Platform): st
 
 ${productBlock(product)}
 
-800-1500 words. Structure: hook, body (concrete examples), conclusion with CTA. Use subheadings. No fluff.
+Write a blog post of 600-1200 words. Match the voice and tone from the product context exactly — that takes priority over structure. No mandatory subheadings. Lead with the point, not the setup. Short paragraphs. Say it like you'd say it out loud.
 
 Seed: ${seed.text}
 
