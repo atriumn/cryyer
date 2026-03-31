@@ -92,7 +92,7 @@ export function blogPrompt(seed: Seed, product: Product, platform: Platform): st
 
 ${productBlock(product)}
 
-Write a blog post of 600-1200 words. Match the voice and tone from the product context exactly — that takes priority over structure. No mandatory subheadings. Lead with the point, not the setup. Short paragraphs. Say it like you'd say it out loud.
+Write a blog post of 600-1200 words. Match the voice and tone from the product context exactly — that takes priority over structure. No subheadings. Lead with the point. Short paragraphs. If the product context includes a voice calibration sample, continue in that exact register.
 
 Seed: ${seed.text}
 

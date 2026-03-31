@@ -112,8 +112,7 @@ describe('blogPrompt', () => {
     const s: Seed = { type: 'blog', text: 'why architecture reviews matter' };
     const result = blogPrompt(s, product, platform);
     expect(result).toContain('why architecture reviews matter');
-    expect(result).toContain('800-1500 words');
-    expect(result).toContain('subheadings');
+    expect(result).toContain('600-1200 words');
     expect(result).toContain('280');
     expect(result).toContain('Architecture review tool');
   });
