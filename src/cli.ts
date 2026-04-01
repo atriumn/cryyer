@@ -3,6 +3,9 @@ import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
+// Auto-load .env if present (Node 20.6+)
+try { process.loadEnvFile(); } catch { /* no .env, that's fine */ }
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 function getVersion(): string {
