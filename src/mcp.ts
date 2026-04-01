@@ -19,7 +19,8 @@ import { parseSeeds } from './social/parse-seeds.js';
 import { loadPlatforms } from './social/platforms.js';
 import { generateSocialPosts } from './social/generate.js';
 import { writeSocialDraft, readSocialDraft } from './social/draft-file.js';
-import * as bufferProvider from './social/buffer-provider.js';
+import { postToLinkedIn } from './social/linkedin-provider.js';
+import { loadLinkedInCredentials } from './social/credentials.js';
 import type { Product, BetaTester } from './types.js';
 import type { SubscriberStore } from './subscriber-store.js';
 import type { EmailProvider } from './email-provider.js';
@@ -673,10 +674,10 @@ export function createServer(deps: McpDeps): McpServer {
 
   server.tool(
     'social_send',
-    'Send a social draft to Buffer for publishing',
+    'Post a social draft to configured platforms (currently LinkedIn)',
     {
       filename: z.string().describe('The draft filename (e.g. "cryyer-2026-03-25.md")'),
-      dry_run: z.boolean().optional().describe('Preview without sending to Buffer'),
+      dry_run: z.boolean().optional().describe('Preview without posting'),
     },
     async ({ filename, dry_run }) => {
       const filePath = join(deps.projectRoot, 'social-drafts', filename);
@@ -688,11 +689,6 @@ export function createServer(deps: McpDeps): McpServer {
       }
 
       const draft = readSocialDraft(filePath);
-      const platformEnvMap: Record<string, string> = {
-        twitter: 'BUFFER_PROFILE_TWITTER',
-        linkedin: 'BUFFER_PROFILE_LINKEDIN',
-        bluesky: 'BUFFER_PROFILE_BLUESKY',
-      };
 
       if (dry_run) {
         const lines = draft.posts.map(
@@ -703,44 +699,30 @@ export function createServer(deps: McpDeps): McpServer {
         };
       }
 
-      const token = process.env['BUFFER_ACCESS_TOKEN'];
-      if (!token) {
+      const creds = loadLinkedInCredentials();
+      if (!creds) {
         return {
-          content: [{ type: 'text', text: 'Missing BUFFER_ACCESS_TOKEN environment variable' }],
+          content: [{ type: 'text', text: 'Missing LinkedIn credentials. Run "cryyer auth linkedin" or set LINKEDIN_ACCESS_TOKEN and LINKEDIN_PERSON_URN env vars.' }],
           isError: true,
         };
       }
 
-      const profiles = await bufferProvider.listProfiles(token);
-      const profileMap = new Map<string, string>();
-      for (const [platformId, envVar] of Object.entries(platformEnvMap)) {
-        const envProfileId = process.env[envVar];
-        if (envProfileId) {
-          const found = profiles.find((p) => p.id === envProfileId);
-          if (!found) {
-            console.error(`Warning: ${envVar}=${envProfileId} not found in Buffer profiles`);
-          }
-          profileMap.set(platformId, envProfileId);
-        }
-      }
-
-      let queued = 0;
+      let posted = 0;
       const skipped: string[] = [];
 
       for (const post of draft.posts) {
-        const profileId = profileMap.get(post.platform.id);
-        if (!profileId) {
+        if (post.platform.id === 'linkedin') {
+          await postToLinkedIn(creds.LINKEDIN_ACCESS_TOKEN, creds.LINKEDIN_PERSON_URN, post.text);
+          posted++;
+        } else {
           skipped.push(post.platform.id);
-          continue;
         }
-        await bufferProvider.createPost(token, profileId, post.text);
-        queued++;
       }
 
-      let result = `Queued ${queued} of ${draft.posts.length} posts to Buffer.`;
+      let result = `Posted ${posted} of ${draft.posts.length} posts.`;
       if (skipped.length > 0) {
         const unique = [...new Set(skipped)];
-        result += ` Skipped platforms (no profile configured): ${unique.join(', ')}`;
+        result += ` Skipped platforms (not yet supported): ${unique.join(', ')}`;
       }
 
       return {
