@@ -1,12 +1,7 @@
 import { fileURLToPath } from 'url';
 import { readSocialDraft } from './draft-file.js';
-import * as bufferProvider from './buffer-provider.js';
-
-const PLATFORM_ENV_MAP: Record<string, string> = {
-  twitter: 'BUFFER_PROFILE_TWITTER',
-  linkedin: 'BUFFER_PROFILE_LINKEDIN',
-  bluesky: 'BUFFER_PROFILE_BLUESKY',
-};
+import { postToLinkedIn } from './linkedin-provider.js';
+import { loadLinkedInCredentials } from './credentials.js';
 
 export function parseArgv(argv: string[]): {
   draftPath: string;
@@ -44,32 +39,16 @@ export async function main(): Promise<void> {
 
   const draft = readSocialDraft(draftPath);
 
-  const token = process.env['BUFFER_ACCESS_TOKEN'];
-  if (!token && !dryRun) {
-    throw new Error('Missing BUFFER_ACCESS_TOKEN environment variable');
+  // Load LinkedIn credentials (env vars take precedence over config file)
+  const creds = loadLinkedInCredentials();
+  if (!creds && !dryRun) {
+    throw new Error(
+      'Missing LinkedIn credentials. Run "cryyer auth linkedin" or set LINKEDIN_ACCESS_TOKEN and LINKEDIN_PERSON_URN env vars.',
+    );
   }
 
-  // Build platform-to-profile mapping
-  const profileMap = new Map<string, string>();
-  if (!dryRun) {
-    const profiles = await bufferProvider.listProfiles(token!);
-    for (const [platformId, envVar] of Object.entries(PLATFORM_ENV_MAP)) {
-      const envProfileId = process.env[envVar];
-      if (envProfileId) {
-        // Verify profile exists
-        const found = profiles.find((p) => p.id === envProfileId);
-        if (!found) {
-          console.warn(
-            `Warning: ${envVar}=${envProfileId} not found in Buffer profiles`,
-          );
-        }
-        profileMap.set(platformId, envProfileId);
-      }
-    }
-  }
-
-  let queued = 0;
-  const platformCounts = new Map<string, number>();
+  let posted = 0;
+  let skipped = 0;
 
   for (const post of draft.posts) {
     const platformId = post.platform.id;
@@ -77,26 +56,25 @@ export async function main(): Promise<void> {
     if (dryRun) {
       console.log(`\n[DRY RUN] ${platformId}:`);
       console.log(post.text);
-      queued++;
-      platformCounts.set(platformId, (platformCounts.get(platformId) ?? 0) + 1);
+      posted++;
       continue;
     }
 
-    const profileId = profileMap.get(platformId);
-    if (!profileId) {
-      console.warn(
-        `Skipping ${platformId}: no profile configured (set ${PLATFORM_ENV_MAP[platformId] ?? `BUFFER_PROFILE_${platformId.toUpperCase()}`})`,
+    if (platformId === 'linkedin') {
+      const urn = await postToLinkedIn(
+        creds!.LINKEDIN_ACCESS_TOKEN,
+        creds!.LINKEDIN_PERSON_URN,
+        post.text,
       );
-      continue;
+      console.log(`  Posted to LinkedIn: ${urn}`);
+      posted++;
+    } else {
+      console.warn(`  Skipping ${platformId}: direct posting not yet supported`);
+      skipped++;
     }
-
-    await bufferProvider.createPost(token!, profileId, post.text);
-    queued++;
-    platformCounts.set(platformId, (platformCounts.get(platformId) ?? 0) + 1);
   }
 
-  const platformCount = platformCounts.size;
-  console.log(`\nQueued ${queued} posts across ${platformCount} platforms`);
+  console.log(`\nPosted ${posted} posts${skipped > 0 ? `, skipped ${skipped}` : ''}`);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

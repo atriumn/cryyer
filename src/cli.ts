@@ -19,7 +19,7 @@ Usage:
 
 Commands:
   init          Interactive product setup
-  auth gmail    Authorize Gmail via OAuth 2.0
+  auth          Manage authentication (gmail, linkedin)
   check         Validate config and connections
   run           Full pipeline: gather → draft → send
   draft         Generate drafts → create GitHub issues
@@ -48,7 +48,7 @@ Usage:
 Commands:
   seed <productId> <type> "<text>"                     Add a seed to seeds/{productId}.md
   draft --product <id> [--type <type>]                 Generate social posts from seeds
-  send <draft-path>                                    Send posts to Buffer queue
+  send <draft-path>                                    Post to social platforms (LinkedIn)
   blog-publish <draft-path> --product <id>             Commit blog post to product repo
 
 Options:
