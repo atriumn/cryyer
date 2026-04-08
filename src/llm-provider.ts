@@ -25,7 +25,7 @@ export class AnthropicProvider implements LLMProvider {
   constructor(apiKey: string | null, model?: string, useOAuth?: boolean) {
     this.apiKey = apiKey;
     this.useOAuth = useOAuth ?? false;
-    this.model = model || 'claude-sonnet-4-5-20250514';
+    this.model = model || 'claude-sonnet-4-6';
   }
 
   async generate(prompt: string, maxTokens: number): Promise<string> {
