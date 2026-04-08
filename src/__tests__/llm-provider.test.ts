@@ -46,7 +46,7 @@ vi.mock('@google/generative-ai', () => ({
 
 import { readFileSync } from 'fs';
 import type { Mock } from 'vitest';
-import { createLLMProvider, AnthropicProvider, OpenAIProvider, GeminiProvider } from '../llm-provider.js';
+import { createLLMProvider, AnthropicProvider, ClaudeCLIProvider, OpenAIProvider, GeminiProvider } from '../llm-provider.js';
 
 describe('createLLMProvider', () => {
   const originalEnv = { ...process.env };
@@ -88,9 +88,10 @@ describe('createLLMProvider', () => {
     expect(() => createLLMProvider()).toThrow('Unknown LLM provider: unknown');
   });
 
-  it('throws when API key is missing for anthropic and no OAuth credentials', () => {
+  it('throws when API key is missing for anthropic haiku and no OAuth credentials', () => {
     delete process.env.ANTHROPIC_API_KEY;
     process.env.LLM_PROVIDER = 'anthropic';
+    process.env.LLM_MODEL = 'claude-haiku-4-5';
     // Mock readFileSync to throw (no credentials file)
     (readFileSync as Mock).mockImplementation((path: string) => {
       if (typeof path === 'string' && path.includes('.credentials.json')) {
@@ -98,12 +99,21 @@ describe('createLLMProvider', () => {
       }
       throw new Error('ENOENT');
     });
-    expect(() => createLLMProvider()).toThrow('Missing ANTHROPIC_API_KEY');
+    expect(() => createLLMProvider()).toThrow('No Claude OAuth credentials found');
   });
 
-  it('falls back to OAuth when ANTHROPIC_API_KEY is missing but credentials exist', () => {
+  it('uses ClaudeCLIProvider for Opus/Sonnet when no API key (regardless of OAuth)', () => {
     delete process.env.ANTHROPIC_API_KEY;
     process.env.LLM_PROVIDER = 'anthropic';
+    delete process.env.LLM_MODEL; // defaults to claude-opus-4-6
+    const provider = createLLMProvider();
+    expect(provider).toBeInstanceOf(ClaudeCLIProvider);
+  });
+
+  it('falls back to OAuth for Haiku when ANTHROPIC_API_KEY is missing but credentials exist', () => {
+    delete process.env.ANTHROPIC_API_KEY;
+    process.env.LLM_PROVIDER = 'anthropic';
+    process.env.LLM_MODEL = 'claude-haiku-4-5';
     (readFileSync as Mock).mockImplementation((path: string) => {
       if (typeof path === 'string' && path.includes('.credentials.json')) {
         return JSON.stringify({ claudeAiOauth: { accessToken: 'oauth-token-123' } });
