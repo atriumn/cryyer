@@ -279,3 +279,10 @@ The following files were deprecated and have been removed from `src/`:
 - `llm.ts` — replaced by `llm-provider.ts` (removed in #40)
 - `email.ts` — thin Resend wrapper, unused (removed in #40)
 - `github.ts` — thin Octokit wrapper, unused (removed in #40)
+
+## lat.md — Codebase Knowledge Graph
+
+At the start of every session, read `lat.md` in the repo root for accumulated codebase knowledge.
+
+When you learn something non-obvious — a key architectural decision, a gotcha, why something is built a certain way — update `lat.md` under the appropriate section. Keep entries concise. This knowledge persists across sessions.
+
