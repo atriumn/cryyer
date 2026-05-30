@@ -29,13 +29,6 @@ pnpm run test:watch   # Run tests in watch mode
 
 ### Running Locally
 
-**Full pipeline** (gather → draft → send):
-
-```bash
-pnpm run build
-pnpm start
-```
-
 **Individual stages:**
 
 ```bash
