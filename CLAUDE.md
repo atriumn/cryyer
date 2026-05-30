@@ -54,9 +54,8 @@ Key modules:
 | `summarize.ts` | Builds prompt with product voice, calls LLM provider, parses JSON `{subject, body}` response |
 | `subscriber-store.ts` | SubscriberStore interface and factory; adapters for Supabase, JSON file, GitHub Gist, Google Sheets. Supports `getSubscribers`, `recordEmailSent`, `addSubscriber`, `removeSubscriber`. |
 | `mcp.ts` | MCP server entry point; 9 tools + 1 prompt for draft review and subscriber management |
-| `email-provider.ts` | EmailProvider interface and factory; adapters for Resend, Gmail |
-| `auth.ts` | `cryyer auth gmail` — OAuth 2.0 flow for Gmail authorization |
-| `gmail-oauth.ts` | Google OAuth client ID/secret constants |
+| `email-provider.ts` | EmailProvider interface and factory; Resend adapter |
+| `auth.ts` | `cryyer auth linkedin` — OAuth 2.0 flow for LinkedIn authorization |
 | `send.ts` | Builds email messages (`sendEmails`), delegates sending to EmailProvider |
 | `draft-file.ts` | CLI: `cryyer draft-file` — gather activity → LLM draft → write YAML front matter file |
 | `send-file.ts` | CLI: `cryyer send-file` — read YAML front matter draft → send emails to subscribers |
@@ -137,11 +136,8 @@ GITHUB_REPOSITORY    # Set by GitHub Actions
 ### Email Provider Configuration
 
 ```
-EMAIL_PROVIDER       # "resend" (default) or "gmail"
-# Resend (default):
-RESEND_API_KEY       # Required when EMAIL_PROVIDER=resend (or unset)
-# Gmail:
-GMAIL_REFRESH_TOKEN  # Required when EMAIL_PROVIDER=gmail; set via "cryyer auth gmail"
+EMAIL_PROVIDER       # "resend" (only supported value; default)
+RESEND_API_KEY       # Required
 ```
 
 ### Subscriber Store Configuration
@@ -232,9 +228,8 @@ Wraps `cryyer send-file`. Maps all credential inputs to env vars for email and s
 | `product` | yes | — | Product ID |
 | `draft-path` | yes | — | Path to the draft markdown file |
 | `from-email` | yes | — | Sender email address |
-| `email-provider` | no | `resend` | Email provider (resend, gmail) |
+| `email-provider` | no | `resend` | Email provider (resend) |
 | `email-api-key` | no | — | Resend API key |
-| `gmail-refresh-token` | no | — | Gmail OAuth refresh token |
 | `from-name` | no | `Cryyer Updates` | Sender display name |
 | `subscriber-store` | no | `json` | Subscriber store (json, supabase, google-sheets) |
 | `supabase-url` | no | — | Supabase project URL |

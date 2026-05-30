@@ -280,33 +280,6 @@ describe('checkEmailConfig', () => {
     expect(result.message).toContain('FROM_EMAIL');
   });
 
-  it('passes when gmail vars are set', () => {
-    process.env['EMAIL_PROVIDER'] = 'gmail';
-    process.env['GMAIL_REFRESH_TOKEN'] = 'token';
-    process.env['FROM_EMAIL'] = 'from@test.com';
-    const result = checkEmailConfig();
-    expect(result.passed).toBe(true);
-    expect(result.message).toContain('GMAIL_REFRESH_TOKEN');
-  });
-
-  it('fails when gmail refresh token is missing', () => {
-    process.env['EMAIL_PROVIDER'] = 'gmail';
-    delete process.env['GMAIL_REFRESH_TOKEN'];
-    process.env['FROM_EMAIL'] = 'from@test.com';
-    const result = checkEmailConfig();
-    expect(result.passed).toBe(false);
-    expect(result.message).toContain('GMAIL_REFRESH_TOKEN');
-  });
-
-  it('fails when gmail FROM_EMAIL is missing', () => {
-    process.env['EMAIL_PROVIDER'] = 'gmail';
-    process.env['GMAIL_REFRESH_TOKEN'] = 'token';
-    delete process.env['FROM_EMAIL'];
-    const result = checkEmailConfig();
-    expect(result.passed).toBe(false);
-    expect(result.message).toContain('FROM_EMAIL');
-  });
-
   it('fails for unknown email provider', () => {
     process.env['EMAIL_PROVIDER'] = 'mailgun';
     const result = checkEmailConfig();

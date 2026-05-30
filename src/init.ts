@@ -43,10 +43,9 @@ const LLM_KEY_PROMPTS: Record<string, string> = {
   gemini: 'Gemini API key (aistudio.google.com/apikey)',
 };
 
-const EMAIL_PROVIDERS = ['resend', 'gmail'] as const;
+const EMAIL_PROVIDERS = ['resend'] as const;
 const EMAIL_PROVIDER_LABELS: Record<string, string> = {
   resend: 'Resend',
-  gmail: 'Gmail',
 };
 
 const SUBSCRIBER_STORES = ['json', 'supabase', 'google-sheets'] as const;
@@ -130,11 +129,6 @@ export function buildSubscribersJson(productId: string): string {
   return JSON.stringify(data, null, 2) + '\n';
 }
 
-const EMAIL_SECRET_NAMES: Record<string, string> = {
-  resend: 'RESEND_API_KEY',
-  gmail: 'GMAIL_REFRESH_TOKEN',
-};
-
 const GITIGNORE_ENTRIES = ['.env', 'subscribers.json', 'email-log.json'];
 const GITIGNORE_HEADER = '# cryyer';
 
@@ -208,8 +202,6 @@ export function buildSendWorkflowContent(
   const emailInputs: string[] = [];
   if (emailProvider === 'resend') {
     emailInputs.push(`          email-api-key: \${{ secrets.RESEND_API_KEY }}`);
-  } else if (emailProvider === 'gmail') {
-    emailInputs.push(`          gmail-refresh-token: \${{ secrets.GMAIL_REFRESH_TOKEN }}`);
   }
 
   const storeInputs: string[] = [];
@@ -301,8 +293,6 @@ export function buildSendUpdateWorkflowContent(
 
   if (emailProvider === 'resend') {
     envLines.push(`          RESEND_API_KEY: \${{ secrets.RESEND_API_KEY }}`);
-  } else if (emailProvider === 'gmail') {
-    envLines.push(`          GMAIL_REFRESH_TOKEN: \${{ secrets.GMAIL_REFRESH_TOKEN }}`);
   }
 
   if (subscriberStore === 'supabase') {
@@ -720,7 +710,6 @@ export async function main(): Promise<void> {
       workflowSecrets.push(LLM_KEY_NAMES[llmProvider]);
       workflowSecrets.push('FROM_EMAIL');
       if (emailProvider === 'resend') workflowSecrets.push('RESEND_API_KEY');
-      if (emailProvider === 'gmail') workflowSecrets.push('GMAIL_REFRESH_TOKEN');
       if (subscriberStore === 'supabase') workflowSecrets.push('SUPABASE_URL', 'SUPABASE_SERVICE_KEY');
       if (subscriberStore === 'google-sheets') workflowSecrets.push('GOOGLE_SHEETS_SPREADSHEET_ID', 'GOOGLE_SERVICE_ACCOUNT_EMAIL', 'GOOGLE_PRIVATE_KEY');
     }
@@ -741,10 +730,6 @@ export async function main(): Promise<void> {
     let step = 1;
     if (workflowSecrets.length > 0) {
       console.log(`    ${step}. Set GitHub secrets  ${workflowSecrets.join(', ')}`);
-      step++;
-    }
-    if (emailProvider === 'gmail') {
-      console.log(`    ${step}. Authorize Gmail     npx @atriumn/cryyer auth gmail`);
       step++;
     }
     if (subscriberStore === 'json') {

@@ -29,7 +29,7 @@ describe('parseInitFlags', () => {
       '--voice', 'Casual',
       '--llm', 'openai',
       '--subscriber-store', 'supabase',
-      '--email-provider', 'gmail',
+      '--email-provider', 'resend',
       '--from-email', 'hi@acme.dev',
       '--yes',
       '--pipeline', 'weekly',
@@ -40,7 +40,7 @@ describe('parseInitFlags', () => {
       voice: 'Casual',
       llm: 'openai',
       subscriberStore: 'supabase',
-      emailProvider: 'gmail',
+      emailProvider: 'resend',
       fromEmail: 'hi@acme.dev',
       yes: true,
       pipeline: 'weekly',
@@ -122,13 +122,6 @@ describe('buildEnvContent', () => {
     expect(content).toContain('SUBSCRIBER_STORE=json');
     expect(content).not.toContain('SUPABASE_URL');
     expect(content).not.toContain('GOOGLE_SHEETS');
-  });
-
-  it('omits RESEND_API_KEY when email provider is gmail', () => {
-    const content = buildEnvContent({ ...baseAnswers, emailProvider: 'gmail', resendApiKey: undefined });
-    expect(content).toContain('EMAIL_PROVIDER=gmail');
-    expect(content).not.toContain('RESEND_API_KEY');
-    expect(content).toContain('FROM_EMAIL=updates@acme.dev');
   });
 
   it('includes supabase vars when store is supabase', () => {
@@ -473,34 +466,6 @@ describe('main (init)', () => {
     makeRl(['My App', 'acme/my-app', 'Casual', '1', 'sk-ant-test', '1', '1', '']);
 
     await expect(main()).rejects.toThrow('GitHub token is required');
-  });
-
-  it('handles Gmail email provider selection (skips Resend key)', async () => {
-    setupFreshDir();
-    makeRl([
-      'Acme CLI', 'acme/acme-cli', 'Casual',
-      '1', 'sk-ant-test',        // anthropic
-      '1',                        // JSON store
-      '2',                        // Gmail
-      'ghp_test',                 // github token (no resend key prompt)
-      'updates@acme.dev',         // from email
-      'n',                        // skip workflows
-    ]);
-
-    await main();
-
-    expect(writeFileSync).toHaveBeenCalledWith(
-      expect.stringContaining('.env'),
-      expect.stringContaining('EMAIL_PROVIDER=gmail'),
-      'utf-8'
-    );
-    // Should not contain RESEND_API_KEY
-    const envCalls = (writeFileSync as Mock).mock.calls.filter(
-      (call) => typeof call[0] === 'string' && call[0].endsWith('.env')
-    );
-    expect(envCalls.length).toBeGreaterThan(0);
-    const envContent = envCalls[0][1] as string;
-    expect(envContent).not.toContain('RESEND_API_KEY');
   });
 
   it('creates weekly workflow files when user selects weekly pipeline', async () => {
