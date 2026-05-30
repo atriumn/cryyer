@@ -11,8 +11,8 @@ pnpm run typecheck   # Type-check without emitting
 pnpm run lint        # ESLint on src/
 pnpm test            # Run unit tests (vitest)
 pnpm run test:watch  # Run tests in watch mode
-pnpm run dev         # Build then run (pnpm run build && pnpm start)
-pnpm start           # Run compiled output (node dist/index.js)
+pnpm run dev         # Build then run (pnpm run build && node dist/cli.js)
+pnpm start           # Run CLI (node dist/cli.js)
 pnpm run mcp         # Run MCP server (node dist/mcp.js)
 ```
 
@@ -36,9 +36,8 @@ The release pipeline uses `draft-file.ts` / `send-file.ts` (file-based). The wee
 
 ## Architecture
 
-Six distinct entry points, each compiled from `src/` to `dist/`:
+Five distinct entry points, each compiled from `src/` to `dist/`:
 
-- **`index.ts`** — Direct orchestration: gather activity, draft per audience, query subscribers, send emails in one run.
 - **`draft.ts`** — Used by `weekly-draft.yml` workflow. Gathers activity, generates drafts via LLM, creates GitHub issues with `draft` + product-id labels. For multi-audience products, creates one issue per audience with `audience:{id}` labels.
 - **`send-on-close.ts`** — Used by `send-update.yml` workflow. Triggered on issue close, parses the draft issue body (`**Subject:** ...\n\n---\n\n<body>`), queries subscriber store (audience-aware via `audience:*` label), sends via configured email provider, posts delivery stats as issue comment.
 - **`draft-file.ts`** — CLI command `cryyer draft-file`. Gathers activity, generates LLM draft, writes a YAML front matter markdown file. Designed for release-triggered pipelines where the draft is committed to a PR branch. Accepts `--product`, `--output`, `--since`, `--repo`, `--audience`, `--version` flags.

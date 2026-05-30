@@ -67,16 +67,9 @@ Then:
 
 ```bash
 npx @atriumn/cryyer check         # validate your setup
-npx @atriumn/cryyer run --dry-run  # preview a draft email
 ```
 
-When you're ready to run for real:
-
-```bash
-npx @atriumn/cryyer run          # full pipeline: gather → draft → send
-```
-
-Or run the two stages separately:
+Run the two stages:
 
 ```bash
 npx @atriumn/cryyer draft        # generate drafts → create GitHub issues

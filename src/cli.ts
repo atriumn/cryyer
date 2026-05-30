@@ -24,7 +24,6 @@ Commands:
   init          Interactive product setup
   auth          Manage authentication (linkedin)
   check         Validate config and connections
-  run           Full pipeline: gather → draft → send
   draft         Generate drafts → create GitHub issues
   send          Send emails for a closed draft issue
   draft-file    Generate a draft → write to markdown file
@@ -166,7 +165,6 @@ async function run(): Promise<void> {
     init: './init.js',
     auth: './auth.js',
     check: './check.js',
-    run: './index.js',
     draft: './draft.js',
     send: './send-on-close.js',
     'draft-file': './draft-file.js',
