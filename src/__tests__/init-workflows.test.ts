@@ -86,13 +86,6 @@ describe('buildSendWorkflowContent', () => {
     expect(content).not.toContain('GMAIL_REFRESH_TOKEN');
   });
 
-  it('includes gmail credentials for gmail provider', () => {
-    const content = buildSendWorkflowContent('acme-cli', 'gmail', 'json');
-    expect(content).toContain('email-provider: gmail');
-    expect(content).toContain('secrets.GMAIL_REFRESH_TOKEN');
-    expect(content).not.toContain('RESEND_API_KEY');
-  });
-
   it('includes no store credentials for json store', () => {
     const content = buildSendWorkflowContent('acme-cli', 'resend', 'json');
     expect(content).toContain('subscriber-store: json');
@@ -169,12 +162,6 @@ describe('buildSendUpdateWorkflowContent', () => {
     const content = buildSendUpdateWorkflowContent('acme-cli', 'resend', 'json');
     expect(content).toContain('RESEND_API_KEY');
     expect(content).not.toContain('GMAIL_REFRESH_TOKEN');
-  });
-
-  it('includes gmail credentials for gmail provider', () => {
-    const content = buildSendUpdateWorkflowContent('acme-cli', 'gmail', 'json');
-    expect(content).toContain('GMAIL_REFRESH_TOKEN');
-    expect(content).not.toContain('RESEND_API_KEY');
   });
 
   it('includes supabase credentials for supabase store', () => {

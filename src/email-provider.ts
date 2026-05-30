@@ -1,6 +1,4 @@
 import { Resend } from 'resend';
-import { OAuth2Client } from 'google-auth-library';
-import { GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET } from './gmail-oauth.js';
 
 export interface EmailMessage {
   from: string;
@@ -70,93 +68,9 @@ export class ResendProvider implements EmailProvider {
   }
 }
 
-// --- GmailProvider ---
-
-function buildRfc2822Message(email: EmailMessage): string {
-  const lines: string[] = [
-    `From: ${email.from}`,
-    `To: ${email.to}`,
-    `Subject: ${email.subject}`,
-    'MIME-Version: 1.0',
-    'Content-Type: text/html; charset=UTF-8',
-  ];
-
-  if (email.replyTo) {
-    lines.push(`Reply-To: ${email.replyTo}`);
-  }
-
-  if (email.headers) {
-    for (const [key, value] of Object.entries(email.headers)) {
-      lines.push(`${key}: ${value}`);
-    }
-  }
-
-  lines.push('', email.html);
-  return lines.join('\r\n');
-}
-
-function base64UrlEncode(str: string): string {
-  return Buffer.from(str)
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-}
-
-export class GmailProvider implements EmailProvider {
-  private refreshToken: string;
-
-  constructor(refreshToken: string) {
-    this.refreshToken = refreshToken;
-  }
-
-  private async getAccessToken(): Promise<string> {
-    const oauth2Client = new OAuth2Client(GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET);
-    oauth2Client.setCredentials({ refresh_token: this.refreshToken });
-    const { token } = await oauth2Client.getAccessToken();
-    if (!token) throw new Error('Failed to obtain Gmail access token from refresh token');
-    return token;
-  }
-
-  async sendBatch(emails: EmailMessage[]): Promise<BatchResult> {
-    const stats: BatchResult = { sent: 0, failed: 0, failures: [] };
-    const accessToken = await this.getAccessToken();
-
-    for (const email of emails) {
-      try {
-        const raw = base64UrlEncode(buildRfc2822Message(email));
-        const response = await fetch(
-          'https://gmail.googleapis.com/gmail/v1/users/me/messages/send',
-          {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ raw }),
-          }
-        );
-
-        if (!response.ok) {
-          const body = await response.text();
-          stats.failed++;
-          stats.failures.push({ email: email.to, error: `Gmail API ${response.status}: ${body}` });
-        } else {
-          stats.sent++;
-        }
-      } catch (err) {
-        stats.failed++;
-        stats.failures.push({ email: email.to, error: String(err) });
-      }
-    }
-
-    return stats;
-  }
-}
-
 // --- Factory ---
 
-export type EmailProviderType = 'resend' | 'gmail';
+export type EmailProviderType = 'resend';
 
 export function createEmailProvider(overrides?: {
   provider?: EmailProviderType;
@@ -169,12 +83,7 @@ export function createEmailProvider(overrides?: {
       if (!apiKey) throw new Error('Missing RESEND_API_KEY environment variable');
       return new ResendProvider(apiKey);
     }
-    case 'gmail': {
-      const refreshToken = process.env.GMAIL_REFRESH_TOKEN;
-      if (!refreshToken) throw new Error('Missing GMAIL_REFRESH_TOKEN environment variable. Run "cryyer auth gmail" to authenticate.');
-      return new GmailProvider(refreshToken);
-    }
     default:
-      throw new Error(`Unknown email provider: ${providerName}. Supported: resend, gmail`);
+      throw new Error(`Unknown email provider: ${providerName}. Supported: resend`);
   }
 }

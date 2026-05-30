@@ -191,16 +191,6 @@ export async function checkSubscriberStore(): Promise<CheckResult> {
 export function checkEmailConfig(): CheckResult {
   const provider = process.env['EMAIL_PROVIDER'] || 'resend';
 
-  if (provider === 'gmail') {
-    const refreshToken = process.env['GMAIL_REFRESH_TOKEN'];
-    const fromEmail = process.env['FROM_EMAIL'];
-    const missing = [!refreshToken && 'GMAIL_REFRESH_TOKEN', !fromEmail && 'FROM_EMAIL'].filter(Boolean).join(', ');
-    if (missing) {
-      return { name: 'Email (Gmail)', passed: false, message: `Missing required variables: ${missing}. Run "cryyer auth gmail" to authenticate.` };
-    }
-    return { name: 'Email (Gmail)', passed: true, message: 'GMAIL_REFRESH_TOKEN and FROM_EMAIL are set' };
-  }
-
   if (provider === 'resend') {
     const resendKey = process.env['RESEND_API_KEY'];
     const fromEmail = process.env['FROM_EMAIL'];
@@ -214,7 +204,7 @@ export function checkEmailConfig(): CheckResult {
   return {
     name: 'Email config',
     passed: false,
-    message: `Unknown EMAIL_PROVIDER: '${provider}'. Supported: resend, gmail`,
+    message: `Unknown EMAIL_PROVIDER: '${provider}'. Supported: resend`,
   };
 }
 

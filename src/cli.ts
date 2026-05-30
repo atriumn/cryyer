@@ -22,7 +22,7 @@ Usage:
 
 Commands:
   init          Interactive product setup
-  auth          Manage authentication (gmail, linkedin)
+  auth          Manage authentication (linkedin)
   check         Validate config and connections
   run           Full pipeline: gather → draft → send
   draft         Generate drafts → create GitHub issues
