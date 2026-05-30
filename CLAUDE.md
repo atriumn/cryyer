@@ -191,6 +191,15 @@ Default models per provider: Anthropic → `claude-sonnet-4-5-20250514`, OpenAI 
 - **`weekly-draft.yml`**: Cron Monday 1pm UTC (or manual trigger). Runs `node dist/draft.js` — gathers activity, generates LLM drafts, creates GitHub issues with `draft` + product-id labels. Needs `GITHUB_TOKEN`, `CRYYER_REPO`, and LLM API key.
 - **`send-update.yml`**: Fires on issue close (filtered to `draft` label). Runs `node dist/send-on-close.js` — parses issue body, sends emails, posts delivery stats. Needs email provider and subscriber store secrets.
 
+### Social posting (MCP / CLI — not CI)
+
+Social posts are triggered manually, not by a CI workflow. There are no `social-draft.yml` or `social-send.yml` workflows — they were removed (#165). Use one of:
+
+- **MCP tool** (Claude Desktop): `social_draft` to generate a draft, `social_send` to post it.
+- **CLI**: `cryyer social draft --product <id>` then `cryyer social send <draft-path>`.
+
+Providers: `bluesky` (`src/social/bluesky-provider.ts`), `x` (`src/social/x-provider.ts`), `linkedin` (`src/social/linkedin-provider.ts`). Credentials are loaded from env vars or a config file via `src/social/credentials.ts`.
+
 ## Composite GitHub Actions
 
 Reusable composite actions that consumer repos reference directly. `cryyer init` can scaffold thin wrapper workflows that use these actions.
@@ -279,6 +288,13 @@ The following files were deprecated and have been removed from `src/`:
 - `llm.ts` — replaced by `llm-provider.ts` (removed in #40)
 - `email.ts` — thin Resend wrapper, unused (removed in #40)
 - `github.ts` — thin Octokit wrapper, unused (removed in #40)
+- `social/buffer-provider.ts` — dead Buffer integration (removed in #165)
+- `__tests__/social-buffer-provider.test.ts` — test for the above (removed in #165)
+
+The following workflows were broken and have been removed from `.github/workflows/`:
+
+- `social-draft.yml` — used the defunct Buffer flow (removed in #165)
+- `social-send.yml` — used the defunct Buffer flow (removed in #165)
 
 ## lat.md — Codebase Knowledge Graph
 
