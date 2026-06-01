@@ -4,6 +4,39 @@ All notable changes to Cryyer are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.0](https://github.com/atriumn/cryyer/compare/cryyer-v0.7.0...cryyer-v0.8.0) (2026-05-30)
+
+
+### Features
+
+* add Bluesky and X (Twitter) direct posting providers ([#163](https://github.com/atriumn/cryyer/issues/163)) ([a304783](https://github.com/atriumn/cryyer/commit/a304783aec09f5273e47bc629c3e8db134773d22))
+* add Claude CLI provider for Opus/Sonnet without API key ([#157](https://github.com/atriumn/cryyer/issues/157)) ([75080ca](https://github.com/atriumn/cryyer/commit/75080cac97545c1aeda4d1cbb770c0f3c6a887a5))
+* add Claude OAuth token fallback for Anthropic provider ([#156](https://github.com/atriumn/cryyer/issues/156)) ([3338bbb](https://github.com/atriumn/cryyer/commit/3338bbb48a52a94ff9016dca4bc805b91c27387d))
+* add cryyer social blog-publish command ([#158](https://github.com/atriumn/cryyer/issues/158)) ([#159](https://github.com/atriumn/cryyer/issues/159)) ([6871652](https://github.com/atriumn/cryyer/commit/6871652e051aafd64334ce5748868fab900097d2))
+* add seed parser for social content ([#146](https://github.com/atriumn/cryyer/issues/146)) ([5f53375](https://github.com/atriumn/cryyer/commit/5f53375150c531ac5494eb56acef94aee31f1a6d)), closes [#129](https://github.com/atriumn/cryyer/issues/129)
+* add self-hosted GitHub Actions deploy workflow ([#155](https://github.com/atriumn/cryyer/issues/155)) ([94a5fc4](https://github.com/atriumn/cryyer/commit/94a5fc438d806bb71531185dd30eeb084e106707))
+* add social MCP tools and GitHub Actions workflows ([#151](https://github.com/atriumn/cryyer/issues/151)) ([a9adff6](https://github.com/atriumn/cryyer/commit/a9adff695212617e6f1b6701a7589cebabb9e60d))
+* add top-level `cryyer blog publish` command ([#160](https://github.com/atriumn/cryyer/issues/160)) ([75af6d7](https://github.com/atriumn/cryyer/commit/75af6d7c3258108fbb2500c68947a49ae9f26d4b))
+* append CTA link to generated social posts ([#154](https://github.com/atriumn/cryyer/issues/154)) ([4a5b04a](https://github.com/atriumn/cryyer/commit/4a5b04a0f8e398e994692aa9d2d2d8bb4f959814))
+* auto-load .env file on startup ([#162](https://github.com/atriumn/cryyer/issues/162)) ([e25749f](https://github.com/atriumn/cryyer/commit/e25749f736d901472b97a57ddffcd1ac3e07bc1f))
+* remove cryyer run headless send entrypoint ([#170](https://github.com/atriumn/cryyer/issues/170)) ([c19cb9f](https://github.com/atriumn/cryyer/commit/c19cb9f6e0c681960574c623f6944f8b7ea2879d)), closes [#167](https://github.com/atriumn/cryyer/issues/167)
+* remove Gmail email channel, go Resend-only ([#169](https://github.com/atriumn/cryyer/issues/169)) ([fab12f7](https://github.com/atriumn/cryyer/commit/fab12f7a8212af4914718a7e4e520e0ba7a6c62c)), closes [#166](https://github.com/atriumn/cryyer/issues/166)
+* replace Buffer with direct LinkedIn posting ([#161](https://github.com/atriumn/cryyer/issues/161)) ([31f1c3d](https://github.com/atriumn/cryyer/commit/31f1c3d6e425f6f23d04d43e697b5644fb8cc3d1))
+
+
+### Bug Fixes
+
+* prioritize voice over structure in blog post generation ([589d115](https://github.com/atriumn/cryyer/commit/589d115be147130a98c9f58a34881c34dc19e570))
+* update blog prompt and fix broken test ([90f6b67](https://github.com/atriumn/cryyer/commit/90f6b67e690352ddba89c5afdcf7b0cbe5d48272))
+* update default model from invalid claude-sonnet-4-5-20250514 to claude-sonnet-4-6 ([7537f1d](https://github.com/atriumn/cryyer/commit/7537f1dd7029e8a30b9d44f672b50520855bb46b))
+
+
+### Miscellaneous
+
+* add arqo issue templates ([#164](https://github.com/atriumn/cryyer/issues/164)) ([d02d027](https://github.com/atriumn/cryyer/commit/d02d027f81fd6337de4f7fbdf77e216f8db31fc1))
+* add lat.md knowledge graph and session instructions ([1e506d8](https://github.com/atriumn/cryyer/commit/1e506d8724f58cad0ec8276bab5c22f526e6cb8c))
+* remove dead Buffer integration and broken social CI workflows ([#168](https://github.com/atriumn/cryyer/issues/168)) ([823a957](https://github.com/atriumn/cryyer/commit/823a957a4d548b9642fed1183c0c98e220132354)), closes [#165](https://github.com/atriumn/cryyer/issues/165)
+
 ## [0.7.0](https://github.com/atriumn/cryyer/compare/cryyer-v0.6.3...cryyer-v0.7.0) (2026-03-25)
 
 
