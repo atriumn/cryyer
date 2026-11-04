@@ -13,13 +13,13 @@ importers:
     dependencies:
       '@anthropic-ai/sdk':
         specifier: ^0.78.0
-        version: 0.78.0(zod@4.3.6)
+        version: 0.78.0(zod@4.6.6)
       '@google/generative-ai':
         specifier: ^0.24.1
         version: 0.24.1
       '@modelcontextprotocol/sdk':
         specifier: ^1.27.0
-        version: 1.27.1(zod@4.3.6)
+        version: 1.27.1(zod@4.6.6)
       '@supabase/supabase-js':
         specifier: ^2.47.10
         version: 2.97.0
@@ -34,7 +34,7 @@ importers:
         version: 5.0.5
       openai:
         specifier: ^6.24.0
-        version: 6.25.0(ws@8.19.0)(zod@4.3.6)
+        version: 6.25.0(ws@8.19.0)(zod@4.6.6)
       resend:
         specifier: ^6.9.2
         version: 6.9.2(@react-email/render@1.1.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4))
@@ -43,7 +43,7 @@ importers:
         version: 2.8.2
       zod:
         specifier: ^4.3.6
-        version: 4.3.6
+        version: 4.6.6
     devDependencies:
       '@types/node':
         specifier: ^25.3.0
@@ -1479,8 +1479,8 @@ packages:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
     engines: {node: '>= 0.8.0'}
 
-  prettier@3.8.1:
-    resolution: {integrity: sha512-UOnG6LftzbdaHZcKoPFtOcCKztrQ57WkHDeRD9t/PTQtmT0NHSeWWepj6pS0z/N7+08BHFDQVUrfmfMRcZwbMg==}
+  prettier@3.9.10:
+    resolution: {integrity: sha512-skGHTH1Yb9QvaTC4hWnRTzEYtCpApF0UMBPz+t/0ZPzP8ihefo/btKd+QA7pUE0fEwA1SbS/NmhyEcstdXOIdA==}
     engines: {node: '>=14'}
     hasBin: true
 
@@ -1707,6 +1707,7 @@ packages:
 
   uuid@10.0.0:
     resolution: {integrity: sha512-8XkAphELsDnEGrDxUOHB3RGvXz6TeuYSGEZBOjtTtPm2lwhGBjLgOzLHB63IUWfBpNucQjND6d3AOudO+H3RWQ==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   vary@1.1.2:
@@ -1842,16 +1843,16 @@ packages:
     peerDependencies:
       zod: ^3.25 || ^4
 
-  zod@4.3.6:
-    resolution: {integrity: sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==}
+  zod@4.6.6:
+    resolution: {integrity: sha512-4UmzQUF5fxvfcYHlbjBmejU+w+hbDnWFx4aS8kBx7nPBHcO2SqPbpAG8snbdg+Xse4pRefR98hgjFgIMCI/UhA==}
 
 snapshots:
 
-  '@anthropic-ai/sdk@0.78.0(zod@4.3.6)':
+  '@anthropic-ai/sdk@0.78.0(zod@4.6.6)':
     dependencies:
       json-schema-to-ts: 3.1.1
     optionalDependencies:
-      zod: 4.3.6
+      zod: 4.6.6
 
   '@babel/helper-string-parser@7.27.1': {}
 
@@ -2013,7 +2014,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@modelcontextprotocol/sdk@1.27.1(zod@4.3.6)':
+  '@modelcontextprotocol/sdk@1.27.1(zod@4.6.6)':
     dependencies:
       '@hono/node-server': 1.19.9(hono@4.12.2)
       ajv: 8.18.0
@@ -2030,8 +2031,8 @@ snapshots:
       json-schema-typed: 8.0.2
       pkce-challenge: 5.0.1
       raw-body: 3.0.2
-      zod: 4.3.6
-      zod-to-json-schema: 3.25.1(zod@4.3.6)
+      zod: 4.6.6
+      zod-to-json-schema: 3.25.1(zod@4.6.6)
     transitivePeerDependencies:
       - supports-color
 
@@ -2189,7 +2190,7 @@ snapshots:
   '@react-email/render@1.1.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
     dependencies:
       html-to-text: 9.0.5
-      prettier: 3.8.1
+      prettier: 3.9.10
       react: 19.2.4
       react-dom: 19.2.4(react@19.2.4)
       react-promise-suspense: 0.3.4
@@ -3198,10 +3199,10 @@ snapshots:
     dependencies:
       wrappy: 1.0.2
 
-  openai@6.25.0(ws@8.19.0)(zod@4.3.6):
+  openai@6.25.0(ws@8.19.0)(zod@4.6.6):
     optionalDependencies:
       ws: 8.19.0
-      zod: 4.3.6
+      zod: 4.6.6
 
   optionator@0.9.4:
     dependencies:
@@ -3262,7 +3263,7 @@ snapshots:
 
   prelude-ls@1.2.1: {}
 
-  prettier@3.8.1:
+  prettier@3.9.10:
     optional: true
 
   proxy-addr@2.0.7:
@@ -3608,8 +3609,8 @@ snapshots:
 
   yocto-queue@0.1.0: {}
 
-  zod-to-json-schema@3.25.1(zod@4.3.6):
+  zod-to-json-schema@3.25.1(zod@4.6.6):
     dependencies:
-      zod: 4.3.6
+      zod: 4.6.6
 
-  zod@4.3.6: {}
+  zod@4.6.6: {}
